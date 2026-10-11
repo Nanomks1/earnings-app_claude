@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>أرباحي</title>
+<style>
+:root{--bg:#f5f6f8;--card:#fff;--text:#1b1f24;--mut:#6b7280;--pri:#0f766e;--onpri:#fff;--pos:#15803d;--neg:#b91c1c;--bd:#e5e7eb}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1113;--card:#181c20;--text:#eceff2;--mut:#9aa3ad;--pri:#2dd4bf;--onpri:#06201c;--pos:#4ade80;--neg:#f87171;--bd:#2a3036}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,"Noto Sans Arabic","Segoe UI",Tahoma,sans-serif}
+body{padding:env(safe-area-inset-top) 0 calc(96px + env(safe-area-inset-bottom))}
+header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px}
+h1{font-size:20px;margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+.icon{background:none;border:0;font-size:22px;padding:6px 10px;border-radius:10px}
+.total{margin:0 16px;padding:20px;border-radius:18px;background:var(--pri);color:var(--onpri)}
+.total small{opacity:.85;font-size:14px}
+.total .big{font-size:36px;font-weight:700;margin:4px 0 10px;direction:ltr;text-align:right}
+.total .sub{display:flex;gap:18px;font-size:13px;opacity:.9}
+.tabs{display:flex;gap:6px;margin:14px 16px 0;padding:4px;background:var(--card);border:1px solid var(--bd);border-radius:12px}
+.tabs button{flex:1;padding:9px;border:0;border-radius:9px;background:none;font-weight:600;color:var(--mut)}
+.tabs button.on{background:var(--pri);color:var(--onpri)}
+.mon{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px}
+.mon h3{margin:0 0 8px;font-size:16px}
+.mon .r{display:flex;justify-content:space-between;font-size:14px;color:var(--mut);padding:3px 0}
+.mon .r b{color:var(--text);direction:ltr}
+.mon .t{border-top:1px solid var(--bd);margin-top:6px;padding-top:8px;color:var(--text);font-weight:700}
+.list{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.item{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px 14px;width:100%;text-align:start}
+.item .d{font-size:15px;font-weight:600}
+.item .m{font-size:13px;color:var(--mut);margin-top:3px}
+.amt{font-size:17px;font-weight:700;direction:ltr;white-space:nowrap}
+.amt.p{color:var(--pos)}.amt.n{color:var(--neg)}
+.empty{text-align:center;color:var(--mut);padding:40px 10px}
+.bar{position:fixed;inset-inline:0;bottom:0;display:flex;gap:10px;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:var(--bg);border-top:1px solid var(--bd)}
+.bar button{flex:1;padding:14px;border-radius:14px;border:0;font-size:16px;font-weight:600}
+.add{background:var(--pri);color:var(--onpri)}
+.adv{background:var(--card);border:1px solid var(--neg)!important;color:var(--neg)}
+dialog{border:0;border-radius:18px;padding:18px;width:min(92vw,420px);background:var(--card);color:var(--text)}
+dialog::backdrop{background:rgba(0,0,0,.5)}
+dialog h2{margin:0 0 12px;font-size:18px}
+label{display:block;font-size:13px;color:var(--mut);margin:10px 0 4px}
+input[type=text],input[type=number],input[type=date]{width:100%;padding:12px;border-radius:10px;border:1px solid var(--bd);background:var(--bg);color:var(--text);font:inherit;font-size:16px}
+.row{display:flex;gap:10px}.row>div{flex:1}
+.acts{display:flex;gap:8px;margin-top:16px}
+.acts button,.menu button{padding:12px;border-radius:12px;border:1px solid var(--bd);background:var(--bg);flex:1}
+.acts .ok{background:var(--pri);color:var(--onpri);border:0;font-weight:600}
+.acts .del{color:var(--neg)}
+.menu button{display:block;width:100%;margin-top:8px;text-align:start}
+.chk{display:flex;align-items:center;gap:8px;margin-top:12px;color:var(--text);font-size:15px}
+.note{font-size:12px;color:var(--mut);margin-top:12px;line-height:1.6}
+#toast{position:fixed;inset-inline:16px;bottom:calc(90px + env(safe-area-inset-bottom));background:var(--text);color:var(--bg);padding:12px 14px;border-radius:12px;text-align:center;opacity:0;pointer-events:none;transition:opacity .25s}
+#toast.on{opacity:1}
+</style>
+</head>
+<body>
+<header>
+  <h1>أرباحي</h1>
+  <button class="icon" id="menuBtn" aria-label="الإعدادات والنسخ الاحتياطي">⚙️</button>
+</header>
+
+<section class="total">
+  <small>المجموع الكامل</small>
+  <div class="big" id="total">0</div>
+  <div class="sub"><span id="sumWork"></span><span id="sumAdv"></span></div>
+</section>
+
+<nav class="tabs"><button class="on" id="tabList">السجلات</button><button id="tabMon">ملخص شهري</button></nav>
+<main class="list" id="list"></main>
+<main class="list" id="months" hidden></main>
+
+<div class="bar">
+  <button class="add" id="addWork">+ يوم عمل</button>
+  <button class="adv" id="addAdv">− كريدي</button>
+</div>
+
+<dialog id="form">
+  <h2 id="formTitle"></h2>
+  <label for="fDate">التاريخ</label>
+  <input type="date" id="fDate">
+  <div id="workFields">
+    <label>مدة العمل</label>
+    <div class="row">
+      <div><input type="number" id="fH" inputmode="numeric" min="0" placeholder="ساعات"></div>
+      <div><input type="number" id="fM" inputmode="numeric" min="0" max="59" placeholder="دقائق"></div>
+    </div>
+  </div>
+  <div id="amtWrap">
+    <label for="fAmt" id="amtLabel">المبلغ</label>
+    <input type="number" id="fAmt" inputmode="decimal" min="0" step="any" placeholder="0">
+  </div>
+  <label for="fNote">ملاحظة (اختياري)</label>
+  <input type="text" id="fNote">
+  <div class="acts">
+    <button class="del" id="fDel" type="button">حذف</button>
+    <button id="fCancel" type="button">إلغاء</button>
+    <button class="ok" id="fSave" type="button">حفظ</button>
+  </div>
+</dialog>
+
+<dialog id="menu" class="menu">
+  <h2>الإعدادات</h2>
+  <label for="cur">العملة (تظهر بجانب الأرقام)</label>
+  <input type="text" id="cur" placeholder="DH">
+  <label class="chk"><input type="checkbox" id="auto"> نسخ احتياطي تلقائي بعد كل تعديل</label>
+  <button id="bkNow">💾 نسخ احتياطي الآن</button>
+  <button id="bkRestore">♻️ استعادة من النسخة الاحتياطية</button>
+  <button id="bkFile">📂 استيراد من ملف…</button>
+  <input type="file" id="file" accept=".json,application/json" hidden>
+  <div class="note" id="path">مكان النسخة: Documents/EarningsBackup/earnings-backup.json</div>
+  <div class="acts"><button class="ok" id="menuClose" type="button">تم</button></div>
+</dialog>
+
+<div id="toast"></div>
+
+<script>
+const KEY = 'earnings_v1';
+const BK_DIR = 'EarningsBackup';
+const BK_FILE = BK_DIR + '/earnings-backup.json';
+const RATE = 10; // سعر الساعة (مخفي)
+let state = { items: [], currency: 'DH', auto: true };
+try { Object.assign(state, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) {}
+state.items.forEach(i => { if (i.type === 'work') i.amount = (i.mins || 0) / 60 * RATE; });
+let editing = null, mode = 'work', view = 'list';
+
+const $ = id => document.getElementById(id);
+const plugin = n => (window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform()) ? Capacitor.Plugins[n] : null;
+const num = n => Number(n).toLocaleString('en', { maximumFractionDigits: 2 });
+const money = n => num(n) + (state.currency ? ' ' + state.currency : '');
+const esc = s => String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const today = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
+const fmtDate = s => new Date(s + 'T00:00').toLocaleDateString('ar-u-nu-latn', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+const fmtDur = m => { const h = Math.floor(m / 60), r = m % 60; return [h ? h + ' ساعة' : '', r ? r + ' دقيقة' : ''].filter(Boolean).join(' و ') || '—'; };
+const toast = t => { const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove('on'), 2600); };
+
+let bkTimer;
+function save() {
+  localStorage.setItem(KEY, JSON.stringify(state));
+  render();
+  if (state.auto) { clearTimeout(bkTimer); bkTimer = setTimeout(() => backup(true), 800); }
+}
+
+function render() {
+  const work = state.items.filter(i => i.type === 'work').reduce((s, i) => s + i.amount, 0);
+  const adv = state.items.filter(i => i.type === 'adv').reduce((s, i) => s + i.amount, 0);
+  $('total').textContent = money(work - adv);
+  $('sumWork').textContent = 'الأجور: ' + money(work);
+  $('sumAdv').textContent = 'الكريدي: ' + money(-adv);
+  renderMonths();
+  const items = [...state.items].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
+  $('list').innerHTML = items.length ? items.map(i => {
+    const neg = i.type === 'adv';
+    return `<button class="item" data-id="${i.id}">
+      <div><div class="d">${fmtDate(i.date)}</div>
+      <div class="m">${neg ? 'كريدي' : 'مدة العمل: ' + fmtDur(i.mins)}${i.note ? ' • ' + esc(i.note) : ''}</div></div>
+      <div class="amt ${neg ? 'n' : 'p'}">${neg ? '−' : ''}${money(i.amount)}</div></button>`;
+  }).join('') : '<div class="empty">لا توجد سجلات بعد.<br>ابدأ بإضافة يوم عمل.</div>';
+}
+
+function renderMonths() {
+  const g = {};
+  state.items.forEach(i => {
+    const k = i.date.slice(0, 7);
+    const o = g[k] || (g[k] = { mins: 0, work: 0, adv: 0, days: 0 });
+    if (i.type === 'work') { o.mins += i.mins || 0; o.work += i.amount; o.days++; } else o.adv += i.amount;
+  });
+  const keys = Object.keys(g).sort().reverse();
+  $('months').innerHTML = keys.length ? keys.map(k => {
+    const o = g[k], name = new Date(k + '-01T00:00').toLocaleDateString('ar-u-nu-latn', { month: 'long', year: 'numeric' });
+    return `<div class="mon"><h3>${name}</h3>
+      <div class="r"><span>أيام العمل</span><b>${o.days}</b></div>
+      <div class="r"><span>مجموع الساعات</span><b>${fmtDur(o.mins)}</b></div>
+      <div class="r"><span>الأجور</span><b>${money(o.work)}</b></div>
+      <div class="r"><span>الكريدي</span><b style="color:var(--neg)">${o.adv ? '−' : ''}${money(o.adv)}</b></div>
+      <div class="r t"><span>الصافي</span><b>${money(o.work - o.adv)}</b></div></div>`;
+  }).join('') : '<div class="empty">لا توجد بيانات بعد.</div>';
+}
+function setView(v) {
+  view = v;
+  $('list').hidden = v !== 'list'; $('months').hidden = v !== 'months';
+  $('tabList').classList.toggle('on', v === 'list'); $('tabMon').classList.toggle('on', v === 'months');
+}
+$('tabList').onclick = () => setView('list');
+$('tabMon').onclick = () => setView('months');
+
+function openForm(m, item) {
+  mode = m; editing = item || null;
+  $('formTitle').textContent = (item ? 'تعديل ' : 'إضافة ') + (m === 'work' ? 'يوم عمل' : 'كريدي');
+  $('workFields').style.display = m === 'work' ? '' : 'none';
+  $('amtWrap').style.display = m === 'work' ? 'none' : '';
+  $('amtLabel').textContent = 'مبلغ الكريدي (يُحسب بالسالب)';
+  $('fDate').value = item ? item.date : today();
+  $('fH').value = item && item.mins ? Math.floor(item.mins / 60) : '';
+  $('fM').value = item && item.mins % 60 ? item.mins % 60 : '';
+  $('fAmt').value = item ? item.amount : '';
+  $('fNote').value = item ? item.note || '' : '';
+  $('fDel').style.display = item ? '' : 'none';
+  $('form').showModal();
+}
+
+$('addWork').onclick = () => openForm('work');
+$('addAdv').onclick = () => openForm('adv');
+$('fCancel').onclick = () => $('form').close();
+$('list').onclick = e => {
+  const b = e.target.closest('.item'); if (!b) return;
+  const it = state.items.find(i => i.id == b.dataset.id);
+  if (it) openForm(it.type, it);
+};
+$('fSave').onclick = () => {
+  const rec = { id: editing ? editing.id : Date.now(), type: mode, date: $('fDate').value, note: $('fNote').value.trim() };
+  if (mode === 'work') {
+    rec.mins = (parseInt($('fH').value) || 0) * 60 + (parseInt($('fM').value) || 0);
+    rec.amount = rec.mins / 60 * RATE;
+    if (!rec.date || !rec.mins) return toast('أدخل التاريخ ومدة العمل');
+  } else {
+    rec.amount = parseFloat($('fAmt').value);
+    if (!rec.date || isNaN(rec.amount) || rec.amount < 0) return toast('أدخل التاريخ والمبلغ');
+  }
+  state.items = editing ? state.items.map(i => i.id === editing.id ? rec : i) : [...state.items, rec];
+  $('form').close(); save();
+};
+$('fDel').onclick = () => {
+  if (!confirm('حذف هذا السجل؟')) return;
+  state.items = state.items.filter(i => i.id !== editing.id);
+  $('form').close(); save();
+};
+
+// ---------- القائمة والنسخ الاحتياطي ----------
+$('menuBtn').onclick = () => { $('cur').value = state.currency; $('auto').checked = state.auto; $('menu').showModal(); };
+$('menuClose').onclick = () => {
+  state.currency = $('cur').value.trim(); state.auto = $('auto').checked;
+  $('menu').close(); save();
+};
+
+async function backup(silent) {
+  const data = JSON.stringify({ app: 'earnings', version: 1, savedAt: new Date().toISOString(), ...state }, null, 1);
+  const FS = plugin('Filesystem');
+  if (!FS) { // المتصفح: تنزيل ملف
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
+    a.download = 'earnings-backup.json'; a.click();
+    return;
+  }
+  try { await FS.requestPermissions(); } catch (e) {}
+  const write = path => FS.writeFile({ path, data, directory: 'DOCUMENTS', encoding: 'utf8', recursive: true });
+  try {
+    await write(BK_FILE);
+    if (!silent) toast('تم حفظ النسخة الاحتياطية في Documents/' + BK_DIR);
+  } catch (e) {
+    try {
+      const alt = BK_DIR + '/earnings-backup-' + Date.now() + '.json';
+      await write(alt);
+      if (!silent) toast('تم الحفظ في ' + alt);
+    } catch (e2) { if (!silent) toast('تعذر الحفظ: تحقق من صلاحية التخزين'); }
+  }
+}
+
+function applyBackup(text) {
+  try {
+    const d = JSON.parse(text);
+    if (!Array.isArray(d.items)) throw 0;
+    if (!confirm('سيتم استبدال البيانات الحالية بالنسخة الاحتياطية. متابعة؟')) return;
+    state = { items: d.items, currency: d.currency || 'DH', auto: d.auto !== false };
+    state.items.forEach(i => { if (i.type === 'work') i.amount = (i.mins || 0) / 60 * RATE; });
+    save(); $('menu').close(); toast('تمت الاستعادة');
+  } catch (e) { toast('ملف النسخة غير صالح'); }
+}
+
+$('bkNow').onclick = () => backup(false);
+$('bkRestore').onclick = async () => {
+  const FS = plugin('Filesystem');
+  if (!FS) return $('file').click();
+  try {
+    try { await FS.requestPermissions(); } catch (e) {}
+    const r = await FS.readFile({ path: BK_FILE, directory: 'DOCUMENTS', encoding: 'utf8' });
+    applyBackup(r.data);
+  } catch (e) { toast('لم أجد النسخة. اختر الملف يدويًا'); $('file').click(); }
+};
+$('bkFile').onclick = () => $('file').click();
+$('file').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader(); r.onload = () => applyBackup(r.result); r.readAsText(f);
+  e.target.value = '';
+};
+
+render();
+</script>
+</body>
+</html>
