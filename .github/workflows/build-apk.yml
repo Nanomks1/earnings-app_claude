@@ -5,7 +5,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -13,7 +13,7 @@ jobs:
         with:
           node-version: 22
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 21
@@ -24,6 +24,63 @@ jobs:
       - name: Add Android platform
         run: npx cap add android
 
+      - name: App name inside the page
+        run: sed -i 's/أرباحي/العمل/g' www/index.html
+
+      - name: Softer colors
+        run: |
+          sed -i 's/--pri:#0f766e;--onpri:#fff/--pri:#2c6e69;--onpri:#fff/' www/index.html
+          sed -i 's/--pri:#2dd4bf;--onpri:#06201c/--pri:#1f5c57;--onpri:#e6f4f2/' www/index.html
+          sed -i 's/--pos:#4ade80/--pos:#6fc79a/; s/--neg:#f87171/--neg:#e58f8f/' www/index.html
+
+      - name: Round clock icon
+        run: |
+          pip install --break-system-packages pillow
+          python3 - <<'PY'
+          from PIL import Image, ImageDraw
+          import os
+          res = 'android/app/src/main/res'
+          TEAL = (44, 110, 105, 255)
+          W = (255, 255, 255, 255)
+
+          def draw(size, circle, scale):
+              S = size * 4
+              im = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+              d = ImageDraw.Draw(im)
+              if circle:
+                  d.ellipse([0, 0, S - 1, S - 1], fill=TEAL)
+              c = S / 2
+              r = S * scale / 2
+              w = max(2, int(r * 0.17))
+              d.ellipse([c - r, c - r, c + r, c + r], outline=W, width=w)
+              pts = [(c, c - r * 0.58), (c + r * 0.42, c + r * 0.2)]
+              for p in pts:
+                  d.line([c, c, p[0], p[1]], fill=W, width=w)
+              for x, y in pts + [(c, c)]:
+                  d.ellipse([x - w / 2, y - w / 2, x + w / 2, y + w / 2], fill=W)
+              return im.resize((size, size), Image.LANCZOS)
+
+          legacy = {'mdpi': 48, 'hdpi': 72, 'xhdpi': 96, 'xxhdpi': 144, 'xxxhdpi': 192}
+          fg = {'mdpi': 108, 'hdpi': 162, 'xhdpi': 216, 'xxhdpi': 324, 'xxxhdpi': 432}
+          for k, s in legacy.items():
+              d = f'{res}/mipmap-{k}'
+              os.makedirs(d, exist_ok=True)
+              img = draw(s, True, 0.52)
+              img.save(f'{d}/ic_launcher.png')
+              img.save(f'{d}/ic_launcher_round.png')
+          for k, s in fg.items():
+              d = f'{res}/mipmap-{k}'
+              os.makedirs(d, exist_ok=True)
+              draw(s, False, 0.46).save(f'{d}/work_fg.png')
+
+          os.makedirs(f'{res}/mipmap-anydpi-v26', exist_ok=True)
+          xml = '<?xml version="1.0" encoding="utf-8"?>\n<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n    <background android:drawable="@color/work_icon_bg"/>\n    <foreground android:drawable="@mipmap/work_fg"/>\n</adaptive-icon>\n'
+          for n in ('ic_launcher', 'ic_launcher_round'):
+              open(f'{res}/mipmap-anydpi-v26/{n}.xml', 'w').write(xml)
+          os.makedirs(f'{res}/values', exist_ok=True)
+          open(f'{res}/values/work_icon.xml', 'w').write('<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="work_icon_bg">#2C6E69</color>\n</resources>\n')
+          PY
+
       - name: Android 16 (API 36) + arm64 only + storage permissions
         run: |
           sed -i 's/targetSdkVersion = .*/targetSdkVersion = 36/' android/variables.gradle
@@ -31,7 +88,6 @@ jobs:
           M=android/app/src/main/AndroidManifest.xml
           sed -i 's#<application#<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29"/>\n    <application#' $M
           sed -i 's#<application#<application android:requestLegacyExternalStorage="true"#' $M
-          grep -n "targetSdk\|compileSdk" android/variables.gradle
 
       - name: Sync web assets
         run: npx cap sync android
