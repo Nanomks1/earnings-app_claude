@@ -92,11 +92,25 @@ jobs:
       - name: Sync web assets
         run: npx cap sync android
 
-      - name: Build debug APK
+      - name: Build release APK
         working-directory: android
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleRelease
+
+      - name: Sign APK
+        env:
+          KS_B64: ${{ secrets.KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > work.p12
+          else
+            keytool -genkeypair -keystore work.p12 -storetype pkcs12 -alias work -keyalg RSA -keysize 2048 -validity 10000 -storepass workpass123 -keypass workpass123 -dname "CN=Work App"
+          fi
+          BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          $BT/zipalign -f -p 4 android/app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
+          $BT/apksigner sign --ks work.p12 --ks-type pkcs12 --ks-pass pass:workpass123 --ks-key-alias work --out work-release.apk aligned.apk
+          $BT/apksigner verify work-release.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: earnings-apk-arm64
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: work-apk-release
+          path: work-release.apk
