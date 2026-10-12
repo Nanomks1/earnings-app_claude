@@ -76,6 +76,7 @@ h1{font-size:22px;margin:0;font-weight:800}
 .stat .sv{font-size:20px;font-weight:800;direction:ltr;line-height:1.1}
 .stat .sv small{font-size:12px;font-weight:600;color:var(--mut);margin-inline-start:3px}
 .stat .sl{font-size:12px;color:var(--mut)}
+.stat .sl small{display:block;margin-top:2px;font-size:11px}
 .stat.cr .sv{color:var(--neg)}
 .stat.net{grid-column:1/-1;background:var(--tint)}
 .stat.net .sv{font-size:26px}
@@ -95,8 +96,10 @@ h1{font-size:22px;margin:0;font-weight:800}
 .acts .ok{background:var(--pri);color:var(--onpri);border:0}
 .acts .del{color:var(--neg)}
 .bar{position:fixed;inset-inline:0;bottom:0;display:flex;gap:10px;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:var(--bg);background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--bd)}
-.bar button{flex:1;height:52px;border-radius:16px;border:0;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px}
+.bar button{flex:1;height:52px;border-radius:16px;border:0;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 4px;min-width:0}
 .add{background:var(--pri);color:var(--onpri);box-shadow:var(--prish)}
+.rem{background:var(--card);border:1px solid var(--pri)!important;color:var(--text)}
+.rem .ic{color:var(--pritx)}
 .adv{background:var(--card);border:1px solid var(--neg)!important;color:var(--neg)}
 dialog{border:0;padding:8px 18px calc(18px + env(safe-area-inset-bottom));width:100%;max-width:480px;max-height:92vh;overflow:auto;background:var(--card);color:var(--text);margin:auto 0 0;border-radius:24px 24px 0 0;animation:up .25s ease-out}
 @media (min-width:520px){dialog{margin:auto;border-radius:24px}}
@@ -151,7 +154,7 @@ details.card .lines{margin-top:12px;border-top:1px dashed var(--bd);padding-top:
 </style>
 </head>
 <body>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol><symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5l10.5 6.5L8 18.5z"/></symbol><symbol id="i-stop" viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="2"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol><symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol><symbol id="i-calendar" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5" rx="2.5"/><path d="M4 10h16M9 3.5v4M15 3.5v4"/></symbol><symbol id="i-cash" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="10" rx="2.5"/><circle cx="12" cy="12" r="2.5"/><path d="M6.5 12h.01M17.5 12h.01"/></symbol><symbol id="i-mcircle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M8 12h8"/></symbol><symbol id="i-tcircle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></symbol><symbol id="i-share" viewBox="0 0 24 24"><circle cx="6" cy="12" r="2.3"/><circle cx="18" cy="6" r="2.3"/><circle cx="18" cy="18" r="2.3"/><path d="M8.1 11l7.8-3.9M8.1 13l7.8 3.9"/></symbol><symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 0 1 2-2H10l2 2.5h6.5a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></symbol><symbol id="i-save" viewBox="0 0 24 24"><path d="M12 4v10M8 10.5l4 4 4-4M5 19h14"/></symbol><symbol id="i-restore" viewBox="0 0 24 24"><path d="M4.5 12a7.5 7.5 0 1 0 2.4-5.5M4 4.5V8h3.5"/></symbol><symbol id="i-file" viewBox="0 0 24 24"><path d="M7 3.5h6.5L18 8v11.5a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1z"/><path d="M13.5 3.5V8H18"/></symbol><symbol id="i-lock" viewBox="0 0 24 24"><rect x="5.5" y="10.5" width="13" height="9.5" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></symbol><symbol id="i-bars" viewBox="0 0 24 24"><path d="M5 20V12M12 20V5M19 20v-5"/></symbol><symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></symbol><symbol id="i-archive" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="4.5" rx="1.2"/><path d="M5 9.5V18a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 18V9.5M10 13h4"/></symbol></svg>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol><symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5l10.5 6.5L8 18.5z"/></symbol><symbol id="i-stop" viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="2"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol><symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol><symbol id="i-calendar" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5" rx="2.5"/><path d="M4 10h16M9 3.5v4M15 3.5v4"/></symbol><symbol id="i-cash" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="10" rx="2.5"/><circle cx="12" cy="12" r="2.5"/><path d="M6.5 12h.01M17.5 12h.01"/></symbol><symbol id="i-mcircle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M8 12h8"/></symbol><symbol id="i-tcircle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></symbol><symbol id="i-share" viewBox="0 0 24 24"><circle cx="6" cy="12" r="2.3"/><circle cx="18" cy="6" r="2.3"/><circle cx="18" cy="18" r="2.3"/><path d="M8.1 11l7.8-3.9M8.1 13l7.8 3.9"/></symbol><symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 0 1 2-2H10l2 2.5h6.5a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></symbol><symbol id="i-save" viewBox="0 0 24 24"><path d="M12 4v10M8 10.5l4 4 4-4M5 19h14"/></symbol><symbol id="i-restore" viewBox="0 0 24 24"><path d="M4.5 12a7.5 7.5 0 1 0 2.4-5.5M4 4.5V8h3.5"/></symbol><symbol id="i-file" viewBox="0 0 24 24"><path d="M7 3.5h6.5L18 8v11.5a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1z"/><path d="M13.5 3.5V8H18"/></symbol><symbol id="i-lock" viewBox="0 0 24 24"><rect x="5.5" y="10.5" width="13" height="9.5" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></symbol><symbol id="i-bars" viewBox="0 0 24 24"><path d="M5 20V12M12 20V5M19 20v-5"/></symbol><symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></symbol><symbol id="i-archive" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="4.5" rx="1.2"/><path d="M5 9.5V18a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 18V9.5M10 13h4"/></symbol><symbol id="i-home" viewBox="0 0 24 24"><path d="M3.5 11.5L12 4.5l8.5 7M6 10v9.5h12V10M10 19.5v-5h4v5"/></symbol></svg>
 <header>
   <h1>العمل</h1>
   <button class="round" id="menuBtn" aria-label="الإعدادات"><svg class="ic"><use href="#i-sliders"/></svg></button>
@@ -192,6 +195,7 @@ details.card .lines{margin-top:12px;border-top:1px dashed var(--bd);padding-top:
 
 <div class="bar">
   <button class="add" id="addWork"><svg class="ic"><use href="#i-plus"/></svg>يوم عمل</button>
+  <button class="rem" id="addRemote"><svg class="ic"><use href="#i-home"/></svg>عن بعد</button>
   <button class="adv" id="addAdv"><svg class="ic"><use href="#i-minus"/></svg>كريدي</button>
 </div>
 
@@ -207,6 +211,13 @@ details.card .lines{margin-top:12px;border-top:1px dashed var(--bd);padding-top:
     <label for="fBrk">استراحة بالدقائق (اختياري)</label>
     <input type="number" id="fBrk" inputmode="numeric" min="0" placeholder="0">
     <div class="info" id="fDur"></div>
+  </div>
+  <div id="remoteFields">
+    <div class="row">
+      <div><label for="rH">ساعات</label><input type="number" id="rH" inputmode="numeric" min="0" placeholder="0"></div>
+      <div><label for="rM">دقائق</label><input type="number" id="rM" inputmode="numeric" min="0" max="59" placeholder="0"></div>
+    </div>
+    <div class="info" id="rDur"></div>
   </div>
   <div id="amtWrap">
     <label for="fAmt">مبلغ الكريدي (يُحسب بالسالب)</label>
@@ -315,7 +326,7 @@ const PALETTE = ['#2c6e69', '#3d6a8f', '#4a7c59', '#6b5b95', '#a0623a', '#a14d63
 const WD = ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
 
 function norm(d) {
-  const s = { v: 3, items: [], archive: [], carry: 0, currency: 'DH', rate: DEF_RATE, auto: true, pin: '', color: DEF_COLOR, open: null };
+  const s = { v: 4, items: [], archive: [], carry: 0, currency: 'DH', rate: DEF_RATE, auto: true, pin: '', color: DEF_COLOR, open: null };
   if (!d || typeof d !== 'object') return s;
   if (typeof d.currency === 'string') s.currency = d.currency;
   if (Number(d.rate) > 0) s.rate = Number(d.rate);
@@ -330,7 +341,11 @@ function norm(d) {
       o.mins = Number(o.mins) || 0;
       o.rate = Number(o.rate) > 0 ? Number(o.rate) : DEF_RATE;
       o.amount = o.mins / 60 * o.rate;
-    } else { o.type = 'adv'; o.amount = Number(o.amount) || 0; }
+      if (o.remote === undefined) {
+        const m = /^\s*عن\s+بعد(?:\s*[:\-–—]\s*|\s+|$)(.*)$/.exec(String(o.note || ''));
+        if (m) { o.remote = true; o.note = m[1].trim(); } else o.remote = false;
+      } else o.remote = !!o.remote;
+    } else { o.type = 'adv'; o.amount = Number(o.amount) || 0; delete o.remote; }
     return o;
   };
   s.items = (Array.isArray(d.items) ? d.items : []).map(fix);
@@ -375,8 +390,12 @@ const fmtHM = m => { m = Math.round(m); return Math.floor(m / 60) + ':' + pad2(m
 const toast = t => { const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove('on'), 3200); };
 
 function calc(items) {
-  const o = { work: 0, adv: 0, mins: 0, days: 0 };
-  items.forEach(i => { if (i.type === 'work') { o.work += i.amount; o.mins += i.mins; o.days++; } else o.adv += i.amount; });
+  const o = { work: 0, adv: 0, mins: 0, rmins: 0, days: 0 }, ds = new Set();
+  items.forEach(i => {
+    if (i.type === 'work') { o.work += i.amount; o.mins += i.mins; if (i.remote) o.rmins += i.mins; ds.add(i.date); }
+    else o.adv += i.amount;
+  });
+  o.days = ds.size;
   return o;
 }
 const due = () => { const c = calc(state.items); return state.carry + c.work - c.adv; };
@@ -432,8 +451,8 @@ function weekLabel(ms) {
 function itemRow(i) {
   const neg = i.type === 'adv';
   const t = i.start && i.end ? `<span dir="ltr">${i.start} – ${i.end}</span> • ` : '';
-  const sub = neg ? 'كريدي' : t + fmtDur(i.mins) + (i.brk ? ' (استراحة ' + i.brk + ' د)' : '');
-  return `<button class="item" data-id="${i.id}"><span class="bub ${neg ? 'neg' : ''}">${ic(neg ? 'minus' : 'clock')}</span>
+  const sub = neg ? 'كريدي' : i.remote ? 'عن بعد • ' + fmtDur(i.mins) : t + fmtDur(i.mins) + (i.brk ? ' (استراحة ' + i.brk + ' د)' : '');
+  return `<button class="item" data-id="${i.id}"><span class="bub ${neg ? 'neg' : ''}">${ic(neg ? 'minus' : i.remote ? 'home' : 'clock')}</span>
     <div><div class="d">${fmtDay(i.date)}</div><div class="m">${sub}${i.note ? ' • ' + esc(i.note) : ''}</div></div>
     <div class="amt num ${neg ? 'n' : 'p'}">${neg ? '−' : ''}${money(i.amount)}</div></button>`;
 }
@@ -491,7 +510,7 @@ function renderArchive() {
     const dates = a.items.map(i => i.date).sort();
     const range = dates.length ? fmtShort(dates[0]) + ' ← ' + fmtShort(dates[dates.length - 1]) : '—';
     const lines = [...a.items].sort((x, y) => x.date.localeCompare(y.date)).map(i =>
-      `${fmtShort(i.date)}: ${i.type === 'work' ? fmtDur(i.mins) + ' = ' + money(i.amount) : 'كريدي ' + signed(-i.amount)}${i.note ? ' • ' + esc(i.note) : ''}`).join('<br>');
+      `${fmtShort(i.date)}: ${i.type === 'work' ? (i.remote ? 'عن بعد ' : '') + fmtDur(i.mins) + ' = ' + money(i.amount) : 'كريدي ' + signed(-i.amount)}${i.note ? ' • ' + esc(i.note) : ''}`).join('<br>');
     const rem = round2(a.remain || 0);
     return `<details class="card"><summary><span class="bub">${ic('tcircle')}</span><div><b>${fmtShort(a.paidAt)}</b><small>${range}</small></div><b class="num" style="direction:ltr">${money(a.received)}</b></summary>
       <div class="lines">
@@ -522,14 +541,16 @@ function summaryText() {
   const SEP = '━━━━━━━━━━━━━━';
   const head = from && to ? `من ${fmtShort(from)}\nإلى ${fmtShort(to)}` : from ? `من ${fmtShort(from)}` : to ? `حتى ${fmtShort(to)}` : 'كل الفترات';
   const out = ['📋 ملخص العمل', SEP, '📅 ' + head, SEP, '',
-    '📆 أيام العمل: ' + ltr(c.days), '⌛ مجموع الساعات: ' + fmtDur(c.mins), '💰 الأجور: ' + money(c.work),
-    '🔻 الكريدي: ' + signed(-c.adv), '✅ الصافي: ' + signed(c.work - c.adv)];
+    '📆 أيام العمل: ' + ltr(c.days), '⌛ مجموع الساعات: ' + fmtDur(c.mins)];
+  if (c.rmins) out.push('🏠 منها عن بعد: ' + fmtDur(c.rmins));
+  out.push('💰 الأجور: ' + money(c.work), '🔻 الكريدي: ' + signed(-c.adv), '✅ الصافي: ' + signed(c.work - c.adv));
   if ($('sDetail').checked && list.length) {
     out.push('', SEP, '📑 التفاصيل', SEP);
     list.forEach((i, n) => {
       const b = [`${n + 1}) ${fmtDate(i.date)}`];
       if (i.type === 'work') {
-        if (i.start && i.end) b.push('   ⏰ ' + ltr(i.start + ' – ' + i.end));
+        if (i.remote) b.push('   🏠 عن بعد');
+        else if (i.start && i.end) b.push('   ⏰ ' + ltr(i.start + ' – ' + i.end));
         b.push('   ⌛ ' + fmtDur(i.mins), '   💰 ' + money(i.amount));
       } else b.push('   🔻 كريدي', '   💰 ' + signed(-i.amount));
       if (i.note) b.push('   📝 ' + i.note);
@@ -544,7 +565,7 @@ function renderSummary() {
   const c = calc(inRange());
   $('sumOut').innerHTML =
     stat('calendar', '', c.days, 'أيام العمل') +
-    stat('clock', '', `<span dir="ltr">${fmtHM(c.mins)}<small>س</small></span>`, 'مجموع الساعات') +
+    stat('clock', '', `<span dir="ltr">${fmtHM(c.mins)}<small>س</small></span>`, 'مجموع الساعات' + (c.rmins ? `<small>منها عن بعد ${fmtHM(c.rmins)} س</small>` : '')) +
     stat('cash', '', mv(c.work), 'الأجور') +
     stat('mcircle', 'cr', mv(c.adv, c.adv > 0), 'الكريدي') +
     stat('tcircle', 'net', mv(Math.abs(c.work - c.adv), c.work - c.adv < 0), 'الصافي');
@@ -607,11 +628,20 @@ function updDur() {
 }
 ['fStart', 'fEnd', 'fBrk'].forEach(id => $(id).addEventListener('input', updDur));
 
+const modeOf = it => it.type === 'adv' ? 'adv' : it.remote ? 'remote' : 'work';
+const remoteMins = () => (parseInt($('rH').value) || 0) * 60 + (parseInt($('rM').value) || 0);
+function updRDur() { const m = remoteMins(); $('rDur').textContent = m > 0 ? 'المدة: ' + fmtDur(m) : ''; }
+['rH', 'rM'].forEach(id => $(id).addEventListener('input', updRDur));
+
 function openForm(m, item, pre) {
   mode = m; editing = item || null; fromShift = !!pre;
-  $('formTitle').textContent = (item ? 'تعديل ' : 'إضافة ') + (m === 'work' ? 'يوم عمل' : 'كريدي');
+  $('formTitle').textContent = (item ? 'تعديل ' : 'إضافة ') + (m === 'work' ? 'يوم عمل' : m === 'remote' ? 'عمل عن بعد' : 'كريدي');
   $('workFields').hidden = m !== 'work';
-  $('amtWrap').hidden = m === 'work';
+  $('remoteFields').hidden = m !== 'remote';
+  $('amtWrap').hidden = m !== 'adv';
+  $('rH').value = item && m === 'remote' && Math.floor(item.mins / 60) ? Math.floor(item.mins / 60) : '';
+  $('rM').value = item && m === 'remote' && item.mins % 60 ? item.mins % 60 : '';
+  updRDur();
   $('fDate').value = pre ? pre.date : item ? item.date : today();
   $('fStart').value = pre ? pre.start : item && item.start || '';
   $('fEnd').value = pre ? pre.end : item && item.end || '';
@@ -624,25 +654,31 @@ function openForm(m, item, pre) {
   $('form').showModal();
 }
 $('addWork').onclick = () => openForm('work');
+$('addRemote').onclick = () => openForm('remote');
 $('addAdv').onclick = () => openForm('adv');
 $('fCancel').onclick = () => $('form').close();
 $('list').onclick = e => {
   const b = e.target.closest('.item'); if (!b) return;
   const it = state.items.find(i => i.id == b.dataset.id);
-  if (it) openForm(it.type, it);
+  if (it) openForm(modeOf(it), it);
 };
 $('fSave').onclick = () => {
   const date = $('fDate').value;
   if (!date) return toast('أدخل التاريخ');
-  const rec = { id: editing ? editing.id : Date.now(), type: mode, date, note: $('fNote').value.trim() };
-  if (mode === 'work') {
+  const rec = { id: editing ? editing.id : Date.now(), type: mode === 'adv' ? 'adv' : 'work', date, note: $('fNote').value.trim() };
+  if (mode === 'remote') {
+    const m = remoteMins();
+    if (m <= 0) return toast('أدخل مدة العمل عن بعد');
+    Object.assign(rec, { remote: true, mins: m, rate: editing && editing.rate ? editing.rate : state.rate });
+    rec.amount = rec.mins / 60 * rec.rate;
+  } else if (mode === 'work') {
     const m = workMins();
     if (m === null) {
       if (editing && editing.mins && !$('fStart').value && !$('fEnd').value) {
-        Object.assign(rec, { mins: editing.mins, rate: editing.rate });
+        Object.assign(rec, { mins: editing.mins, rate: editing.rate, remote: false });
       } else return toast('أدخل البداية والنهاية (والاستراحة أقل من المدة)');
     } else {
-      Object.assign(rec, { start: $('fStart').value, end: $('fEnd').value, brk: parseInt($('fBrk').value) || 0, mins: m, rate: editing && editing.rate ? editing.rate : state.rate });
+      Object.assign(rec, { remote: false, start: $('fStart').value, end: $('fEnd').value, brk: parseInt($('fBrk').value) || 0, mins: m, rate: editing && editing.rate ? editing.rate : state.rate });
     }
     rec.amount = rec.mins / 60 * rec.rate;
   } else {
@@ -765,7 +801,7 @@ $('menuClose').onclick = () => {
 
 // ---------- النسخ الاحتياطي ----------
 const stamp = () => { const d = new Date(); return d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()) + '-' + pad2(d.getHours()) + pad2(d.getMinutes()) + pad2(d.getSeconds()); };
-const payload = () => JSON.stringify({ app: 'earnings', version: 3, savedAt: new Date().toISOString(), ...state }, null, 1);
+const payload = () => JSON.stringify({ app: 'earnings', version: 4, savedAt: new Date().toISOString(), ...state }, null, 1);
 const fsWrite = (FS, path, data) => FS.writeFile({ path, data, directory: 'DOCUMENTS', encoding: 'utf8', recursive: true });
 const docsAlt = {};
 let warned = false;
@@ -847,6 +883,22 @@ $('file').onchange = e => {
   const r = new FileReader(); r.onload = () => applyBackup(r.result); r.readAsText(f);
   e.target.value = '';
 };
+
+// ---------- زر الرجوع ----------
+let lastBack = 0;
+function exitTwice() {
+  const now = Date.now();
+  if (now - lastBack < 2000) { const A = plugin('App'); if (A && A.exitApp) A.exitApp(); return; }
+  lastBack = now; toast('اضغط رجوع مرة أخرى للخروج');
+}
+function handleBack() {
+  if (!$('lock').hidden) return exitTwice();
+  const open = [...document.querySelectorAll('dialog[open]')].pop();
+  if (open) { if (open.id === 'menu') $('menuClose').onclick(); else open.close(); return; }
+  if (view !== 'list') return setView('list');
+  exitTwice();
+}
+(function () { const A = plugin('App'); if (A && A.addListener) A.addListener('backButton', handleBack); })();
 
 applyTheme();
 setMode('month');
