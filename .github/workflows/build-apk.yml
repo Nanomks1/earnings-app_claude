@@ -279,17 +279,28 @@ jobs:
 
       - name: Sign APK
         env:
-          KS_B64: ${{ secrets.KEYSTORE_B64 }}
+          KS_B64: ${{ secrets.KEYSTORE_B64 || secrets.KEYSTORE_BASE64 || secrets.KEYSTORE }}
+          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD || secrets.STORE_PASSWORD || secrets.KS_PASSWORD || 'workpass123' }}
+          KEY_ALIAS_IN: ${{ secrets.KEY_ALIAS || secrets.KEYSTORE_ALIAS || secrets.ALIAS }}
+          KEY_PASS_IN: ${{ secrets.KEY_PASSWORD || secrets.KEYSTORE_KEY_PASSWORD }}
         run: |
           if [ -n "$KS_B64" ]; then
-            echo "$KS_B64" | base64 -d > work.p12
+            echo "Keystore source: repository secret"
+            echo "$KS_B64" | tr -d ' \r\n' | base64 -d > work.p12 || { echo "::error::The keystore secret is not valid base64"; exit 1; }
           else
-            keytool -genkeypair -keystore work.p12 -storetype pkcs12 -alias work -keyalg RSA -keysize 2048 -validity 10000 -storepass workpass123 -keypass workpass123 -dname "CN=Work App"
+            echo "::warning::No keystore secret found. Using a temporary key, so every update needs an uninstall first."
+            keytool -genkeypair -keystore work.p12 -storetype pkcs12 -alias work -keyalg RSA -keysize 2048 -validity 10000 -storepass "$KS_PASS" -keypass "$KS_PASS" -dname "CN=Work App"
+            KEY_ALIAS_IN=work
+            KEY_PASS_IN=
           fi
           BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
           $BT/zipalign -f -p 4 android/app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
-          $BT/apksigner sign --ks work.p12 --ks-type pkcs12 --ks-pass pass:workpass123 --ks-key-alias work --out work-release.apk aligned.apk
+          ARGS=(--ks work.p12 --ks-pass env:KS_PASS)
+          if [ -n "$KEY_ALIAS_IN" ]; then ARGS+=(--ks-key-alias "$KEY_ALIAS_IN"); fi
+          if [ -n "$KEY_PASS_IN" ]; then ARGS+=(--key-pass env:KEY_PASS_IN); fi
+          $BT/apksigner sign "${ARGS[@]}" --out work-release.apk aligned.apk
           $BT/apksigner verify work-release.apk
+          echo "Signed OK"
 
       - uses: actions/upload-artifact@v4
         with:
