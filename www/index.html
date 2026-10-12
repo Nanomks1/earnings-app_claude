@@ -7,7 +7,7 @@
 <title>العمل</title>
 <style>
 :root{--bg:#f5f6f8;--card:#fff;--text:#1b1f24;--mut:#6b7280;--pri:#2c6e69;--onpri:#fff;--pos:#15803d;--neg:#b91c1c;--bd:#e5e7eb}
-@media (prefers-color-scheme:dark){:root{--bg:#0e1113;--card:#181c20;--text:#eceff2;--mut:#9aa3ad;--pri:#1f5c57;--onpri:#e6f4f2;--pos:#6fc79a;--neg:#e58f8f;--bd:#2a3036}}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1113;--card:#181c20;--text:#eceff2;--mut:#9aa3ad;--pos:#6fc79a;--neg:#e58f8f;--bd:#2a3036}}
 [hidden]{display:none!important}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,"Noto Sans Arabic","Segoe UI",Tahoma,sans-serif}
@@ -20,19 +20,25 @@ button{font:inherit;color:inherit;cursor:pointer}
 .total small{opacity:.85;font-size:14px}
 .total .big{font-size:36px;font-weight:700;margin:4px 0 10px;direction:ltr;text-align:right}
 .total .sub{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;opacity:.9}
+.shift{margin:12px 16px 0}
+.shift .clock{width:100%;padding:13px;border-radius:14px;border:1px dashed var(--pri);background:var(--card);font-weight:700;font-size:15px}
+.shift .open{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--card);border:1px solid var(--pri);border-radius:14px;padding:12px 14px}
+.shift .open .m{font-size:13px;color:var(--mut);margin-top:3px}
+.shift .two{display:flex;gap:8px}
+.shift .two button{padding:10px 12px;border-radius:10px;border:1px solid var(--bd);background:var(--bg)}
+.shift .two #clockOut{background:var(--pri);color:var(--onpri);border:0;font-weight:600}
 .pay{display:block;margin:12px 16px 0;width:calc(100% - 32px);padding:13px;border-radius:14px;border:1px solid var(--pri);background:var(--card);color:var(--text);font-weight:700;font-size:15px}
 .tabs{display:flex;gap:6px;margin:14px 16px 0;padding:4px;background:var(--card);border:1px solid var(--bd);border-radius:12px}
 .tabs button{flex:1;padding:9px 4px;border:0;border-radius:9px;background:none;font-weight:600;color:var(--mut);font-size:14px}
 .tabs button.on{background:var(--pri);color:var(--onpri)}
 .mon{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px}
-.mon h3{margin:0 0 8px;font-size:16px}
 .mon .r{display:flex;justify-content:space-between;gap:10px;font-size:14px;color:var(--mut);padding:3px 0}
 .mon .r b{color:var(--text);direction:ltr;text-align:left}
 .mon .t{border-top:1px solid var(--bd);margin-top:6px;padding-top:8px;color:var(--text);font-weight:700}
 .mon summary{display:flex;justify-content:space-between;gap:10px;font-size:15px;cursor:pointer;list-style:none}
 .mon summary::-webkit-details-marker{display:none}
 .mon .lines{margin-top:10px;border-top:1px dashed var(--bd);padding-top:8px;font-size:13px;color:var(--mut);line-height:1.9}
-.chips{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}
 .chips button{padding:7px 12px;border-radius:999px;border:1px solid var(--bd);background:var(--bg);font-size:13px}
 .list{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
 .item{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px 14px;width:100%;text-align:start}
@@ -49,14 +55,18 @@ dialog{border:0;border-radius:18px;padding:18px;width:min(92vw,420px);max-height
 dialog::backdrop{background:rgba(0,0,0,.5)}
 dialog h2{margin:0 0 12px;font-size:18px}
 label{display:block;font-size:13px;color:var(--mut);margin:10px 0 4px}
-input[type=text],input[type=number],input[type=date],input[type=time],input[type=password]{width:100%;padding:12px;border-radius:10px;border:1px solid var(--bd);background:var(--bg);color:var(--text);font:inherit;font-size:16px}
-.row{display:flex;gap:10px}.row>div{flex:1}
+input[type=text],input[type=number],input[type=date],input[type=time],input[type=password]{display:block;width:100%;min-width:0;padding:12px;border-radius:10px;border:1px solid var(--bd);background:var(--bg);color:var(--text);font:inherit;font-size:16px}
+.row{display:flex;gap:10px}.row>div{flex:1;min-width:0}
 .acts{display:flex;gap:8px;margin-top:16px}
 .acts button,.menu button{padding:12px;border-radius:12px;border:1px solid var(--bd);background:var(--bg);flex:1}
 .acts .ok{background:var(--pri);color:var(--onpri);border:0;font-weight:600}
 .acts .del{color:var(--neg)}
 .menu button{display:block;width:100%;margin-top:8px;text-align:start}
 .menu .acts button{margin-top:0;text-align:center}
+.menu .sw{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:6px 0}
+.menu .sw button{width:36px;height:36px;padding:0;margin:0;flex:none;border-radius:50%;border:3px solid var(--card);box-shadow:0 0 0 1px var(--bd)}
+.menu .sw button.sel{box-shadow:0 0 0 2px var(--text)}
+.sw input[type=color]{width:44px;height:36px;padding:0;border:0;background:none}
 .chk{display:flex;align-items:center;gap:8px;margin-top:12px;color:var(--text);font-size:15px}
 .note{font-size:12px;color:var(--mut);margin-top:12px;line-height:1.6}
 .info{font-size:14px;margin:8px 0;line-height:1.7}
@@ -84,6 +94,7 @@ input[type=text],input[type=number],input[type=date],input[type=time],input[type
   <div class="big" id="total">0</div>
   <div class="sub"><span id="sumWork"></span><span id="sumAdv"></span><span id="sumCarry"></span></div>
 </section>
+<section class="shift" id="shift"></section>
 <button class="pay" id="payBtn">✔ استلمت الدفعة</button>
 
 <nav class="tabs">
@@ -141,6 +152,19 @@ input[type=text],input[type=number],input[type=date],input[type=time],input[type
   </div>
 </dialog>
 
+<dialog id="inDlg">
+  <h2>تسجيل دخول العمل</h2>
+  <div class="row">
+    <div><label for="iDate">التاريخ</label><input type="date" id="iDate"></div>
+    <div><label for="iTime">وقت الدخول</label><input type="time" id="iTime"></div>
+  </div>
+  <div class="note">عند الخروج اضغط «خروج» وسيحسب التطبيق المدة والأجرة.</div>
+  <div class="acts">
+    <button id="iCancel" type="button">إلغاء</button>
+    <button class="ok" id="iOk" type="button">حفظ وقت الدخول</button>
+  </div>
+</dialog>
+
 <dialog id="payDlg">
   <h2>استلام دفعة</h2>
   <div class="info big2" id="pInfo"></div>
@@ -164,14 +188,26 @@ input[type=text],input[type=number],input[type=date],input[type=time],input[type
   <input type="text" id="cur" placeholder="DH">
   <label for="rate">سعر الساعة (للأيام الجديدة فقط)</label>
   <input type="number" id="rate" inputmode="decimal" min="0" step="any">
+  <label>لون التطبيق</label>
+  <div class="sw" id="sw"></div>
   <button id="pinBtn">🔒 رمز القفل</button>
   <label class="chk"><input type="checkbox" id="auto"> نسخ احتياطي تلقائي بعد كل تعديل</label>
+  <div class="info" id="bkWhere"></div>
+  <button id="bkPick">📁 اختيار مجلد لحفظ النسخ…</button>
+  <button id="bkReset">↺ العودة للمكان الافتراضي</button>
   <button id="bkNow">💾 نسخة احتياطية جديدة الآن</button>
   <button id="bkRestore">♻️ استعادة من النسخة التلقائية</button>
+  <button id="bkList">🗂 اختيار نسخة من المجلد…</button>
   <button id="bkFile">📂 استعادة من ملف…</button>
   <input type="file" id="file" accept=".json,application/json" hidden>
-  <div class="note">التلقائية: Documents/EarningsBackup/earnings-backup.json (تُستبدل كل مرة).<br>الزر اليدوي ينشئ ملفًا جديدًا باسمه التاريخ والوقت.</div>
+  <div class="note">التلقائية تُستبدل كل مرة. الزر اليدوي ينشئ ملفًا جديدًا باسمه التاريخ والوقت.</div>
   <div class="acts"><button class="ok" id="menuClose" type="button">تم</button></div>
+</dialog>
+
+<dialog id="filesDlg" class="menu">
+  <h2>اختر نسخة</h2>
+  <div id="filesList"></div>
+  <div class="acts"><button id="filesClose" type="button">إغلاق</button></div>
 </dialog>
 
 <dialog id="pinDlg">
@@ -181,7 +217,7 @@ input[type=text],input[type=number],input[type=date],input[type=time],input[type
   <input type="password" id="pinNew" inputmode="numeric" maxlength="4">
   <label for="pinNew2">تأكيد الرمز الجديد</label>
   <input type="password" id="pinNew2" inputmode="numeric" maxlength="4">
-  <div class="note">الرمز يمنع فتح التطبيق فقط، ولا يحمي ملفات النسخ الاحتياطي في الذاكرة.</div>
+  <div class="note">الرمز يمنع فتح التطبيق فقط، ولا يحمي ملفات النسخ الاحتياطي.</div>
   <div class="acts">
     <button class="del" id="pinRemove" type="button">إزالة</button>
     <button id="pinCancel" type="button">إلغاء</button>
@@ -200,17 +236,21 @@ input[type=text],input[type=number],input[type=date],input[type=time],input[type
 <script>
 const KEY = 'earnings_v1';
 const BK_DIR = 'EarningsBackup';
-const BK_AUTO = BK_DIR + '/earnings-backup.json';
+const AUTO_NAME = 'earnings-backup.json';
 const DEF_RATE = 10;
+const DEF_COLOR = '#2c6e69';
+const PALETTE = ['#2c6e69', '#3d6a8f', '#4a7c59', '#6b5b95', '#a0623a', '#a14d63', '#4b5563', '#7a6a3a'];
 
 function norm(d) {
-  const s = { v: 2, items: [], archive: [], carry: 0, currency: 'DH', rate: DEF_RATE, auto: true, pin: '' };
+  const s = { v: 3, items: [], archive: [], carry: 0, currency: 'DH', rate: DEF_RATE, auto: true, pin: '', color: DEF_COLOR, open: null };
   if (!d || typeof d !== 'object') return s;
   if (typeof d.currency === 'string') s.currency = d.currency;
   if (Number(d.rate) > 0) s.rate = Number(d.rate);
   s.auto = d.auto !== false;
   s.pin = typeof d.pin === 'string' ? d.pin : '';
   s.carry = Number(d.carry) || 0;
+  if (/^#[0-9a-f]{6}$/i.test(d.color || '')) s.color = d.color;
+  if (d.open && d.open.date && d.open.start) s.open = { date: d.open.date, start: d.open.start };
   const fix = i => {
     const o = { ...i };
     if (o.type === 'work') {
@@ -226,22 +266,36 @@ function norm(d) {
 }
 let state;
 try { state = norm(JSON.parse(localStorage.getItem(KEY))); } catch (e) { state = norm(null); }
-let editing = null, mode = 'work', view = 'list';
+let bk = {};
+try { bk = JSON.parse(localStorage.getItem('earnings_bk')) || {}; } catch (e) {}
+const saveBk = () => localStorage.setItem('earnings_bk', JSON.stringify(bk));
+let editing = null, mode = 'work', view = 'list', fromShift = false;
 
 const $ = id => document.getElementById(id);
-const plugin = n => (window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform()) ? Capacitor.Plugins[n] : null;
+const isNative = () => !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());
+const plugin = n => isNative() ? Capacitor.Plugins[n] : null;
+let _saf;
+const saf = () => {
+  if (!isNative()) return null;
+  if (!_saf) { try { _saf = Capacitor.registerPlugin ? Capacitor.registerPlugin('SafBackup') : Capacitor.Plugins.SafBackup; } catch (e) { _saf = Capacitor.Plugins.SafBackup || null; } }
+  return _saf;
+};
+const ltr = s => '\u2066' + s + '\u2069';
 const num = n => Number(n).toLocaleString('en', { maximumFractionDigits: 2 });
-const money = n => num(n) + (state.currency ? ' ' + state.currency : '');
+const cur = () => state.currency ? ' ' + state.currency : '';
+const money = n => ltr(num(n) + cur());
+const signed = n => ltr((n < 0 ? '−' : '') + num(Math.abs(n)) + cur());
 const round2 = n => Math.round(n * 100) / 100;
 const esc = s => String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const pad2 = n => String(n).padStart(2, '0');
 const iso = d => d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
 const today = () => iso(new Date());
+const nowTime = () => { const d = new Date(); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); };
 const fmtDate = s => new Date(s + 'T00:00').toLocaleDateString('ar-u-nu-latn', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 const fmtShort = s => new Date(s + 'T00:00').toLocaleDateString('ar-u-nu-latn', { day: 'numeric', month: 'long', year: 'numeric' });
-const fmtDur = m => { m = Math.round(m); const h = Math.floor(m / 60), r = m % 60; return [h ? h + ' ساعة' : '', r ? r + ' دقيقة' : ''].filter(Boolean).join(' و ') || '—'; };
-const toast = t => { const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove('on'), 2800); };
-const signed = n => (n < 0 ? '−' : '') + money(Math.abs(n));
+const unit = (n, one, two, few) => n === 1 ? one : n === 2 ? two : n + ' ' + (n <= 10 ? few : one);
+const fmtDur = m => { m = Math.round(m); const h = Math.floor(m / 60), r = m % 60; return [h ? unit(h, 'ساعة', 'ساعتان', 'ساعات') : '', r ? unit(r, 'دقيقة', 'دقيقتان', 'دقائق') : ''].filter(Boolean).join(' و ') || '—'; };
+const toast = t => { const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove('on'), 3200); };
 
 function calc(items) {
   const o = { work: 0, adv: 0, mins: 0, days: 0 };
@@ -257,6 +311,35 @@ function save() {
   if (state.auto) { clearTimeout(bkTimer); bkTimer = setTimeout(autoBackup, 800); }
 }
 
+// ---------- الألوان وشريط الحالة ----------
+const hex2rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const rgb2hex = a => '#' + a.map(v => Math.round(v).toString(16).padStart(2, '0')).join('');
+const lum = h => { const [r, g, b] = hex2rgb(h).map(v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }); return .2126 * r + .7152 * g + .0722 * b; };
+const isDark = () => !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+function applyTheme() {
+  const base = state.color || DEF_COLOR;
+  const pri = isDark() ? rgb2hex(hex2rgb(base).map(v => v * .7)) : base;
+  const root = document.documentElement.style;
+  root.setProperty('--pri', pri);
+  root.setProperty('--onpri', lum(pri) > .5 ? '#10201f' : '#ffffff');
+  const SB = plugin('StatusBar');
+  if (SB) { try { SB.setStyle({ style: isDark() ? 'DARK' : 'LIGHT' }); } catch (e) {} }
+}
+if (window.matchMedia) { try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme); } catch (e) {} }
+function buildSwatches() {
+  $('sw').innerHTML = PALETTE.map(c => `<button data-c="${c}" style="background:${c}" class="${c.toLowerCase() === state.color.toLowerCase() ? 'sel' : ''}" aria-label="لون"></button>`).join('')
+    + `<input type="color" id="colCustom" value="${state.color}" aria-label="لون مخصص">`;
+}
+$('sw').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  state.color = b.dataset.c; applyTheme(); buildSwatches(); localStorage.setItem(KEY, JSON.stringify(state));
+};
+$('sw').addEventListener('input', e => {
+  if (e.target.id !== 'colCustom') return;
+  state.color = e.target.value; applyTheme(); localStorage.setItem(KEY, JSON.stringify(state));
+  [...document.querySelectorAll('#sw button')].forEach(b => b.classList.remove('sel'));
+});
+
 // ---------- العرض ----------
 function render() {
   const c = calc(state.items);
@@ -264,6 +347,7 @@ function render() {
   $('sumWork').textContent = 'الأجور: ' + money(c.work);
   $('sumAdv').textContent = 'الكريدي: ' + signed(-c.adv);
   $('sumCarry').textContent = state.carry ? 'مرحَّل من الدفعة السابقة: ' + signed(state.carry) : '';
+  renderShift();
   const items = [...state.items].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
   $('list').innerHTML = items.length ? items.map(i => {
     const neg = i.type === 'adv';
@@ -273,10 +357,36 @@ function render() {
       <div><div class="d">${fmtDate(i.date)}</div>
       <div class="m">${sub}${i.note ? ' • ' + esc(i.note) : ''}</div></div>
       <div class="amt ${neg ? 'n' : 'p'}">${neg ? '−' : ''}${money(i.amount)}</div></button>`;
-  }).join('') : '<div class="empty">لا توجد سجلات في الفترة الحالية.<br>ابدأ بإضافة يوم عمل.</div>';
+  }).join('') : '<div class="empty">لا توجد سجلات في الفترة الحالية.<br>ابدأ بتسجيل دخول العمل أو أضف يومًا.</div>';
   renderArchive();
   renderSummary();
 }
+
+// ---------- دخول / خروج ----------
+const elapsed = () => {
+  const o = state.open; if (!o) return '';
+  const m = (Date.now() - new Date(o.date + 'T' + o.start).getTime()) / 60000;
+  return isNaN(m) ? '' : fmtDur(Math.max(0, m));
+};
+function renderShift() {
+  const o = state.open;
+  $('shift').innerHTML = !o ? '<button class="clock" id="clockIn">▶ تسجيل دخول العمل</button>'
+    : `<div class="open"><div><b>أنت الآن في العمل</b><div class="m">دخلت <span dir="ltr">${o.start}</span> • مضى <span id="elapsed">${elapsed()}</span></div></div>
+       <div class="two"><button id="clockOut">⏹ خروج</button><button id="clockCancel" aria-label="إلغاء">✕</button></div></div>`;
+}
+setInterval(() => { const e = $('elapsed'); if (e && state.open) e.textContent = elapsed(); }, 30000);
+$('shift').onclick = e => {
+  const id = e.target.closest('button') && e.target.closest('button').id;
+  if (id === 'clockIn') { $('iDate').value = today(); $('iTime').value = nowTime(); $('inDlg').showModal(); }
+  else if (id === 'clockOut') openForm('work', null, { date: state.open.date, start: state.open.start, end: nowTime() });
+  else if (id === 'clockCancel') { if (confirm('إلغاء تسجيل الدخول الحالي؟')) { state.open = null; save(); } }
+};
+$('iCancel').onclick = () => $('inDlg').close();
+$('iOk').onclick = () => {
+  if (!$('iDate').value || !toMin($('iTime').value) && $('iTime').value !== '00:00') return toast('أدخل التاريخ والوقت');
+  state.open = { date: $('iDate').value, start: $('iTime').value };
+  $('inDlg').close(); save(); toast('تم حفظ وقت الدخول');
+};
 
 function renderArchive() {
   const arc = [...state.archive].reverse();
@@ -284,7 +394,7 @@ function renderArchive() {
     const dates = a.items.map(i => i.date).sort();
     const range = dates.length ? fmtShort(dates[0]) + ' ← ' + fmtShort(dates[dates.length - 1]) : '—';
     const lines = [...a.items].sort((x, y) => x.date.localeCompare(y.date)).map(i =>
-      `${fmtShort(i.date)}: ${i.type === 'work' ? fmtDur(i.mins) + ' = ' + money(i.amount) : 'كريدي −' + money(i.amount)}${i.note ? ' • ' + esc(i.note) : ''}`).join('<br>');
+      `${fmtShort(i.date)}: ${i.type === 'work' ? fmtDur(i.mins) + ' = ' + money(i.amount) : 'كريدي ' + signed(-i.amount)}${i.note ? ' • ' + esc(i.note) : ''}`).join('<br>');
     const rem = round2(a.remain || 0);
     return `<details class="mon"><summary><b>${fmtShort(a.paidAt)}</b><span>استلمت ${money(a.received)}</span></summary>
       <div class="lines">
@@ -304,6 +414,7 @@ function renderArchive() {
     : '<div class="empty">لا توجد دفعات سابقة بعد.</div>';
 }
 
+// ---------- الملخص والمشاركة ----------
 function inRange() {
   const from = $('sFrom').value, to = $('sTo').value;
   return [...state.archive.flatMap(a => a.items), ...state.items].filter(i => (!from || i.date >= from) && (!to || i.date <= to));
@@ -311,14 +422,24 @@ function inRange() {
 function summaryText() {
   const list = inRange().sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
   const c = calc(list), from = $('sFrom').value, to = $('sTo').value;
-  const head = from && to ? `من ${fmtShort(from)} إلى ${fmtShort(to)}` : from ? `من ${fmtShort(from)}` : to ? `حتى ${fmtShort(to)}` : 'كل الفترات';
-  let t = `ملخص العمل\n${head}\n\nأيام العمل: ${c.days}\nمجموع الساعات: ${fmtDur(c.mins)}\nالأجور: ${money(c.work)}\nالكريدي: ${signed(-c.adv)}\nالصافي: ${signed(c.work - c.adv)}`;
+  const SEP = '━━━━━━━━━━━━━━';
+  const head = from && to ? `من ${fmtShort(from)}\nإلى ${fmtShort(to)}` : from ? `من ${fmtShort(from)}` : to ? `حتى ${fmtShort(to)}` : 'كل الفترات';
+  const out = ['📋 ملخص العمل', SEP, '📅 ' + head, SEP, '',
+    '📆 أيام العمل: ' + ltr(c.days), '⌛ مجموع الساعات: ' + fmtDur(c.mins), '💰 الأجور: ' + money(c.work),
+    '🔻 الكريدي: ' + signed(-c.adv), '✅ الصافي: ' + signed(c.work - c.adv)];
   if ($('sDetail').checked && list.length) {
-    t += '\n\nالتفاصيل:\n' + list.map(i => `• ${fmtShort(i.date)}: ` + (i.type === 'work'
-      ? `${i.start && i.end ? i.start + '–' + i.end + ' ' : ''}${fmtDur(i.mins)} = ${money(i.amount)}`
-      : `كريدي −${money(i.amount)}`) + (i.note ? ' (' + i.note + ')' : '')).join('\n');
+    out.push('', SEP, '📑 التفاصيل', SEP);
+    list.forEach((i, n) => {
+      const b = [`${n + 1}) ${fmtDate(i.date)}`];
+      if (i.type === 'work') {
+        if (i.start && i.end) b.push('   ⏰ ' + ltr(i.start + ' – ' + i.end));
+        b.push('   ⌛ ' + fmtDur(i.mins), '   💰 ' + money(i.amount));
+      } else b.push('   🔻 كريدي', '   💰 ' + signed(-i.amount));
+      if (i.note) b.push('   📝 ' + i.note);
+      out.push('', b.join('\n'));
+    });
   }
-  return t;
+  return out.join('\n');
 }
 function renderSummary() {
   const c = calc(inRange());
@@ -328,8 +449,6 @@ function renderSummary() {
     <div class="r"><span>الكريدي</span><b style="color:var(--neg)">${signed(-c.adv)}</b></div>
     <div class="r t"><span>الصافي</span><b>${signed(c.work - c.adv)}</b></div>`;
 }
-$('sumOut').className = 'mon';
-$('sumOut').style.border = '0'; $('sumOut').style.padding = '0';
 function setRange(a, b) { $('sFrom').value = a; $('sTo').value = b; renderSummary(); }
 $('chMonth').onclick = () => { const d = new Date(); setRange(iso(new Date(d.getFullYear(), d.getMonth(), 1)), today()); };
 $('chWeek').onclick = () => { const d = new Date(); d.setDate(d.getDate() - 6); setRange(iso(d), today()); };
@@ -370,14 +489,14 @@ function updDur() {
 }
 ['fStart', 'fEnd', 'fBrk'].forEach(id => $(id).addEventListener('input', updDur));
 
-function openForm(m, item) {
-  mode = m; editing = item || null;
+function openForm(m, item, pre) {
+  mode = m; editing = item || null; fromShift = !!pre;
   $('formTitle').textContent = (item ? 'تعديل ' : 'إضافة ') + (m === 'work' ? 'يوم عمل' : 'كريدي');
   $('workFields').hidden = m !== 'work';
   $('amtWrap').hidden = m === 'work';
-  $('fDate').value = item ? item.date : today();
-  $('fStart').value = item && item.start || '';
-  $('fEnd').value = item && item.end || '';
+  $('fDate').value = pre ? pre.date : item ? item.date : today();
+  $('fStart').value = pre ? pre.start : item && item.start || '';
+  $('fEnd').value = pre ? pre.end : item && item.end || '';
   $('fBrk').value = item && item.brk || '';
   $('fAmt').value = item && m === 'adv' ? item.amount : '';
   $('fNote').value = item ? item.note || '' : '';
@@ -401,7 +520,7 @@ $('fSave').onclick = () => {
   if (mode === 'work') {
     const m = workMins();
     if (m === null) {
-      if (editing && editing.mins && !$('fStart').value && !$('fEnd').value) { // سجل قديم بلا بداية/نهاية
+      if (editing && editing.mins && !$('fStart').value && !$('fEnd').value) {
         Object.assign(rec, { mins: editing.mins, rate: editing.rate });
       } else return toast('أدخل البداية والنهاية (والاستراحة أقل من المدة)');
     } else {
@@ -413,6 +532,7 @@ $('fSave').onclick = () => {
     if (isNaN(rec.amount) || rec.amount < 0) return toast('أدخل مبلغ الكريدي');
   }
   state.items = editing ? state.items.map(i => i.id === editing.id ? rec : i) : [...state.items, rec];
+  if (fromShift) { state.open = null; fromShift = false; }
   $('form').close(); save();
 };
 $('fDel').onclick = () => {
@@ -441,7 +561,7 @@ $('pCancel').onclick = () => $('payDlg').close();
 $('pOk').onclick = () => {
   const r = parseFloat($('pRecv').value), paidAt = $('pDate').value;
   if (isNaN(r) || r < 0 || !paidAt) return toast('أدخل التاريخ والمبلغ');
-  if (!confirm('تأكيد استلام ' + money(r) + '؟ ستنتقل الفترة الحالية إلى الأرشيف.')) return;
+  if (!confirm('تأكيد استلام ' + num(r) + cur() + '؟ ستنتقل الفترة الحالية إلى الأرشيف.')) return;
   const c = calc(state.items), d = due();
   state.archive.push({ id: Date.now(), paidAt, due: d, received: r, carryIn: state.carry, remain: round2(d - r),
     note: $('pNote').value.trim(), items: state.items, work: c.work, adv: c.adv, mins: c.mins, days: c.days });
@@ -509,10 +629,14 @@ $('pinRemove').onclick = async () => {
 };
 const updPinLabel = () => $('pinBtn').textContent = '🔒 رمز القفل: ' + (state.pin ? 'مفعّل' : 'غير مفعّل');
 
-// ---------- الإعدادات والنسخ الاحتياطي ----------
+// ---------- الإعدادات ----------
+function updBkWhere() {
+  $('bkWhere').textContent = 'مكان النسخ: ' + (bk.tree ? '📁 ' + (bk.name || 'المجلد المختار') : 'Documents/EarningsBackup (الافتراضي)');
+  $('bkReset').hidden = !bk.tree; $('bkList').hidden = !bk.tree;
+}
 $('menuBtn').onclick = () => {
   $('cur').value = state.currency; $('rate').value = state.rate; $('auto').checked = state.auto;
-  updPinLabel(); $('menu').showModal();
+  updPinLabel(); updBkWhere(); buildSwatches(); $('menu').showModal();
 };
 $('menuClose').onclick = () => {
   state.currency = $('cur').value.trim();
@@ -521,29 +645,37 @@ $('menuClose').onclick = () => {
   $('menu').close(); save();
 };
 
+// ---------- النسخ الاحتياطي ----------
 const stamp = () => { const d = new Date(); return d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()) + '-' + pad2(d.getHours()) + pad2(d.getMinutes()) + pad2(d.getSeconds()); };
-const payload = () => JSON.stringify({ app: 'earnings', version: 2, savedAt: new Date().toISOString(), ...state }, null, 1);
-const writeFile = (FS, path, data) => FS.writeFile({ path, data, directory: 'DOCUMENTS', encoding: 'utf8', recursive: true });
-let autoAlt = null;
+const payload = () => JSON.stringify({ app: 'earnings', version: 3, savedAt: new Date().toISOString(), ...state }, null, 1);
+const fsWrite = (FS, path, data) => FS.writeFile({ path, data, directory: 'DOCUMENTS', encoding: 'utf8', recursive: true });
+const docsAlt = {};
+let warned = false;
 
-async function autoBackup() {
-  const FS = plugin('Filesystem'); if (!FS) return;
-  const data = payload();
-  try { await writeFile(FS, autoAlt || BK_AUTO, data); }
-  catch (e) {
-    try { autoAlt = BK_DIR + '/earnings-backup-auto-' + stamp() + '.json'; await writeFile(FS, autoAlt, data); } catch (e2) {}
+async function putFile(name, data) {
+  const S = saf();
+  if (bk.tree && S) {
+    try { await S.writeFile({ tree: bk.tree, name, data }); return 'saf'; }
+    catch (e) { if (!warned) { warned = true; toast('تعذر الحفظ في المجلد المختار. اخترْه من جديد. حُفظت النسخة في المكان الافتراضي'); } }
   }
+  const FS = plugin('Filesystem'); if (!FS) throw new Error('no fs');
+  try { await fsWrite(FS, BK_DIR + '/' + (docsAlt[name] || name), data); }
+  catch (e) { docsAlt[name] = name.replace('.json', '-' + stamp() + '.json'); await fsWrite(FS, BK_DIR + '/' + docsAlt[name], data); }
+  return 'docs';
 }
+async function autoBackup() { try { await putFile(AUTO_NAME, payload()); } catch (e) {} }
 async function manualBackup() {
-  const data = payload(), name = 'earnings-backup-' + stamp() + '.json', FS = plugin('Filesystem');
-  if (!FS) {
+  const data = payload(), name = 'earnings-backup-' + stamp() + '.json';
+  if (!isNative()) {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
     a.download = name; a.click(); return;
   }
-  try { await FS.requestPermissions(); } catch (e) {}
-  try { await writeFile(FS, BK_DIR + '/' + name, data); toast('تم الحفظ: Documents/' + BK_DIR + '/' + name); }
-  catch (e) { toast('تعذر الحفظ: تحقق من صلاحية التخزين'); }
+  if (!bk.tree) { try { await plugin('Filesystem').requestPermissions(); } catch (e) {} }
+  try {
+    const w = await putFile(name, data);
+    toast('تم الحفظ: ' + name + (w === 'saf' ? ' في ' + (bk.name || 'المجلد') : ' في Documents/' + BK_DIR));
+  } catch (e) { toast('تعذر الحفظ: تحقق من صلاحية التخزين'); }
 }
 
 function applyBackup(text) {
@@ -554,19 +686,43 @@ function applyBackup(text) {
     const keepPin = state.pin;
     state = norm(d);
     if (typeof d.pin !== 'string') state.pin = keepPin;
-    save(); $('menu').close(); toast('تمت الاستعادة');
+    applyTheme(); save(); $('menu').close(); $('filesDlg').close(); toast('تمت الاستعادة');
   } catch (e) { toast('ملف النسخة غير صالح'); }
 }
 $('bkNow').onclick = manualBackup;
-$('bkRestore').onclick = async () => {
-  const FS = plugin('Filesystem');
-  if (!FS) return $('file').click();
+$('bkPick').onclick = async () => {
+  const S = saf();
+  if (!S) return toast('اختيار المجلد يعمل داخل التطبيق فقط');
   try {
-    try { await FS.requestPermissions(); } catch (e) {}
-    const r = await FS.readFile({ path: BK_AUTO, directory: 'DOCUMENTS', encoding: 'utf8' });
-    applyBackup(r.data);
+    const r = await S.pickFolder();
+    bk = { tree: r.uri, name: r.name }; saveBk(); updBkWhere(); warned = false;
+    toast('تم اختيار المجلد'); autoBackup();
+  } catch (e) { /* أُلغي الاختيار */ }
+};
+$('bkReset').onclick = () => { bk = {}; saveBk(); updBkWhere(); toast('عاد الحفظ إلى المكان الافتراضي'); };
+$('bkRestore').onclick = async () => {
+  const S = saf(), FS = plugin('Filesystem');
+  if (!FS && !S) return $('file').click();
+  try {
+    let text;
+    if (bk.tree && S) text = (await S.readFile({ tree: bk.tree, name: AUTO_NAME })).data;
+    else { try { await FS.requestPermissions(); } catch (e) {} text = (await FS.readFile({ path: BK_DIR + '/' + AUTO_NAME, directory: 'DOCUMENTS', encoding: 'utf8' })).data; }
+    applyBackup(text);
   } catch (e) { toast('لم أجد النسخة التلقائية. اختر ملفًا'); $('file').click(); }
 };
+$('bkList').onclick = async () => {
+  try {
+    const r = await saf().listFiles({ tree: bk.tree });
+    const fs = (r.files || []).sort((a, b) => b.modified - a.modified);
+    $('filesList').innerHTML = fs.length ? fs.map(f => `<button data-uri="${esc(f.uri)}">${esc(f.name)}<br><small>${new Date(f.modified).toLocaleString('ar-u-nu-latn')}</small></button>`).join('') : '<div class="empty">لا توجد ملفات json في المجلد.</div>';
+    $('filesDlg').showModal();
+  } catch (e) { toast('تعذر قراءة المجلد. اخترْه من جديد'); }
+};
+$('filesList').onclick = async e => {
+  const b = e.target.closest('button'); if (!b) return;
+  try { applyBackup((await saf().readFile({ uri: b.dataset.uri })).data); } catch (err) { toast('تعذر قراءة الملف'); }
+};
+$('filesClose').onclick = () => $('filesDlg').close();
 $('bkFile').onclick = () => $('file').click();
 $('file').onchange = e => {
   const f = e.target.files[0]; if (!f) return;
@@ -574,8 +730,8 @@ $('file').onchange = e => {
   e.target.value = '';
 };
 
-// بداية الشهر افتراضيًا في الملخص
 (function () { const d = new Date(); $('sFrom').value = iso(new Date(d.getFullYear(), d.getMonth(), 1)); $('sTo').value = today(); })();
+applyTheme();
 render();
 showLock();
 </script>
