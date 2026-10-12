@@ -24,20 +24,19 @@ jobs:
       - name: Add Android platform
         run: npx cap add android
 
-      - name: App name inside the page
-        run: sed -i 's/أرباحي/العمل/g' www/index.html
-
-      - name: Softer colors
+      - name: Status bar icons follow day/night
         run: |
-          sed -i 's/--pri:#0f766e;--onpri:#fff/--pri:#2c6e69;--onpri:#fff/' www/index.html
-          sed -i 's/--pri:#2dd4bf;--onpri:#06201c/--pri:#1f5c57;--onpri:#e6f4f2/' www/index.html
-          sed -i 's/--pos:#4ade80/--pos:#6fc79a/; s/--neg:#f87171/--neg:#e58f8f/' www/index.html
+          R=android/app/src/main/res
+          mkdir -p $R/values $R/values-night
+          printf '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <bool name="work_light_bars">true</bool>\n</resources>\n' > $R/values/work_bool.xml
+          printf '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <bool name="work_light_bars">false</bool>\n</resources>\n' > $R/values-night/work_bool.xml
+          sed -i 's#\(<style name="AppTheme.NoActionBar"[^>]*>\)#\1\n        <item name="android:windowLightStatusBar">@bool/work_light_bars</item>\n        <item name="android:windowLightNavigationBar">@bool/work_light_bars</item>#' $R/values/styles.xml
 
-      - name: Round clock icon
+      - name: Phone repair icon
         run: |
           pip install --break-system-packages pillow
           python3 - <<'PY'
-          from PIL import Image, ImageDraw
+          from PIL import Image, ImageDraw, ImageFilter
           import os
           res = 'android/app/src/main/res'
           TEAL = (44, 110, 105, 255)
@@ -45,19 +44,30 @@ jobs:
 
           def draw(size, circle, scale):
               S = size * 4
+              B = S * scale
               im = Image.new('RGBA', (S, S), (0, 0, 0, 0))
               d = ImageDraw.Draw(im)
               if circle:
                   d.ellipse([0, 0, S - 1, S - 1], fill=TEAL)
               c = S / 2
-              r = S * scale / 2
-              w = max(2, int(r * 0.17))
-              d.ellipse([c - r, c - r, c + r, c + r], outline=W, width=w)
-              pts = [(c, c - r * 0.58), (c + r * 0.42, c + r * 0.2)]
-              for p in pts:
-                  d.line([c, c, p[0], p[1]], fill=W, width=w)
-              for x, y in pts + [(c, c)]:
-                  d.ellipse([x - w / 2, y - w / 2, x + w / 2, y + w / 2], fill=W)
+              pw, ph, sw = B * 0.50, B * 0.84, max(2, int(B * 0.065))
+              px, py = c - B * 0.07, c
+              d.rounded_rectangle([px - pw / 2, py - ph / 2, px + pw / 2, py + ph / 2], radius=B * 0.10, outline=W, width=sw)
+              d.ellipse([px - B * 0.035, py + ph / 2 - B * 0.13, px + B * 0.035, py + ph / 2 - B * 0.06], fill=W)
+              d.line([px - B * 0.07, py - ph / 2 + B * 0.09, px + B * 0.07, py - ph / 2 + B * 0.09], fill=W, width=max(2, int(sw * 0.7)))
+              L = Image.new('L', (S, S), 0)
+              wd = ImageDraw.Draw(L)
+              hh = B * 0.055
+              wd.rounded_rectangle([c - B * 0.46, c - hh, c + B * 0.12, c + hh], radius=hh, fill=255)
+              hx, hr = c + B * 0.20, B * 0.17
+              wd.ellipse([hx - hr, c - hr, hx + hr, c + hr], fill=255)
+              wd.rectangle([hx + B * 0.02, c - B * 0.075, hx + hr + 4, c + B * 0.075], fill=0)
+              L = L.rotate(45, resample=Image.BICUBIC, center=(c, c))
+              shift = (int(B * 0.13), int(B * 0.1))
+              L = L.transform(L.size, Image.AFFINE, (1, 0, -shift[0], 0, 1, -shift[1]))
+              halo = L.filter(ImageFilter.MaxFilter(int(B * 0.06) // 2 * 2 + 1))
+              im.paste(Image.new('RGBA', (S, S), TEAL), (0, 0), halo)
+              im.paste(Image.new('RGBA', (S, S), W), (0, 0), L)
               return im.resize((size, size), Image.LANCZOS)
 
           legacy = {'mdpi': 48, 'hdpi': 72, 'xhdpi': 96, 'xxhdpi': 144, 'xxxhdpi': 192}
@@ -65,13 +75,13 @@ jobs:
           for k, s in legacy.items():
               d = f'{res}/mipmap-{k}'
               os.makedirs(d, exist_ok=True)
-              img = draw(s, True, 0.52)
+              img = draw(s, True, 0.56)
               img.save(f'{d}/ic_launcher.png')
               img.save(f'{d}/ic_launcher_round.png')
           for k, s in fg.items():
               d = f'{res}/mipmap-{k}'
               os.makedirs(d, exist_ok=True)
-              draw(s, False, 0.46).save(f'{d}/work_fg.png')
+              draw(s, False, 0.50).save(f'{d}/work_fg.png')
 
           os.makedirs(f'{res}/mipmap-anydpi-v26', exist_ok=True)
           xml = '<?xml version="1.0" encoding="utf-8"?>\n<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n    <background android:drawable="@color/work_icon_bg"/>\n    <foreground android:drawable="@mipmap/work_fg"/>\n</adaptive-icon>\n'
@@ -80,6 +90,177 @@ jobs:
           os.makedirs(f'{res}/values', exist_ok=True)
           open(f'{res}/values/work_icon.xml', 'w').write('<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="work_icon_bg">#2C6E69</color>\n</resources>\n')
           PY
+
+      - name: Folder picker plugin (SAF)
+        run: |
+          P=android/app/src/main/java/com/pd/earnings
+          mkdir -p $P
+          cat > $P/SafBackupPlugin.java <<'JAVA'
+          package com.pd.earnings;
+
+          import android.app.Activity;
+          import android.content.Intent;
+          import android.net.Uri;
+          import androidx.activity.result.ActivityResult;
+          import androidx.documentfile.provider.DocumentFile;
+          import com.getcapacitor.JSArray;
+          import com.getcapacitor.JSObject;
+          import com.getcapacitor.Plugin;
+          import com.getcapacitor.PluginCall;
+          import com.getcapacitor.PluginMethod;
+          import com.getcapacitor.annotation.ActivityCallback;
+          import com.getcapacitor.annotation.CapacitorPlugin;
+          import java.io.ByteArrayOutputStream;
+          import java.io.InputStream;
+          import java.io.OutputStream;
+          import java.nio.charset.StandardCharsets;
+
+          @CapacitorPlugin(name = "SafBackup")
+          public class SafBackupPlugin extends Plugin {
+
+              @PluginMethod
+              public void pickFolder(PluginCall call) {
+                  Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+                  intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
+                          | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                          | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+                          | Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
+                  startActivityForResult(call, intent, "pickFolderResult");
+              }
+
+              @ActivityCallback
+              private void pickFolderResult(PluginCall call, ActivityResult result) {
+                  if (call == null) return;
+                  if (result.getResultCode() != Activity.RESULT_OK || result.getData() == null || result.getData().getData() == null) {
+                      call.reject("cancelled");
+                      return;
+                  }
+                  try {
+                      Uri uri = result.getData().getData();
+                      getContext().getContentResolver().takePersistableUriPermission(uri,
+                              Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                      DocumentFile dir = DocumentFile.fromTreeUri(getContext(), uri);
+                      String name = (dir != null && dir.getName() != null) ? dir.getName() : "";
+                      JSObject o = new JSObject();
+                      o.put("uri", uri.toString());
+                      o.put("name", name);
+                      call.resolve(o);
+                  } catch (Exception e) {
+                      call.reject(String.valueOf(e.getMessage()));
+                  }
+              }
+
+              @PluginMethod
+              public void writeFile(PluginCall call) {
+                  try {
+                      String tree = call.getString("tree");
+                      String name = call.getString("name");
+                      String data = call.getString("data");
+                      DocumentFile dir = DocumentFile.fromTreeUri(getContext(), Uri.parse(tree));
+                      if (dir == null || !dir.canWrite()) {
+                          call.reject("no access");
+                          return;
+                      }
+                      DocumentFile f = dir.findFile(name);
+                      if (f == null) f = dir.createFile("application/json", name);
+                      if (f == null) {
+                          call.reject("create failed");
+                          return;
+                      }
+                      OutputStream os = getContext().getContentResolver().openOutputStream(f.getUri(), "wt");
+                      if (os == null) {
+                          call.reject("open failed");
+                          return;
+                      }
+                      try {
+                          os.write(data.getBytes(StandardCharsets.UTF_8));
+                      } finally {
+                          os.close();
+                      }
+                      call.resolve();
+                  } catch (Exception e) {
+                      call.reject(String.valueOf(e.getMessage()));
+                  }
+              }
+
+              @PluginMethod
+              public void listFiles(PluginCall call) {
+                  try {
+                      DocumentFile dir = DocumentFile.fromTreeUri(getContext(), Uri.parse(call.getString("tree")));
+                      if (dir == null || !dir.canWrite()) {
+                          call.reject("no access");
+                          return;
+                      }
+                      JSArray arr = new JSArray();
+                      DocumentFile[] files = dir.listFiles();
+                      for (DocumentFile f : files) {
+                          String n = f.getName();
+                          if (f.isFile() && n != null && n.toLowerCase().endsWith(".json")) {
+                              JSObject o = new JSObject();
+                              o.put("name", n);
+                              o.put("uri", f.getUri().toString());
+                              o.put("modified", f.lastModified());
+                              arr.put(o);
+                          }
+                      }
+                      JSObject res = new JSObject();
+                      res.put("files", arr);
+                      call.resolve(res);
+                  } catch (Exception e) {
+                      call.reject(String.valueOf(e.getMessage()));
+                  }
+              }
+
+              @PluginMethod
+              public void readFile(PluginCall call) {
+                  try {
+                      String uri = call.getString("uri");
+                      if (uri == null) {
+                          DocumentFile dir = DocumentFile.fromTreeUri(getContext(), Uri.parse(call.getString("tree")));
+                          DocumentFile f = dir == null ? null : dir.findFile(call.getString("name"));
+                          if (f == null) {
+                              call.reject("not found");
+                              return;
+                          }
+                          uri = f.getUri().toString();
+                      }
+                      InputStream is = getContext().getContentResolver().openInputStream(Uri.parse(uri));
+                      if (is == null) {
+                          call.reject("open failed");
+                          return;
+                      }
+                      ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                      try {
+                          byte[] buf = new byte[8192];
+                          int n;
+                          while ((n = is.read(buf)) > 0) bos.write(buf, 0, n);
+                      } finally {
+                          is.close();
+                      }
+                      JSObject res = new JSObject();
+                      res.put("data", new String(bos.toByteArray(), StandardCharsets.UTF_8));
+                      call.resolve(res);
+                  } catch (Exception e) {
+                      call.reject(String.valueOf(e.getMessage()));
+                  }
+              }
+          }
+          JAVA
+          cat > $P/MainActivity.java <<'JAVA'
+          package com.pd.earnings;
+
+          import android.os.Bundle;
+          import com.getcapacitor.BridgeActivity;
+
+          public class MainActivity extends BridgeActivity {
+              @Override
+              public void onCreate(Bundle savedInstanceState) {
+                  registerPlugin(SafBackupPlugin.class);
+                  super.onCreate(savedInstanceState);
+              }
+          }
+          JAVA
+          sed -i '/^dependencies {/a\    implementation "androidx.documentfile:documentfile:1.0.1"' android/app/build.gradle
 
       - name: Android 16 (API 36) + arm64 only + storage permissions
         run: |
