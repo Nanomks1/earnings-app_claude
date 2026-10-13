@@ -212,15 +212,8 @@ details.card .lines{margin-top:12px;border-top:1px dashed var(--bd);padding-top:
     <input type="number" id="fBrk" inputmode="numeric" min="0" placeholder="0">
     <div class="info" id="fDur"></div>
   </div>
-  <div id="remoteFields">
-    <div class="row">
-      <div><label for="rH">ساعات</label><input type="number" id="rH" inputmode="numeric" min="0" placeholder="0"></div>
-      <div><label for="rM">دقائق</label><input type="number" id="rM" inputmode="numeric" min="0" max="59" placeholder="0"></div>
-    </div>
-    <div class="info" id="rDur"></div>
-  </div>
   <div id="amtWrap">
-    <label for="fAmt">مبلغ الكريدي (يُحسب بالسالب)</label>
+    <label for="fAmt" id="fAmtL">مبلغ الكريدي (يُحسب بالسالب)</label>
     <input type="number" id="fAmt" inputmode="decimal" min="0" step="any" placeholder="0">
   </div>
   <label for="fNote">ملاحظة (اختياري)</label>
@@ -326,7 +319,7 @@ const PALETTE = ['#2c6e69', '#3d6a8f', '#4a7c59', '#6b5b95', '#a0623a', '#a14d63
 const WD = ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
 
 function norm(d) {
-  const s = { v: 4, items: [], archive: [], carry: 0, currency: 'DH', rate: DEF_RATE, auto: true, pin: '', color: DEF_COLOR, open: null };
+  const s = { v: 5, items: [], archive: [], carry: 0, currency: 'DH', rate: DEF_RATE, auto: true, pin: '', color: DEF_COLOR, open: null };
   if (!d || typeof d !== 'object') return s;
   if (typeof d.currency === 'string') s.currency = d.currency;
   if (Number(d.rate) > 0) s.rate = Number(d.rate);
@@ -337,15 +330,20 @@ function norm(d) {
   if (d.open && d.open.date && d.open.start) s.open = { date: d.open.date, start: d.open.start };
   const fix = i => {
     const o = { ...i };
-    if (o.type === 'work') {
+    if (o.type !== 'work') { o.type = 'adv'; o.amount = Number(o.amount) || 0; delete o.remote; return o; }
+    if (o.remote === undefined) {
+      const m = /^\s*عن\s+بعد(?:\s*[:\-–—]\s*|\s+|$)(.*)$/.exec(String(o.note || ''));
+      if (m) { o.remote = true; o.note = m[1].trim(); } else o.remote = false;
+    } else o.remote = !!o.remote;
+    if (o.remote) { // العمل عن بعد: أجرة ثابتة وليس ساعات
+      const a = Number(o.amount);
+      o.amount = isFinite(a) && a > 0 ? a : (Number(o.mins) || 0) / 60 * (Number(o.rate) > 0 ? Number(o.rate) : DEF_RATE);
+      o.mins = 0; delete o.rate; delete o.start; delete o.end; delete o.brk;
+    } else {
       o.mins = Number(o.mins) || 0;
       o.rate = Number(o.rate) > 0 ? Number(o.rate) : DEF_RATE;
       o.amount = o.mins / 60 * o.rate;
-      if (o.remote === undefined) {
-        const m = /^\s*عن\s+بعد(?:\s*[:\-–—]\s*|\s+|$)(.*)$/.exec(String(o.note || ''));
-        if (m) { o.remote = true; o.note = m[1].trim(); } else o.remote = false;
-      } else o.remote = !!o.remote;
-    } else { o.type = 'adv'; o.amount = Number(o.amount) || 0; delete o.remote; }
+    }
     return o;
   };
   s.items = (Array.isArray(d.items) ? d.items : []).map(fix);
@@ -390,9 +388,9 @@ const fmtHM = m => { m = Math.round(m); return Math.floor(m / 60) + ':' + pad2(m
 const toast = t => { const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove('on'), 3200); };
 
 function calc(items) {
-  const o = { work: 0, adv: 0, mins: 0, rmins: 0, days: 0 }, ds = new Set();
+  const o = { work: 0, adv: 0, mins: 0, ramt: 0, days: 0 }, ds = new Set();
   items.forEach(i => {
-    if (i.type === 'work') { o.work += i.amount; o.mins += i.mins; if (i.remote) o.rmins += i.mins; ds.add(i.date); }
+    if (i.type === 'work') { o.work += i.amount; o.mins += i.mins; if (i.remote) o.ramt += i.amount; ds.add(i.date); }
     else o.adv += i.amount;
   });
   o.days = ds.size;
@@ -451,7 +449,7 @@ function weekLabel(ms) {
 function itemRow(i) {
   const neg = i.type === 'adv';
   const t = i.start && i.end ? `<span dir="ltr">${i.start} – ${i.end}</span> • ` : '';
-  const sub = neg ? 'كريدي' : i.remote ? 'عن بعد • ' + fmtDur(i.mins) : t + fmtDur(i.mins) + (i.brk ? ' (استراحة ' + i.brk + ' د)' : '');
+  const sub = neg ? 'كريدي' : i.remote ? 'عن بعد' : t + fmtDur(i.mins) + (i.brk ? ' (استراحة ' + i.brk + ' د)' : '');
   return `<button class="item" data-id="${i.id}"><span class="bub ${neg ? 'neg' : ''}">${ic(neg ? 'minus' : i.remote ? 'home' : 'clock')}</span>
     <div><div class="d">${fmtDay(i.date)}</div><div class="m">${sub}${i.note ? ' • ' + esc(i.note) : ''}</div></div>
     <div class="amt num ${neg ? 'n' : 'p'}">${neg ? '−' : ''}${money(i.amount)}</div></button>`;
@@ -510,7 +508,7 @@ function renderArchive() {
     const dates = a.items.map(i => i.date).sort();
     const range = dates.length ? fmtShort(dates[0]) + ' ← ' + fmtShort(dates[dates.length - 1]) : '—';
     const lines = [...a.items].sort((x, y) => x.date.localeCompare(y.date)).map(i =>
-      `${fmtShort(i.date)}: ${i.type === 'work' ? (i.remote ? 'عن بعد ' : '') + fmtDur(i.mins) + ' = ' + money(i.amount) : 'كريدي ' + signed(-i.amount)}${i.note ? ' • ' + esc(i.note) : ''}`).join('<br>');
+      `${fmtShort(i.date)}: ${i.type === 'work' ? (i.remote ? 'عن بعد = ' : fmtDur(i.mins) + ' = ') + money(i.amount) : 'كريدي ' + signed(-i.amount)}${i.note ? ' • ' + esc(i.note) : ''}`).join('<br>');
     const rem = round2(a.remain || 0);
     return `<details class="card"><summary><span class="bub">${ic('tcircle')}</span><div><b>${fmtShort(a.paidAt)}</b><small>${range}</small></div><b class="num" style="direction:ltr">${money(a.received)}</b></summary>
       <div class="lines">
@@ -541,17 +539,20 @@ function summaryText() {
   const SEP = '━━━━━━━━━━━━━━';
   const head = from && to ? `من ${fmtShort(from)}\nإلى ${fmtShort(to)}` : from ? `من ${fmtShort(from)}` : to ? `حتى ${fmtShort(to)}` : 'كل الفترات';
   const out = ['📋 ملخص العمل', SEP, '📅 ' + head, SEP, '',
-    '📆 أيام العمل: ' + ltr(c.days), '⌛ مجموع الساعات: ' + fmtDur(c.mins)];
-  if (c.rmins) out.push('🏠 منها عن بعد: ' + fmtDur(c.rmins));
-  out.push('💰 الأجور: ' + money(c.work), '🔻 الكريدي: ' + signed(-c.adv), '✅ الصافي: ' + signed(c.work - c.adv));
+    '📆 أيام العمل: ' + ltr(c.days), '⌛ مجموع الساعات: ' + fmtDur(c.mins), '💰 الأجور: ' + money(c.work)];
+  if (c.ramt) out.push('🏠 منها عن بعد: ' + money(c.ramt));
+  out.push('🔻 الكريدي: ' + signed(-c.adv), '✅ الصافي: ' + signed(c.work - c.adv));
   if ($('sDetail').checked && list.length) {
     out.push('', SEP, '📑 التفاصيل', SEP);
     list.forEach((i, n) => {
       const b = [`${n + 1}) ${fmtDate(i.date)}`];
       if (i.type === 'work') {
         if (i.remote) b.push('   🏠 عن بعد');
-        else if (i.start && i.end) b.push('   ⏰ ' + ltr(i.start + ' – ' + i.end));
-        b.push('   ⌛ ' + fmtDur(i.mins), '   💰 ' + money(i.amount));
+        else {
+          if (i.start && i.end) b.push('   ⏰ ' + ltr(i.start + ' – ' + i.end));
+          b.push('   ⌛ ' + fmtDur(i.mins));
+        }
+        b.push('   💰 ' + money(i.amount));
       } else b.push('   🔻 كريدي', '   💰 ' + signed(-i.amount));
       if (i.note) b.push('   📝 ' + i.note);
       out.push('', b.join('\n'));
@@ -565,8 +566,8 @@ function renderSummary() {
   const c = calc(inRange());
   $('sumOut').innerHTML =
     stat('calendar', '', c.days, 'أيام العمل') +
-    stat('clock', '', `<span dir="ltr">${fmtHM(c.mins)}<small>س</small></span>`, 'مجموع الساعات' + (c.rmins ? `<small>منها عن بعد ${fmtHM(c.rmins)} س</small>` : '')) +
-    stat('cash', '', mv(c.work), 'الأجور') +
+    stat('clock', '', `<span dir="ltr">${fmtHM(c.mins)}<small>س</small></span>`, 'مجموع الساعات') +
+    stat('cash', '', mv(c.work), 'الأجور' + (c.ramt ? `<small>منها عن بعد ${money(c.ramt)}</small>` : '')) +
     stat('mcircle', 'cr', mv(c.adv, c.adv > 0), 'الكريدي') +
     stat('tcircle', 'net', mv(Math.abs(c.work - c.adv), c.work - c.adv < 0), 'الصافي');
   renderChart();
@@ -629,24 +630,18 @@ function updDur() {
 ['fStart', 'fEnd', 'fBrk'].forEach(id => $(id).addEventListener('input', updDur));
 
 const modeOf = it => it.type === 'adv' ? 'adv' : it.remote ? 'remote' : 'work';
-const remoteMins = () => (parseInt($('rH').value) || 0) * 60 + (parseInt($('rM').value) || 0);
-function updRDur() { const m = remoteMins(); $('rDur').textContent = m > 0 ? 'المدة: ' + fmtDur(m) : ''; }
-['rH', 'rM'].forEach(id => $(id).addEventListener('input', updRDur));
 
 function openForm(m, item, pre) {
   mode = m; editing = item || null; fromShift = !!pre;
   $('formTitle').textContent = (item ? 'تعديل ' : 'إضافة ') + (m === 'work' ? 'يوم عمل' : m === 'remote' ? 'عمل عن بعد' : 'كريدي');
   $('workFields').hidden = m !== 'work';
-  $('remoteFields').hidden = m !== 'remote';
-  $('amtWrap').hidden = m !== 'adv';
-  $('rH').value = item && m === 'remote' && Math.floor(item.mins / 60) ? Math.floor(item.mins / 60) : '';
-  $('rM').value = item && m === 'remote' && item.mins % 60 ? item.mins % 60 : '';
-  updRDur();
+  $('amtWrap').hidden = m === 'work';
+  $('fAmtL').textContent = m === 'remote' ? 'أجرة العمل عن بعد' : 'مبلغ الكريدي (يُحسب بالسالب)';
   $('fDate').value = pre ? pre.date : item ? item.date : today();
   $('fStart').value = pre ? pre.start : item && item.start || '';
   $('fEnd').value = pre ? pre.end : item && item.end || '';
   $('fBrk').value = item && item.brk || '';
-  $('fAmt').value = item && m === 'adv' ? item.amount : '';
+  $('fAmt').value = item && m !== 'work' ? item.amount : '';
   $('fNote').value = item ? item.note || '' : '';
   $('fDel').hidden = !item;
   updDur();
@@ -667,10 +662,9 @@ $('fSave').onclick = () => {
   if (!date) return toast('أدخل التاريخ');
   const rec = { id: editing ? editing.id : Date.now(), type: mode === 'adv' ? 'adv' : 'work', date, note: $('fNote').value.trim() };
   if (mode === 'remote') {
-    const m = remoteMins();
-    if (m <= 0) return toast('أدخل مدة العمل عن بعد');
-    Object.assign(rec, { remote: true, mins: m, rate: editing && editing.rate ? editing.rate : state.rate });
-    rec.amount = rec.mins / 60 * rec.rate;
+    const a = parseFloat($('fAmt').value);
+    if (isNaN(a) || a <= 0) return toast('أدخل أجرة العمل عن بعد');
+    Object.assign(rec, { remote: true, mins: 0, amount: a });
   } else if (mode === 'work') {
     const m = workMins();
     if (m === null) {
@@ -801,7 +795,7 @@ $('menuClose').onclick = () => {
 
 // ---------- النسخ الاحتياطي ----------
 const stamp = () => { const d = new Date(); return d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()) + '-' + pad2(d.getHours()) + pad2(d.getMinutes()) + pad2(d.getSeconds()); };
-const payload = () => JSON.stringify({ app: 'earnings', version: 4, savedAt: new Date().toISOString(), ...state }, null, 1);
+const payload = () => JSON.stringify({ app: 'earnings', version: 5, savedAt: new Date().toISOString(), ...state }, null, 1);
 const fsWrite = (FS, path, data) => FS.writeFile({ path, data, directory: 'DOCUMENTS', encoding: 'utf8', recursive: true });
 const docsAlt = {};
 let warned = false;
