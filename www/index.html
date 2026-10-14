@@ -281,7 +281,7 @@ details.card .lines{margin-top:12px;border-top:1px dashed var(--bd);padding-top:
     <button class="rb" id="bkReset"><svg class="ic"><use href="#i-restore"/></svg><span>العودة للمكان الافتراضي</span></button>
     <button class="rb" id="bkNow"><svg class="ic"><use href="#i-save"/></svg><span>نسخة احتياطية جديدة الآن</span></button>
     <button class="rb" id="bkRestore"><svg class="ic"><use href="#i-restore"/></svg><span>استعادة من النسخة التلقائية</span></button>
-    <button class="rb" id="bkList"><svg class="ic"><use href="#i-archive"/></svg><span>اختيار نسخة من المجلد</span></button>
+    <button class="rb" id="bkList"><svg class="ic"><use href="#i-archive"/></svg><span>اختيار نسخة سابقة</span></button>
     <button class="rb" id="bkFile"><svg class="ic"><use href="#i-file"/></svg><span>استعادة من ملف</span></button>
   </div>
   <input type="file" id="file" accept=".json,application/json" hidden>
@@ -447,10 +447,10 @@ function calc(items) {
 const due = () => { const c = calc(state.items); return state.carry + c.work - c.adv; };
 
 let bkTimer;
-function save() {
+function save(noBackup) {
   localStorage.setItem(KEY, JSON.stringify(state));
   render();
-  if (state.auto) { clearTimeout(bkTimer); bkTimer = setTimeout(autoBackup, 800); }
+  if (state.auto && !noBackup) { clearTimeout(bkTimer); bkTimer = setTimeout(autoBackup, 800); }
 }
 
 // ---------- الألوان وشريط الحالة ----------
@@ -901,8 +901,12 @@ const updPinLabel = () => { $('pinSt').textContent = state.pin ? 'مفعّل' : 
 
 // ---------- الإعدادات ----------
 function updBkWhere() {
-  $('bkWhere').textContent = 'مكان النسخ: ' + (bk.tree ? (bk.name || 'المجلد المختار') : 'Documents/EarningsBackup (الافتراضي)');
-  $('bkReset').hidden = !bk.tree; $('bkList').hidden = !bk.tree;
+  const t = ms => new Date(ms).toLocaleString('ar-u-nu-latn', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+  let st = '';
+  if (lastBk.ok) st = '<br>آخر نسخة تلقائية: ' + t(lastBk.okAt);
+  else if (lastBk.at) st = '<br><span style="color:var(--neg)">فشل آخر حفظ تلقائي</span>' + (lastBk.okAt ? ' • آخر نجاح: ' + t(lastBk.okAt) : '');
+  $('bkWhere').innerHTML = 'مكان النسخ: ' + esc(bk.tree ? (bk.name || 'المجلد المختار') : 'Documents/EarningsBackup (الافتراضي)') + st;
+  $('bkReset').hidden = !bk.tree;
 }
 $('menuBtn').onclick = () => {
   $('cur').value = state.currency; $('rate').value = state.rate; $('auto').checked = state.auto;
@@ -920,18 +924,58 @@ const stamp = () => { const d = new Date(); return d.getFullYear() + pad2(d.getM
 const payload = () => JSON.stringify({ app: 'earnings', version: 5, savedAt: new Date().toISOString(), ...state }, null, 1);
 const fsWrite = (FS, path, data) => FS.writeFile({ path, data, directory: 'DOCUMENTS', encoding: 'utf8', recursive: true });
 const docsAlt = {};
-let warned = false;
+let warned = false, warnedAuto = false;
+const isEmpty = s => !s.items.length && !s.archive.length && !s.carry;
+let lastBk = {};
+try { lastBk = JSON.parse(localStorage.getItem('earnings_lastbk')) || {}; } catch (e) {}
+function markBk(ok) {
+  lastBk = { ok, at: Date.now(), okAt: ok ? Date.now() : (lastBk.okAt || 0) };
+  try { localStorage.setItem('earnings_lastbk', JSON.stringify(lastBk)); } catch (e) {}
+  if (ok) warnedAuto = false;
+  else if (!warnedAuto) { warnedAuto = true; toast('تعذر حفظ النسخة التلقائية. افتح الإعدادات وتحقق من مكان النسخ'); }
+}
 
 async function putFile(name, data) {
   const S = saf();
   if (bk.tree && S) {
-    try { await S.writeFile({ tree: bk.tree, name, data }); return 'saf'; }
+    try { await S.writeFile({ tree: bk.tree, name, data }); return { via: 'saf', name }; }
     catch (e) { if (!warned) { warned = true; toast('تعذر الحفظ في المجلد المختار. اخترْه من جديد. حُفظت النسخة في المكان الافتراضي'); } }
   }
   const FS = plugin('Filesystem'); if (!FS) throw new Error('no fs');
-  try { await fsWrite(FS, BK_DIR + '/' + (docsAlt[name] || name), data); }
-  catch (e) { docsAlt[name] = name.replace('.json', '-' + stamp() + '.json'); await fsWrite(FS, BK_DIR + '/' + docsAlt[name], data); }
-  return 'docs';
+  let n = docsAlt[name] || name;
+  try { await fsWrite(FS, BK_DIR + '/' + n, data); }
+  catch (e) { n = docsAlt[name] = name.replace('.json', '-' + stamp() + '.json'); await fsWrite(FS, BK_DIR + '/' + n, data); }
+  return { via: 'docs', name: n };
+}
+async function readFrom(via, name) {
+  if (via === 'saf') return (await saf().readFile({ tree: bk.tree, name })).data;
+  return (await plugin('Filesystem').readFile({ path: BK_DIR + '/' + name, directory: 'DOCUMENTS', encoding: 'utf8' })).data;
+}
+async function readBack(name) { // من مكان النسخ الحالي، وnull إن لم يوجد
+  try { return await readFrom(bk.tree && saf() ? 'saf' : 'docs', name); } catch (e) { return null; }
+}
+function validBackup(t) {
+  if (!t) return false;
+  try {
+    const d = JSON.parse(t);
+    if (!d) return false;
+    if (d.enc) return !!d.data;
+    return Array.isArray(d.items) && (d.items.length > 0 || (Array.isArray(d.archive) && d.archive.length > 0));
+  } catch (e) { return false; }
+}
+// آخر 3 نسخ تلقائية سابقة: تدور مرة في اليوم قبل أن تُستبدل النسخة التلقائية
+const SNAPS = ['earnings-snap-1.json', 'earnings-snap-2.json', 'earnings-snap-3.json'];
+async function rotateSnap() {
+  const day = today();
+  if (localStorage.getItem('earnings_snapday') === day) return;
+  const cur = await readBack(AUTO_NAME);
+  if (validBackup(cur)) {
+    const s1 = await readBack(SNAPS[0]), s2 = await readBack(SNAPS[1]);
+    if (validBackup(s2)) await putFile(SNAPS[2], s2);
+    if (validBackup(s1)) await putFile(SNAPS[1], s1);
+    await putFile(SNAPS[0], cur);
+  }
+  localStorage.setItem('earnings_snapday', day);
 }
 // ---------- التشفير (AES-256-GCM + PBKDF2) ----------
 const b64 = u8 => { let t = ''; u8.forEach(c => t += String.fromCharCode(c)); return btoa(t); };
@@ -987,7 +1031,16 @@ $('encOff').onclick = () => {
   enc = {}; saveEnc(); $('encDlg').close(); updEnc(); autoBackup(); toast('تم إيقاف التشفير');
 };
 
-async function autoBackup() { try { await putFile(AUTO_NAME, await backupText()); } catch (e) {} }
+async function autoBackup() {
+  if (!isNative() || isEmpty(state)) return; // لا نكتب بيانات فارغة فوق نسخة سليمة
+  try {
+    const text = await backupText();
+    try { await rotateSnap(); } catch (e) {}
+    const r = await putFile(AUTO_NAME, text);
+    if (await readFrom(r.via, r.name) !== text) throw new Error('verify');
+    markBk(true);
+  } catch (e) { markBk(false); }
+}
 async function manualBackup() {
   const name = 'earnings-backup-' + (enc.on ? 'enc-' : '') + stamp() + '.json';
   let data;
@@ -1000,7 +1053,7 @@ async function manualBackup() {
   if (!bk.tree) { try { await plugin('Filesystem').requestPermissions(); } catch (e) {} }
   try {
     const w = await putFile(name, data);
-    toast('تم الحفظ: ' + name + (w === 'saf' ? ' في ' + (bk.name || 'المجلد') : ' في Documents/' + BK_DIR));
+    toast('تم الحفظ: ' + w.name + (w.via === 'saf' ? ' في ' + (bk.name || 'المجلد') : ' في Documents/' + BK_DIR));
   } catch (e) { toast('تعذر الحفظ: تحقق من صلاحية التخزين'); }
 }
 
@@ -1010,10 +1063,15 @@ async function applyBackup(text) {
     if (!d) return;
     if (!Array.isArray(d.items)) throw 0;
     if (!confirm('سيتم استبدال البيانات الحالية بالنسخة الاحتياطية. متابعة؟')) return;
+    if (isNative() && !isEmpty(state)) { // نسخة من بياناتك الحالية قبل استبدالها
+      try { await putFile('earnings-before-restore-' + stamp() + '.json', await backupText()); }
+      catch (e) { if (!confirm('تعذر حفظ نسخة من بياناتك الحالية قبل الاستعادة. متابعة رغم ذلك؟')) return; }
+    }
+    clearTimeout(bkTimer);
     const keepPin = state.pin;
     state = norm(d);
     if (typeof d.pin !== 'string') state.pin = keepPin;
-    applyTheme(); save(); $('menu').close(); $('filesDlg').close(); toast('تمت الاستعادة');
+    applyTheme(); save(true); $('menu').close(); $('filesDlg').close(); toast('تمت الاستعادة');
   } catch (e) { toast('ملف النسخة غير صالح'); }
 }
 $('bkNow').onclick = manualBackup;
@@ -1037,17 +1095,27 @@ $('bkRestore').onclick = async () => {
     applyBackup(text);
   } catch (e) { toast('لم أجد النسخة التلقائية. اختر ملفًا'); $('file').click(); }
 };
+const bkLabel = n => /^earnings-backup\.json$/.test(n) ? 'النسخة التلقائية'
+  : /^earnings-snap-(\d)/.test(n) ? 'نسخة تلقائية سابقة ' + n.match(/snap-(\d)/)[1]
+  : /^earnings-before-restore/.test(n) ? 'قبل آخر استعادة' : 'نسخة يدوية';
+async function listBackups() {
+  const S = saf();
+  if (bk.tree && S) { const r = await S.listFiles({ tree: bk.tree }); return (r.files || []).map(f => ({ name: f.name, uri: f.uri, modified: Number(f.modified) || 0 })); }
+  const FS = plugin('Filesystem'); if (!FS) throw new Error('no fs');
+  try { await FS.requestPermissions(); } catch (e) {}
+  const r = await FS.readdir({ path: BK_DIR, directory: 'DOCUMENTS' });
+  return (r.files || []).filter(f => /\.json$/i.test(f.name)).map(f => ({ name: f.name, uri: '', modified: Number(f.mtime) || 0 }));
+}
 $('bkList').onclick = async () => {
   try {
-    const r = await saf().listFiles({ tree: bk.tree });
-    const fs = (r.files || []).sort((a, b) => b.modified - a.modified);
-    $('filesList').innerHTML = fs.length ? fs.map(f => `<button data-uri="${esc(f.uri)}">${esc(f.name)}<br><small>${new Date(f.modified).toLocaleString('ar-u-nu-latn')}</small></button>`).join('') : emptyBox('file', 'لا توجد ملفات json في المجلد.');
+    const fs = (await listBackups()).sort((a, b) => b.modified - a.modified);
+    $('filesList').innerHTML = fs.length ? fs.map(f => `<button data-name="${esc(f.name)}" data-uri="${esc(f.uri)}">${esc(bkLabel(f.name))}<br><small>${esc(f.name)}${f.modified ? ' • ' + new Date(f.modified).toLocaleString('ar-u-nu-latn') : ''}</small></button>`).join('') : emptyBox('file', 'لا توجد ملفات json في المجلد.');
     $('filesDlg').showModal();
-  } catch (e) { toast('تعذر قراءة المجلد. اخترْه من جديد'); }
+  } catch (e) { toast(bk.tree ? 'تعذر قراءة المجلد. اخترْه من جديد' : 'لا توجد نسخ في المكان الافتراضي'); }
 };
 $('filesList').onclick = async e => {
   const b = e.target.closest('button'); if (!b) return;
-  try { applyBackup((await saf().readFile({ uri: b.dataset.uri })).data); } catch (err) { toast('تعذر قراءة الملف'); }
+  try { applyBackup(b.dataset.uri ? (await saf().readFile({ uri: b.dataset.uri })).data : await readFrom('docs', b.dataset.name)); } catch (err) { toast('تعذر قراءة الملف'); }
 };
 $('filesClose').onclick = () => $('filesDlg').close();
 $('bkFile').onclick = () => $('file').click();
