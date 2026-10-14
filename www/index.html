@@ -55,6 +55,11 @@ h1{font-size:22px;margin:0;font-weight:800}
 .list{padding:8px 16px 0;display:flex;flex-direction:column;gap:8px}
 .wk{display:flex;justify-content:space-between;align-items:center;margin:12px 4px 2px;font-size:12.5px;color:var(--mut);font-weight:600}
 .wk b{direction:ltr;font-weight:700}
+.wk .r{display:flex;align-items:center;gap:6px}
+.wkb{border:0;background:none;color:var(--pritx);padding:4px;display:grid;place-items:center}
+.wkb .ic{width:18px;height:18px}
+.hbtns{display:flex;gap:8px}
+.note.warn{color:var(--neg)}
 .item{display:grid;grid-template-columns:40px 1fr auto;align-items:center;gap:12px;background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:10px 12px;width:100%;text-align:start;box-shadow:var(--sh)}
 .item .d{font-size:15px;font-weight:700}
 .item .m{font-size:12.5px;color:var(--mut);margin-top:2px}
@@ -157,7 +162,10 @@ details.card .lines{margin-top:12px;border-top:1px dashed var(--bd);padding-top:
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol><symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5l10.5 6.5L8 18.5z"/></symbol><symbol id="i-stop" viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="2"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol><symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol><symbol id="i-calendar" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5" rx="2.5"/><path d="M4 10h16M9 3.5v4M15 3.5v4"/></symbol><symbol id="i-cash" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="10" rx="2.5"/><circle cx="12" cy="12" r="2.5"/><path d="M6.5 12h.01M17.5 12h.01"/></symbol><symbol id="i-mcircle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M8 12h8"/></symbol><symbol id="i-tcircle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></symbol><symbol id="i-share" viewBox="0 0 24 24"><circle cx="6" cy="12" r="2.3"/><circle cx="18" cy="6" r="2.3"/><circle cx="18" cy="18" r="2.3"/><path d="M8.1 11l7.8-3.9M8.1 13l7.8 3.9"/></symbol><symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 0 1 2-2H10l2 2.5h6.5a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></symbol><symbol id="i-save" viewBox="0 0 24 24"><path d="M12 4v10M8 10.5l4 4 4-4M5 19h14"/></symbol><symbol id="i-restore" viewBox="0 0 24 24"><path d="M4.5 12a7.5 7.5 0 1 0 2.4-5.5M4 4.5V8h3.5"/></symbol><symbol id="i-file" viewBox="0 0 24 24"><path d="M7 3.5h6.5L18 8v11.5a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1z"/><path d="M13.5 3.5V8H18"/></symbol><symbol id="i-lock" viewBox="0 0 24 24"><rect x="5.5" y="10.5" width="13" height="9.5" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></symbol><symbol id="i-bars" viewBox="0 0 24 24"><path d="M5 20V12M12 20V5M19 20v-5"/></symbol><symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></symbol><symbol id="i-archive" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="4.5" rx="1.2"/><path d="M5 9.5V18a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 18V9.5M10 13h4"/></symbol><symbol id="i-home" viewBox="0 0 24 24"><path d="M3.5 11.5L12 4.5l8.5 7M6 10v9.5h12V10M10 19.5v-5h4v5"/></symbol></svg>
 <header>
   <h1>العمل</h1>
-  <button class="round" id="menuBtn" aria-label="الإعدادات"><svg class="ic"><use href="#i-sliders"/></svg></button>
+  <div class="hbtns">
+    <button class="round" id="shareCur" aria-label="مشاركة الفترة الحالية"><svg class="ic"><use href="#i-share"/></svg></button>
+    <button class="round" id="menuBtn" aria-label="الإعدادات"><svg class="ic"><use href="#i-sliders"/></svg></button>
+  </div>
 </header>
 
 <section class="total">
@@ -268,6 +276,7 @@ details.card .lines{margin-top:12px;border-top:1px dashed var(--bd);padding-top:
   <div class="grp">
     <div class="rb"><svg class="ic"><use href="#i-save"/></svg><span>نسخ احتياطي تلقائي بعد كل تعديل</span><input type="checkbox" id="auto"></div>
     <div class="info" id="bkWhere" style="color:var(--mut);font-size:13px"></div>
+    <button class="rb" id="encBtn"><svg class="ic"><use href="#i-lock"/></svg><span>تشفير النسخ الاحتياطي</span><em id="encSt"></em></button>
     <button class="rb" id="bkPick"><svg class="ic"><use href="#i-folder"/></svg><span>اختيار مجلد لحفظ النسخ</span></button>
     <button class="rb" id="bkReset"><svg class="ic"><use href="#i-restore"/></svg><span>العودة للمكان الافتراضي</span></button>
     <button class="rb" id="bkNow"><svg class="ic"><use href="#i-save"/></svg><span>نسخة احتياطية جديدة الآن</span></button>
@@ -298,6 +307,42 @@ details.card .lines{margin-top:12px;border-top:1px dashed var(--bd);padding-top:
     <button class="del" id="pinRemove" type="button">إزالة</button>
     <button id="pinCancel" type="button">إلغاء</button>
     <button class="ok" id="pinSave" type="button">حفظ</button>
+  </div>
+</dialog>
+
+<dialog id="encDlg">
+  <h2>تشفير النسخ الاحتياطي</h2>
+  <div class="note" id="encNote" style="margin-top:0"></div>
+  <label for="encPw">كلمة السر (6 أحرف فأكثر)</label>
+  <input type="password" id="encPw" autocomplete="new-password">
+  <label for="encPw2">تأكيد كلمة السر</label>
+  <input type="password" id="encPw2" autocomplete="new-password">
+  <div class="note warn">إن نسيت كلمة السر ولم تعد تملك الهاتف الذي حُفظت فيه، فلا يمكن استرجاع النسخ المشفرة بأي طريقة. تبقى الملفات القديمة غير المشفرة كما هي.</div>
+  <div class="acts">
+    <button class="del" id="encOff" type="button">إيقاف</button>
+    <button id="encCancel" type="button">إلغاء</button>
+    <button class="ok" id="encSave" type="button">حفظ</button>
+  </div>
+</dialog>
+
+<dialog id="pwDlg">
+  <h2>كلمة سر النسخة</h2>
+  <div class="note" style="margin-top:0">هذه النسخة مشفرة. أدخل كلمة السر لاستعادتها.</div>
+  <label for="pwIn">كلمة السر</label>
+  <input type="password" id="pwIn" autocomplete="off">
+  <div class="acts">
+    <button id="pwCancel" type="button">إلغاء</button>
+    <button class="ok" id="pwOk" type="button">استعادة</button>
+  </div>
+</dialog>
+
+<dialog id="shDlg">
+  <h2 id="shTitle">مشاركة</h2>
+  <div class="tg"><span>تضمين تفاصيل الأيام</span><input type="checkbox" id="shDetail" checked></div>
+  <div class="acts">
+    <button id="shCancel" type="button">إلغاء</button>
+    <button id="shCopy" type="button">نسخ</button>
+    <button class="ok" id="shGo" type="button"><svg class="ic"><use href="#i-share"/></svg>مشاركة</button>
   </div>
 </dialog>
 
@@ -355,6 +400,9 @@ try { state = norm(JSON.parse(localStorage.getItem(KEY))); } catch (e) { state =
 let bk = {};
 try { bk = JSON.parse(localStorage.getItem('earnings_bk')) || {}; } catch (e) {}
 const saveBk = () => localStorage.setItem('earnings_bk', JSON.stringify(bk));
+let enc = {};
+try { enc = JSON.parse(localStorage.getItem('earnings_enc')) || {}; } catch (e) {}
+const saveEnc = () => localStorage.setItem('earnings_enc', JSON.stringify(enc));
 let editing = null, mode = 'work', view = 'list', fromShift = false, sumMode = 'month';
 
 const $ = id => document.getElementById(id);
@@ -469,7 +517,7 @@ function render() {
   sorted.forEach(i => (groups[monday(i.date)] = groups[monday(i.date)] || []).push(i));
   $('list').innerHTML = sorted.length ? Object.keys(groups).sort().reverse().map(k => {
     const g = calc(groups[k]);
-    return `<div class="wk"><span>${weekLabel(k)}</span><b class="num">${signed(g.work - g.adv)}</b></div>` + groups[k].map(itemRow).join('');
+    return `<div class="wk"><span>${weekLabel(k)}</span><span class="r"><b class="num">${signed(g.work - g.adv)}</b><button class="wkb" data-wk="${k}" aria-label="مشاركة الأسبوع">${ic('share')}</button></span></div>` + groups[k].map(itemRow).join('');
   }).join('') : emptyBox('clock', 'لا توجد سجلات في الفترة الحالية.<br>سجّل دخول العمل أو أضف يومًا.');
   renderArchive();
   renderSummary();
@@ -504,7 +552,7 @@ $('iOk').onclick = () => {
 
 function renderArchive() {
   const arc = [...state.archive].reverse();
-  $('arch').innerHTML = arc.length ? arc.map(a => {
+  $('arch').innerHTML = arc.length ? `<button class="pay" style="margin:0;width:100%" id="shareAll">${ic('share')}مشاركة كل الدفعات</button>` + arc.map(a => {
     const dates = a.items.map(i => i.date).sort();
     const range = dates.length ? fmtShort(dates[0]) + ' ← ' + fmtShort(dates[dates.length - 1]) : '—';
     const lines = [...a.items].sort((x, y) => x.date.localeCompare(y.date)).map(i =>
@@ -522,6 +570,7 @@ function renderArchive() {
         ${rem ? `<div class="kv"><span>${rem > 0 ? 'بقي لك (رُحِّل)' : 'زيادة (خُصمت لاحقًا)'}</span><b>${signed(rem)}</b></div>` : ''}
         ${a.note ? `<div class="kv"><span>ملاحظة</span><b style="direction:rtl">${esc(a.note)}</b></div>` : ''}
         ${lines ? '<div style="margin-top:8px">' + lines + '</div>' : ''}
+        <button class="pay sh1" data-id="${a.id}" style="width:100%;margin:12px 0 0;height:42px;font-size:14px">${ic('share')}مشاركة هذه الدفعة</button>
       </div></details>`;
   }).join('') + `<button class="pay" style="margin:6px 0 0;width:100%" id="undoPay">${ic('restore')}التراجع عن آخر دفعة</button>`
     : emptyBox('archive', 'لا توجد دفعات سابقة بعد.<br>عند استلام دفعة تظهر هنا.');
@@ -533,33 +582,108 @@ function inRange() {
   const from = $('sFrom').value, to = $('sTo').value;
   return allItems().filter(i => (!from || i.date >= from) && (!to || i.date <= to));
 }
-function summaryText() {
-  const list = inRange().sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
-  const c = calc(list), from = $('sFrom').value, to = $('sTo').value;
-  const SEP = '━━━━━━━━━━━━━━';
-  const head = from && to ? `من ${fmtShort(from)}\nإلى ${fmtShort(to)}` : from ? `من ${fmtShort(from)}` : to ? `حتى ${fmtShort(to)}` : 'كل الفترات';
-  const out = ['📋 ملخص العمل', SEP, '📅 ' + head, SEP, '',
-    '📆 أيام العمل: ' + ltr(c.days), '⌛ مجموع الساعات: ' + fmtDur(c.mins), '💰 الأجور: ' + money(c.work)];
-  if (c.ramt) out.push('🏠 منها عن بعد: ' + money(c.ramt));
-  out.push('🔻 الكريدي: ' + signed(-c.adv), '✅ الصافي: ' + signed(c.work - c.adv));
-  if ($('sDetail').checked && list.length) {
-    out.push('', SEP, '📑 التفاصيل', SEP);
-    list.forEach((i, n) => {
-      const b = [`${n + 1}) ${fmtDate(i.date)}`];
-      if (i.type === 'work') {
-        if (i.remote) b.push('   🏠 عن بعد');
-        else {
-          if (i.start && i.end) b.push('   ⏰ ' + ltr(i.start + ' – ' + i.end));
-          b.push('   ⌛ ' + fmtDur(i.mins));
-        }
-        b.push('   💰 ' + money(i.amount));
-      } else b.push('   🔻 كريدي', '   💰 ' + signed(-i.amount));
-      if (i.note) b.push('   📝 ' + i.note);
-      out.push('', b.join('\n'));
-    });
-  }
+const SEP = '━━━━━━━━━━━━━━';
+const byDate = (a, b) => a.date.localeCompare(b.date) || a.id - b.id;
+function totalsBlock(c) {
+  const o = ['📆 أيام العمل: ' + ltr(c.days), '⌛ مجموع الساعات: ' + fmtDur(c.mins), '💰 الأجور: ' + money(c.work)];
+  if (c.ramt) o.push('🏠 منها عن بعد: ' + money(c.ramt));
+  o.push('🔻 الكريدي: ' + signed(-c.adv), '✅ الصافي: ' + signed(c.work - c.adv));
+  return o;
+}
+function itemBlock(i, n) {
+  const b = [`${n + 1}) ${fmtDate(i.date)}`];
+  if (i.type === 'work') {
+    if (i.remote) b.push('   🏠 عن بعد');
+    else {
+      if (i.start && i.end) b.push('   ⏰ ' + ltr(i.start + ' – ' + i.end));
+      b.push('   ⌛ ' + fmtDur(i.mins));
+    }
+    b.push('   💰 ' + money(i.amount));
+  } else b.push('   🔻 كريدي', '   💰 ' + signed(-i.amount));
+  if (i.note) b.push('   📝 ' + i.note);
+  return b.join('\n');
+}
+function detailLines(list) {
+  const out = ['', SEP, '📑 التفاصيل', SEP];
+  list.forEach((i, n) => out.push('', itemBlock(i, n)));
+  return out;
+}
+const rangeOf = list => {
+  const d = list.map(i => i.date).sort();
+  return d.length ? (d[0] === d[d.length - 1] ? fmtShort(d[0]) : fmtShort(d[0]) + ' ← ' + fmtShort(d[d.length - 1])) : '—';
+};
+function periodText(title, head, list, withDetail, extra) {
+  const out = [title, SEP, ...head, SEP, '', ...totalsBlock(calc(list)), ...(extra || [])];
+  if (withDetail && list.length) out.push(...detailLines(list));
   return out.join('\n');
 }
+function summaryText(withDetail) {
+  const list = inRange().sort(byDate), from = $('sFrom').value, to = $('sTo').value;
+  const head = from && to ? `من ${fmtShort(from)}\nإلى ${fmtShort(to)}` : from ? `من ${fmtShort(from)}` : to ? `حتى ${fmtShort(to)}` : 'كل الفترات';
+  return periodText('📋 ملخص العمل', ['📅 ' + head], list, withDetail === undefined ? $('sDetail').checked : withDetail);
+}
+function currentText(d) {
+  const list = [...state.items].sort(byDate), extra = [];
+  if (state.carry) extra.push('↩️ مرحَّل من الدفعة السابقة: ' + signed(state.carry));
+  extra.push('🧾 المستحق الآن: ' + signed(due()));
+  return periodText('📋 الفترة الحالية (غير مدفوعة)', ['🗓 ' + rangeOf(list)], list, d, extra);
+}
+function weekText(k, d) {
+  const list = state.items.filter(i => monday(i.date) === k).sort(byDate);
+  return periodText('📋 ملخص أسبوع', ['🗓 ' + weekLabel(k)], list, d);
+}
+function archiveText(a, d) {
+  const list = [...a.items].sort(byDate), rem = round2(a.remain || 0), extra = [];
+  if (a.carryIn) extra.push('↩️ مرحَّل قبلها: ' + signed(a.carryIn));
+  extra.push('🧾 المستحق: ' + signed(a.due), '💵 المستلم: ' + money(a.received));
+  if (rem) extra.push(rem > 0 ? '⏳ بقي لك (رُحِّل): ' + money(rem) : '➕ زيادة (خُصمت لاحقًا): ' + money(-rem));
+  if (a.note) extra.push('📝 ' + a.note);
+  return periodText('📋 كشف دفعة', ['📅 تاريخ الاستلام: ' + fmtShort(a.paidAt), '🗓 الفترة: ' + rangeOf(list)], list, d, extra);
+}
+function archivesText(d) {
+  const arc = [...state.archive].sort((a, b) => a.paidAt.localeCompare(b.paidAt) || a.id - b.id);
+  const out = ['📋 كشف الدفعات', SEP, '🗂 عدد الدفعات: ' + ltr(arc.length), SEP];
+  let total = 0;
+  arc.forEach((a, n) => {
+    const list = [...a.items].sort(byDate), rem = round2(a.remain || 0);
+    total += a.received;
+    const b = [`${n + 1}) 📅 ${fmtShort(a.paidAt)}`, '   🗓 ' + rangeOf(list), '   🧾 المستحق: ' + signed(a.due), '   💵 المستلم: ' + money(a.received)];
+    if (rem) b.push(rem > 0 ? '   ⏳ بقي لك: ' + money(rem) : '   ➕ زيادة: ' + money(-rem));
+    if (d) list.forEach(i => b.push('   • ' + fmtShort(i.date) + ' — ' + (i.type === 'work' ? (i.remote ? 'عن بعد' : fmtDur(i.mins)) + ' — ' + money(i.amount) : 'كريدي ' + signed(-i.amount))));
+    out.push('', b.join('\n'));
+  });
+  out.push('', SEP, '💵 مجموع المستلم: ' + money(total));
+  return out.join('\n');
+}
+async function doShare(text) {
+  const S = plugin('Share');
+  try {
+    if (S) await S.share({ title: 'العمل', text, dialogTitle: 'مشاركة' });
+    else if (navigator.share) await navigator.share({ title: 'العمل', text });
+    else { await navigator.clipboard.writeText(text); toast('تم نسخ النص'); }
+  } catch (e) {}
+}
+let pendingShare = null;
+function askShare(title, build) {
+  pendingShare = build;
+  $('shTitle').textContent = title;
+  $('shDetail').checked = localStorage.getItem('earnings_sd') !== '0';
+  $('shDlg').showModal();
+}
+$('shCancel').onclick = () => $('shDlg').close();
+$('shGo').onclick = async () => {
+  const d = $('shDetail').checked; localStorage.setItem('earnings_sd', d ? '1' : '0');
+  const text = pendingShare(d); $('shDlg').close(); await doShare(text);
+};
+$('shCopy').onclick = async () => {
+  const d = $('shDetail').checked; localStorage.setItem('earnings_sd', d ? '1' : '0');
+  const text = pendingShare(d); $('shDlg').close();
+  try { await navigator.clipboard.writeText(text); toast('تم نسخ النص'); } catch (e) { toast('تعذر النسخ'); }
+};
+$('shareCur').onclick = () => {
+  if (!state.items.length) return toast('لا توجد سجلات في الفترة الحالية');
+  askShare('مشاركة الفترة الحالية', d => currentText(d));
+};
 const stat = (icon, cls, val, label) => `<div class="stat ${cls}"><span class="bub ${cls === 'cr' ? 'neg' : ''}">${ic(icon)}</span><div class="sv num">${val}</div><div class="sl">${label}</div></div>`;
 const mv = (n, neg) => `<span dir="ltr">${neg ? '−' : ''}${num(n)}<small>${esc(state.currency)}</small></span>`;
 function renderSummary() {
@@ -594,14 +718,7 @@ function setMode(m) {
 }
 $('sSeg').onclick = e => { const b = e.target.closest('button'); if (b) setMode(b.dataset.m); };
 $('sFrom').onchange = $('sTo').onchange = () => { sumMode = 'custom'; [...document.querySelectorAll('#sSeg button')].forEach(b => b.classList.remove('on')); renderSummary(); };
-$('sShare').onclick = async () => {
-  const text = summaryText(), S = plugin('Share');
-  try {
-    if (S) await S.share({ title: 'ملخص العمل', text, dialogTitle: 'مشاركة الملخص' });
-    else if (navigator.share) await navigator.share({ title: 'ملخص العمل', text });
-    else { await navigator.clipboard.writeText(text); toast('تم نسخ الملخص'); }
-  } catch (e) {}
-};
+$('sShare').onclick = () => doShare(summaryText());
 
 function setView(v) {
   view = v;
@@ -653,6 +770,8 @@ $('addRemote').onclick = () => openForm('remote');
 $('addAdv').onclick = () => openForm('adv');
 $('fCancel').onclick = () => $('form').close();
 $('list').onclick = e => {
+  const w = e.target.closest('.wkb');
+  if (w) { const k = w.dataset.wk; askShare('مشاركة الأسبوع', d => weekText(k, d)); return; }
   const b = e.target.closest('.item'); if (!b) return;
   const it = state.items.find(i => i.id == b.dataset.id);
   if (it) openForm(modeOf(it), it);
@@ -718,6 +837,9 @@ $('pOk').onclick = () => {
   $('payDlg').close(); save(); setView('arc'); toast('تم الاستلام ونُقلت الفترة إلى الأرشيف');
 };
 $('arch').onclick = e => {
+  if (e.target.closest('#shareAll')) { askShare('مشاركة كل الدفعات', d => archivesText(d)); return; }
+  const s1 = e.target.closest('.sh1');
+  if (s1) { const a = state.archive.find(x => x.id == s1.dataset.id); if (a) askShare('مشاركة الدفعة', d => archiveText(a, d)); return; }
   if (!e.target.closest('#undoPay')) return;
   if (!confirm('التراجع عن آخر دفعة؟ ستعود أيامها إلى الفترة الحالية.')) return;
   const a = state.archive.pop();
@@ -784,7 +906,7 @@ function updBkWhere() {
 }
 $('menuBtn').onclick = () => {
   $('cur').value = state.currency; $('rate').value = state.rate; $('auto').checked = state.auto;
-  updPinLabel(); updBkWhere(); buildSwatches(); $('menu').showModal();
+  updPinLabel(); updBkWhere(); updEnc(); buildSwatches(); $('menu').showModal();
 };
 $('menuClose').onclick = () => {
   state.currency = $('cur').value.trim();
@@ -811,9 +933,65 @@ async function putFile(name, data) {
   catch (e) { docsAlt[name] = name.replace('.json', '-' + stamp() + '.json'); await fsWrite(FS, BK_DIR + '/' + docsAlt[name], data); }
   return 'docs';
 }
-async function autoBackup() { try { await putFile(AUTO_NAME, payload()); } catch (e) {} }
+// ---------- التشفير (AES-256-GCM + PBKDF2) ----------
+const b64 = u8 => { let t = ''; u8.forEach(c => t += String.fromCharCode(c)); return btoa(t); };
+const unb64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
+async function deriveKey(pw, salt, iter) {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: iter, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+}
+async function encryptText(text, pw) {
+  const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12)), iter = 210000;
+  const key = await deriveKey(pw, salt, iter);
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(text)));
+  return JSON.stringify({ app: 'earnings', enc: 1, alg: 'AES-GCM', kdf: 'PBKDF2-SHA256', iter, salt: b64(salt), iv: b64(iv), data: b64(ct) }, null, 1);
+}
+async function decryptEnv(d, pw) {
+  const iter = Math.min(Math.max(Number(d.iter) || 210000, 100000), 1000000);
+  const key = await deriveKey(pw, unb64(d.salt), iter);
+  return new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(d.iv) }, key, unb64(d.data)));
+}
+const backupText = async () => { const plain = payload(); return enc.on && enc.pw ? await encryptText(plain, enc.pw) : plain; };
+
+let pwDone = null;
+const askPassword = () => new Promise(res => { pwDone = res; $('pwIn').value = ''; $('pwDlg').showModal(); });
+function closePw(v) { if (pwDone) { const f = pwDone; pwDone = null; f(v); } $('pwDlg').close(); }
+$('pwOk').onclick = () => closePw($('pwIn').value);
+$('pwCancel').onclick = () => closePw(null);
+$('pwDlg').addEventListener('close', () => { if (pwDone) { const f = pwDone; pwDone = null; f(null); } });
+async function readBackup(text) {
+  const d = JSON.parse(text);
+  if (!d || !d.enc) return d;
+  if (enc.pw) { try { return JSON.parse(await decryptEnv(d, enc.pw)); } catch (e) {} }
+  const pw = await askPassword();
+  if (pw === null) return null;
+  try { return JSON.parse(await decryptEnv(d, pw)); } catch (e) { toast('كلمة السر غير صحيحة'); return null; }
+}
+function updEnc() {
+  $('encSt').textContent = enc.on ? 'مفعّل' : 'غير مفعّل';
+  $('encNote').textContent = enc.on ? 'التشفير مفعّل لكل النسخ الجديدة. أدخل كلمة سر جديدة إن أردت تغييرها (النسخ القديمة تبقى بكلمة سرها).' : 'تُشفَّر النسخ التلقائية واليدوية بكلمة سر تختارها، وتُحفظ الكلمة داخل التطبيق على هذا الهاتف لتعمل النسخ التلقائية.';
+  $('encOff').hidden = !enc.on;
+}
+$('encBtn').onclick = () => { $('encPw').value = ''; $('encPw2').value = ''; updEnc(); $('encDlg').showModal(); };
+$('encCancel').onclick = () => $('encDlg').close();
+$('encSave').onclick = () => {
+  const a = $('encPw').value;
+  if (!(window.crypto && crypto.subtle)) return toast('التشفير غير متاح على هذا الجهاز');
+  if (a.length < 6) return toast('كلمة السر 6 أحرف على الأقل');
+  if (a !== $('encPw2').value) return toast('التأكيد غير مطابق');
+  if (!confirm('تنبيه: إن نسيت كلمة السر لا يمكن استرجاع النسخ المشفرة أبدًا. متابعة؟')) return;
+  enc = { on: true, pw: a }; saveEnc(); $('encDlg').close(); updEnc(); autoBackup(); toast('تم تفعيل تشفير النسخ الاحتياطي');
+};
+$('encOff').onclick = () => {
+  if (!confirm('إيقاف التشفير؟ ستُحفظ النسخ القادمة بدون تشفير.')) return;
+  enc = {}; saveEnc(); $('encDlg').close(); updEnc(); autoBackup(); toast('تم إيقاف التشفير');
+};
+
+async function autoBackup() { try { await putFile(AUTO_NAME, await backupText()); } catch (e) {} }
 async function manualBackup() {
-  const data = payload(), name = 'earnings-backup-' + stamp() + '.json';
+  const name = 'earnings-backup-' + (enc.on ? 'enc-' : '') + stamp() + '.json';
+  let data;
+  try { data = await backupText(); } catch (e) { return toast('تعذر تشفير النسخة'); }
   if (!isNative()) {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
@@ -826,9 +1004,10 @@ async function manualBackup() {
   } catch (e) { toast('تعذر الحفظ: تحقق من صلاحية التخزين'); }
 }
 
-function applyBackup(text) {
+async function applyBackup(text) {
   try {
-    const d = JSON.parse(text);
+    const d = await readBackup(text);
+    if (!d) return;
     if (!Array.isArray(d.items)) throw 0;
     if (!confirm('سيتم استبدال البيانات الحالية بالنسخة الاحتياطية. متابعة؟')) return;
     const keepPin = state.pin;
