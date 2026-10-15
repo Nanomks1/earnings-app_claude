@@ -85,6 +85,22 @@ h1{font-size:22px;margin:0;font-weight:800}
 .stat.cr .sv{color:var(--neg)}
 .stat.net{grid-column:1/-1;background:var(--tint)}
 .stat.net .sv{font-size:26px}
+.mbars{display:flex;gap:6px;height:150px}
+.mb{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%}
+.mb .pair{flex:1;width:100%;display:flex;align-items:flex-end;justify-content:center;gap:3px}
+.mb .col{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;flex:1;max-width:22px;min-width:0}
+.mb .col i{display:block;width:100%;border-radius:6px 6px 3px 3px;min-height:3px}
+.mb .col i.w{background:var(--pri)}
+.mb .col i.c{background:var(--neg);opacity:.8}
+.mb .v{font-size:9.5px;color:var(--mut);height:12px;line-height:12px;direction:ltr;white-space:nowrap}
+.mb .bd{font-size:11px;color:var(--mut);white-space:nowrap}
+.lg{display:flex;gap:16px;font-size:12px;color:var(--mut);margin-top:10px}
+.lg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-inline-end:5px;vertical-align:-1px}
+.lg i.w{background:var(--pri)}.lg i.c{background:var(--neg);opacity:.8}
+.bal svg{display:block;width:100%;height:120px;direction:ltr}
+.bal .ax{display:flex;justify-content:space-between;font-size:11px;color:var(--mut);margin-top:6px;direction:ltr}
+.bal .mm{display:flex;justify-content:space-between;font-size:12px;color:var(--mut);margin-top:8px}
+.nodata{font-size:13px;color:var(--mut);text-align:center;padding:18px 0}
 .chart .ch{display:flex;justify-content:space-between;align-items:center;font-size:14px;margin-bottom:12px}
 .chart .ch span{font-size:12.5px;color:var(--mut)}
 .bars{display:flex;gap:6px;align-items:flex-end;height:128px}
@@ -202,6 +218,8 @@ details.card .lines{margin-top:12px;border-top:1px dashed var(--bd);padding-top:
     <div class="tg"><span>تضمين تفاصيل الأيام في الرسالة</span><input type="checkbox" id="sDetail" checked></div>
     <div class="acts"><button class="ok" id="sShare" type="button"><svg class="ic"><use href="#i-share"/></svg>مشاركة الملخص</button></div>
   </div>
+  <div class="card chart" id="chartMonths"></div>
+  <div class="card chart bal" id="chartBal"></div>
   <div class="card chart" id="chart"></div>
 </main>
 
@@ -716,8 +734,10 @@ function renderSummary() {
     stat('clock', '', `<span dir="ltr">${fmtHM(c.mins)}<small>س</small></span>`, 'مجموع الساعات') +
     stat('cash', '', mv(c.work), 'الأجور' + (c.ramt ? `<small>منها عن بعد ${money(c.ramt)}</small>` : '')) +
     stat('mcircle', 'cr', mv(c.adv, c.adv > 0), 'الكريدي') +
+    stat('cash', '', mv(c.days ? Math.round(c.work / c.days * 10) / 10 : 0), 'متوسط أجر اليوم') +
+    stat('clock', '', `<span dir="ltr">${fmtHM(c.days ? c.mins / c.days : 0)}<small>س</small></span>`, 'متوسط الساعات في اليوم') +
     stat('tcircle', 'net', mv(Math.abs(c.work - c.adv), c.work - c.adv < 0), 'الصافي');
-  renderChart();
+  renderChart(); renderMonths(); renderBalance();
 }
 function renderChart() {
   const days = [];
@@ -729,6 +749,45 @@ function renderChart() {
       const h = mins[n] / 60;
       return `<div class="b ${mins[n] ? 'has' : ''} ${n === 6 ? 'today' : ''}"><span class="bv num">${mins[n] ? +h.toFixed(1) : ''}</span><i style="height:${mins[n] ? Math.max(6, Math.round(mins[n] / max * 84)) : 3}px"></i><span class="bd">${WD[dt(d).getDay()]}</span></div>`;
     }).join('') + '</div>';
+}
+const kfmt = n => { const a = Math.abs(n), t = a >= 1000 ? (Math.round(a / 100) / 10) + 'k' : String(Math.round(a)); return (n < 0 ? '-' : '') + t; };
+function renderMonths() {
+  const now = new Date(), ms = [];
+  for (let k = 5; k >= 0; k--) { const d = new Date(now.getFullYear(), now.getMonth() - k, 1); ms.push({ key: d.getFullYear() + '-' + pad2(d.getMonth() + 1), d, w: 0, c: 0 }); }
+  allItems().forEach(i => { const m = ms.find(x => i.date.slice(0, 7) === x.key); if (m) { if (i.type === 'work') m.w += i.amount; else m.c += i.amount; } });
+  const max = Math.max(...ms.map(m => Math.max(m.w, m.c)), 1), H = 84;
+  const col = (v, cls) => `<div class="col"><span class="v">${v ? kfmt(v) : ''}</span><i class="${cls}" style="height:${v > 0 ? Math.max(3, Math.round(v / max * H)) : 3}px"></i></div>`;
+  $('chartMonths').innerHTML = `<div class="ch"><b>الأجور والكريدي حسب الشهر</b><span>آخر 6 أشهر</span></div><div class="mbars">` +
+    ms.map(m => `<div class="mb"><div class="pair">${col(m.w, 'w')}${col(m.c, 'c')}</div><span class="bd">${esc(m.d.toLocaleDateString('ar-u-nu-latn', { month: 'short' }))}</span></div>`).join('') +
+    `</div><div class="lg"><span><i class="w"></i>الأجور</span><span><i class="c"></i>الكريدي</span></div>`;
+}
+function balSeries() { // رصيدك (المستحق) بعد كل يوم، ويُعاد ضبطه عند كل دفعة
+  const pts = [], per = [...state.archive].sort((a, b) => (a.paidAt || '').localeCompare(b.paidAt || '') || a.id - b.id)
+    .map(a => ({ items: a.items, start: a.carryIn || 0, end: a.remain, at: a.paidAt })).concat([{ items: state.items, start: state.carry || 0 }]);
+  per.forEach(p => {
+    let bal = p.start; const days = {};
+    [...p.items].sort(byDate).forEach(i => { days[i.date] = (days[i.date] || 0) + (i.type === 'work' ? i.amount : -i.amount); });
+    Object.keys(days).sort().forEach(d => { bal += days[d]; pts.push({ d, v: round2(bal) }); });
+    if (p.end !== undefined && p.at) { const last = pts[pts.length - 1]; if (last && last.d === p.at) last.v = round2(p.end); else pts.push({ d: p.at, v: round2(p.end) }); }
+  });
+  return pts;
+}
+function renderBalance() {
+  const from = $('sFrom').value, to = $('sTo').value;
+  const pts = balSeries().filter(p => (!from || p.d >= from) && (!to || p.d <= to));
+  const head = '<div class="ch"><b>تطور الرصيد</b>' + (pts.length ? `<span class="num">${signed(pts[pts.length - 1].v)}</span>` : '') + '</div>';
+  if (pts.length < 2) { $('chartBal').innerHTML = head + '<div class="nodata">لا توجد بيانات كافية في هذه الفترة</div>'; return; }
+  const t = p => dt(p.d).getTime(), t0 = t(pts[0]), t1 = t(pts[pts.length - 1]);
+  const vs = pts.map(p => p.v), mx = Math.max(...vs, 0), mn = Math.min(...vs, 0), span = mx - mn || 1;
+  const X = p => t1 === t0 ? 0 : (t(p) - t0) / (t1 - t0) * 300, Y = v => 8 + (mx - v) / span * 104;
+  const line = pts.map(p => X(p).toFixed(1) + ',' + Y(p.v).toFixed(1)).join(' ');
+  const area = '0,' + Y(0).toFixed(1) + ' ' + line + ' 300,' + Y(0).toFixed(1);
+  const sd = p => dt(p.d).toLocaleDateString('ar-u-nu-latn', { day: 'numeric', month: 'short' });
+  $('chartBal').innerHTML = head +
+    `<svg viewBox="0 0 300 120" preserveAspectRatio="none"><line x1="0" x2="300" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}" stroke="var(--bd)" stroke-width="1" stroke-dasharray="4 4" vector-effect="non-scaling-stroke"/>` +
+    `<polygon points="${area}" fill="var(--tint)"/><polyline points="${line}" fill="none" stroke="var(--pritx)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>` +
+    `<div class="ax"><span>${esc(sd(pts[0]))}</span><span>${esc(sd(pts[pts.length - 1]))}</span></div>` +
+    `<div class="mm"><span>أدنى: ${signed(Math.min(...vs))}</span><span>أعلى: ${signed(Math.max(...vs))}</span></div>`;
 }
 function setMode(m) {
   sumMode = m;
