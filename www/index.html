@@ -285,7 +285,8 @@ details.card .lines{margin-top:12px;border-top:1px dashed var(--bd);padding-top:
     <button class="rb" id="bkFile"><svg class="ic"><use href="#i-file"/></svg><span>استعادة من ملف</span></button>
   </div>
   <input type="file" id="file" accept=".json,application/json" hidden>
-  <div class="note">التلقائية تُستبدل كل مرة. الزر اليدوي ينشئ ملفًا جديدًا باسمه التاريخ والوقت.</div>
+  <div class="note">التلقائية تُحدَّث مع كل تغيير، ويُحتفظ بآخر 3 نسخ سابقة (مرة في اليوم). الزر اليدوي ينشئ ملفًا جديدًا باسمه التاريخ والوقت.</div>
+  <div class="note" id="appVer" style="text-align:center" hidden></div>
   <div class="acts"><button class="ok" id="menuClose" type="button">تم</button></div>
 </dialog>
 
@@ -919,8 +920,12 @@ function updBkWhere() {
 }
 $('menuBtn').onclick = () => {
   $('cur').value = state.currency; $('rate').value = state.rate; $('auto').checked = state.auto;
-  updPinLabel(); updBkWhere(); updEnc(); buildSwatches(); $('menu').showModal();
+  updPinLabel(); updBkWhere(); updEnc(); buildSwatches(); showVer(); $('menu').showModal();
 };
+async function showVer() { // رقم النسخة من التطبيق نفسه (يتغير مع كل بناء)
+  const A = plugin('App'); if (!A || !A.getInfo) return;
+  try { const i = await A.getInfo(); $('appVer').textContent = 'النسخة ' + ltr(i.version + (i.build ? ' (' + i.build + ')' : '')); $('appVer').hidden = false; } catch (e) {}
+}
 $('menuClose').onclick = () => {
   state.currency = $('cur').value.trim();
   const r = parseFloat($('rate').value); if (r > 0) state.rate = r;
