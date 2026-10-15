@@ -589,7 +589,7 @@ const bold = s => '*' + s + '*';
 const clean = s => String(s || '').replace(/[*_~`]/g, c => ({ '*': '×', '_': 'ـ', '~': '∼', '`': 'ʼ' }[c]));
 const moneyP = n => num(n) + cur();
 const signedP = n => (n < 0 ? '−' : '') + num(Math.abs(n)) + cur();
-const durS = m => { m = Math.round(m); const h = Math.floor(m / 60), r = m % 60; return (h ? h + 'س' : '') + (h && r ? ' ' : '') + (r || !h ? r + 'د' : ''); };
+const durS = m => { m = Math.round(m); const h = Math.floor(m / 60), r = m % 60; return h ? ltr(h + ':' + pad2(r)) + ' ساعة' : ltr(r) + ' دقيقة'; };
 function totalsBlock(c, hideNet) {
   const o = ['📆 أيام العمل: ' + ltr(c.days), '⌛ مجموع الساعات: ' + fmtDur(c.mins), '💰 الأجور: ' + money(c.work)];
   if (c.ramt) o.push('🏠 منها عن بعد: ' + money(c.ramt));
@@ -606,7 +606,14 @@ function itemLine(i) {
 }
 function dayGroups(list) {
   const out = []; let last = null;
-  list.forEach(i => { if (i.date !== last) { if (last) out.push(''); out.push('📅 ' + bold(fmtDay(i.date))); last = i.date; } out.push(itemLine(i)); });
+  const days = [];
+  list.forEach(i => { if (i.date !== last) { days.push([]); last = i.date; } days[days.length - 1].push(i); });
+  days.forEach((g, k) => {
+    if (k) out.push('');
+    const net = g.reduce((t, i) => t + (i.type === 'work' ? i.amount : -i.amount), 0);
+    out.push('📌 ' + bold(fmtDay(g[0].date)) + (g.length > 1 ? ' • ' + ltr(signedP(round2(net))) : ''));
+    g.forEach(i => out.push(itemLine(i)));
+  });
   return out;
 }
 const rangeOf = list => {
@@ -624,7 +631,7 @@ const netKey = list => { const c = calc(list); return '✅ ' + bold('الصاف�
 function summaryText(withDetail) {
   const list = inRange().sort(byDate), from = $('sFrom').value, to = $('sTo').value;
   const head = from && to ? `من ${fmtShort(from)}\nإلى ${fmtShort(to)}` : from ? `من ${fmtShort(from)}` : to ? `حتى ${fmtShort(to)}` : 'كل الفترات';
-  return periodText('ملخص العمل', ['📅 ' + head], list, withDetail === undefined ? $('sDetail').checked : withDetail, null, netKey(list), true);
+  return periodText('ملخص العمل', ['🗓 ' + head], list, withDetail === undefined ? $('sDetail').checked : withDetail, null, netKey(list), true);
 }
 function currentText(d) {
   const list = [...state.items].sort(byDate), extra = [];
@@ -641,7 +648,7 @@ function archiveText(a, d) {
   extra.push('🧾 المستحق: ' + signed(a.due));
   if (rem) extra.push(rem > 0 ? '⏳ بقي لك (رُحِّل): ' + money(rem) : '➕ زيادة (خُصمت لاحقًا): ' + money(-rem));
   if (a.note) extra.push('📝 ' + clean(a.note));
-  return periodText('كشف دفعة', ['📅 تاريخ الاستلام: ' + fmtShort(a.paidAt), '🗓 الفترة: ' + rangeOf(list)], list, d, extra, '💵 ' + bold('المستلم: ' + ltr(moneyP(a.received))));
+  return periodText('كشف دفعة', ['🗓 تاريخ الاستلام: ' + fmtShort(a.paidAt), '🗓 الفترة: ' + rangeOf(list)], list, d, extra, '💵 ' + bold('المستلم: ' + ltr(moneyP(a.received))));
 }
 function archivesText(d) {
   const arc = [...state.archive].sort((a, b) => a.paidAt.localeCompare(b.paidAt) || a.id - b.id);
@@ -650,7 +657,7 @@ function archivesText(d) {
   arc.forEach((a, n) => {
     const list = [...a.items].sort(byDate), rem = round2(a.remain || 0);
     total += a.received;
-    out.push('', '📅 ' + bold((n + 1) + ') ' + fmtShort(a.paidAt)), '🗓 ' + rangeOf(list), '🧾 المستحق: ' + signed(a.due), '💵 المستلم: ' + money(a.received));
+    out.push('', '📌 ' + bold((n + 1) + ') ' + fmtShort(a.paidAt)), '🗓 ' + rangeOf(list), '🧾 المستحق: ' + signed(a.due), '💵 المستلم: ' + money(a.received));
     if (rem) out.push(rem > 0 ? '⏳ بقي لك: ' + money(rem) : '➕ زيادة: ' + money(-rem));
     if (d && list.length) out.push('', ...dayGroups(list));
   });
