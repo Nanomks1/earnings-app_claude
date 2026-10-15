@@ -122,20 +122,23 @@ input[type=checkbox]::after{content:"";position:absolute;top:3px;inset-inline-st
 input[type=checkbox]:checked{background:var(--pri)}
 input[type=checkbox]:checked::after{inset-inline-start:21px}
 .tg{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;font-size:15px;color:var(--text)}
+.shd{font-size:12px;font-weight:700;color:var(--mut);margin:16px 4px 0}
+.shd+.grp{margin-top:6px}
+.hint{font-size:11.5px;color:var(--mut);margin:-2px 0 8px}
 .note{font-size:12px;color:var(--mut);margin-top:12px;line-height:1.7}
 .info{font-size:14px;margin:8px 0;line-height:1.7}
 .big2{font-weight:800;font-size:18px}
 .grp{background:var(--card2);border-radius:16px;padding:4px 12px;margin-top:12px}
 .grp .fld{padding:2px 0 8px}
-.rb{display:flex;align-items:center;gap:12px;width:100%;min-height:50px;padding:6px 0;border:0;border-bottom:1px solid var(--bd);background:none;text-align:start;font-size:15px}
+.rb{display:flex;align-items:center;gap:12px;width:100%;min-height:46px;padding:6px 0;border:0;border-bottom:1px solid var(--bd);background:none;text-align:start;font-size:15px}
 .rb:last-child{border-bottom:0}
 .rb .ic{color:var(--pritx)}
 .rb span{flex:1}
 .rb em{font-style:normal;font-size:13px;color:var(--mut)}
-.sw{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:4px}
-.sw button{width:34px;height:34px;padding:0;border-radius:50%;border:3px solid var(--card2);box-shadow:0 0 0 1px var(--bd)}
+.sw{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:4px}
+.sw button{width:30px;height:30px;padding:0;border-radius:50%;border:3px solid var(--card2);box-shadow:0 0 0 1px var(--bd)}
 .sw button.sel{box-shadow:0 0 0 2.5px var(--text)}
-.sw input[type=color]{width:44px;height:34px;padding:0;border:0;background:none;border-radius:8px}
+.sw input[type=color]{width:38px;height:30px;padding:0;border:0;background:none;border-radius:8px}
 #filesList button{display:block;width:100%;text-align:start;padding:12px;margin-top:8px;border-radius:12px;border:1px solid var(--bd);background:var(--card2)}
 #filesList small{color:var(--mut)}
 .kv{display:flex;justify-content:space-between;gap:10px;font-size:14px;color:var(--mut);padding:4px 0}
@@ -148,6 +151,7 @@ details.card summary small{display:block;font-size:12px;color:var(--mut);margin-
 details.card .lines{margin-top:12px;border-top:1px dashed var(--bd);padding-top:10px;font-size:13px;color:var(--mut);line-height:1.9}
 #toast{position:fixed;inset-inline:16px;bottom:calc(96px + env(safe-area-inset-bottom));background:var(--text);color:var(--bg);padding:12px 14px;border-radius:14px;text-align:center;opacity:0;pointer-events:none;transition:opacity .25s;z-index:60;font-size:14px}
 #toast.on{opacity:1}
+@media (prefers-color-scheme:dark){#toast{background:#2a3138;color:var(--text);border:1px solid #3b444c;box-shadow:0 6px 18px rgba(0,0,0,.45)}}
 #lock{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px}
 #lock .dots{display:flex;gap:14px;direction:ltr}
 #lock .dots span{width:16px;height:16px;border-radius:50%;border:2px solid var(--pri)}
@@ -265,21 +269,30 @@ details.card .lines{margin-top:12px;border-top:1px dashed var(--bd);padding-top:
 
 <dialog id="menu">
   <h2>الإعدادات</h2>
+  <div class="shd">عام</div>
   <div class="grp">
-    <div class="fld"><label for="cur">العملة</label><input type="text" id="cur" placeholder="DH"></div>
-    <div class="fld"><label for="rate">سعر الساعة (للأيام الجديدة فقط)</label><input type="number" id="rate" inputmode="decimal" min="0" step="any"></div>
+    <div class="row">
+      <div class="fld" style="flex:.8"><label for="cur">العملة</label><input type="text" id="cur" placeholder="DH"></div>
+      <div class="fld"><label for="rate">سعر الساعة</label><input type="number" id="rate" inputmode="decimal" min="0" step="any"></div>
+    </div>
+    <div class="hint">السعر الجديد يسري على الأيام الجديدة فقط</div>
     <div class="fld"><label>لون التطبيق</label><div class="sw" id="sw"></div></div>
   </div>
+  <div class="shd">الأمان</div>
   <div class="grp">
     <button class="rb" id="pinBtn"><svg class="ic"><use href="#i-lock"/></svg><span>رمز القفل</span><em id="pinSt"></em></button>
+    <button class="rb" id="encBtn"><svg class="ic"><use href="#i-lock"/></svg><span>تشفير النسخ الاحتياطي</span><em id="encSt"></em></button>
   </div>
+  <div class="shd">النسخ الاحتياطي</div>
   <div class="grp">
     <div class="rb"><svg class="ic"><use href="#i-save"/></svg><span>نسخ احتياطي تلقائي بعد كل تعديل</span><input type="checkbox" id="auto"></div>
     <div class="info" id="bkWhere" style="color:var(--mut);font-size:13px"></div>
-    <button class="rb" id="encBtn"><svg class="ic"><use href="#i-lock"/></svg><span>تشفير النسخ الاحتياطي</span><em id="encSt"></em></button>
     <button class="rb" id="bkPick"><svg class="ic"><use href="#i-folder"/></svg><span>اختيار مجلد لحفظ النسخ</span></button>
     <button class="rb" id="bkReset"><svg class="ic"><use href="#i-restore"/></svg><span>العودة للمكان الافتراضي</span></button>
     <button class="rb" id="bkNow"><svg class="ic"><use href="#i-save"/></svg><span>نسخة احتياطية جديدة الآن</span></button>
+  </div>
+  <div class="shd">الاستعادة</div>
+  <div class="grp">
     <button class="rb" id="bkRestore"><svg class="ic"><use href="#i-restore"/></svg><span>استعادة من النسخة التلقائية</span></button>
     <button class="rb" id="bkList"><svg class="ic"><use href="#i-archive"/></svg><span>اختيار نسخة سابقة</span></button>
     <button class="rb" id="bkFile"><svg class="ic"><use href="#i-file"/></svg><span>استعادة من ملف</span></button>
