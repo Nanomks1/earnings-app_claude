@@ -582,78 +582,80 @@ function inRange() {
   const from = $('sFrom').value, to = $('sTo').value;
   return allItems().filter(i => (!from || i.date >= from) && (!to || i.date <= to));
 }
-const SEP = '━━━━━━━━━━━━━━';
+const RLM = '\u200F';
+const SEP = '━━━━━━━━━━━━━━', BOX = '▬▬▬▬▬▬▬▬▬▬▬▬▬▬';
 const byDate = (a, b) => a.date.localeCompare(b.date) || a.id - b.id;
-function totalsBlock(c) {
+const bold = s => '*' + s + '*';
+const clean = s => String(s || '').replace(/[*_~`]/g, c => ({ '*': '×', '_': 'ـ', '~': '∼', '`': 'ʼ' }[c]));
+const moneyP = n => num(n) + cur();
+const signedP = n => (n < 0 ? '−' : '') + num(Math.abs(n)) + cur();
+const durS = m => { m = Math.round(m); const h = Math.floor(m / 60), r = m % 60; return (h ? h + 'س' : '') + (h && r ? ' ' : '') + (r || !h ? r + 'د' : ''); };
+function totalsBlock(c, hideNet) {
   const o = ['📆 أيام العمل: ' + ltr(c.days), '⌛ مجموع الساعات: ' + fmtDur(c.mins), '💰 الأجور: ' + money(c.work)];
   if (c.ramt) o.push('🏠 منها عن بعد: ' + money(c.ramt));
-  o.push('🔻 الكريدي: ' + signed(-c.adv), '✅ الصافي: ' + signed(c.work - c.adv));
+  o.push('🔻 الكريدي: ' + signed(-c.adv));
+  if (!hideNet) o.push('✅ الصافي: ' + signed(c.work - c.adv));
   return o;
 }
-function itemBlock(i, n) {
-  const b = [`${n + 1}) ${fmtDate(i.date)}`];
-  if (i.type === 'work') {
-    if (i.remote) b.push('   🏠 عن بعد');
-    else {
-      if (i.start && i.end) b.push('   ⏰ ' + ltr(i.start + ' – ' + i.end));
-      b.push('   ⌛ ' + fmtDur(i.mins));
-    }
-    b.push('   💰 ' + money(i.amount));
-  } else b.push('   🔻 كريدي', '   💰 ' + signed(-i.amount));
-  if (i.note) b.push('   📝 ' + i.note);
-  return b.join('\n');
+// بند واحد = سطر واحد: أيقونة، المبلغ بخط عريض، ثم التفاصيل
+function itemLine(i) {
+  const n = i.note ? ' • ' + clean(i.note) : '';
+  if (i.type !== 'work') return '🔻 ' + bold(ltr(signedP(-i.amount))) + ' • كريدي' + n;
+  if (i.remote) return '🏠 ' + bold(ltr(moneyP(i.amount))) + ' • عن بعد' + n;
+  return '💰 ' + bold(ltr(moneyP(i.amount))) + ' • ' + (i.start && i.end ? ltr(i.start + ' – ' + i.end) + ' • ' : '') + durS(i.mins) + n;
 }
-function detailLines(list) {
-  const out = ['', SEP, '📑 التفاصيل', SEP];
-  list.forEach((i, n) => out.push('', itemBlock(i, n)));
+function dayGroups(list) {
+  const out = []; let last = null;
+  list.forEach(i => { if (i.date !== last) { if (last) out.push(''); out.push('📅 ' + bold(fmtDay(i.date))); last = i.date; } out.push(itemLine(i)); });
   return out;
 }
 const rangeOf = list => {
   const d = list.map(i => i.date).sort();
   return d.length ? (d[0] === d[d.length - 1] ? fmtShort(d[0]) : fmtShort(d[0]) + ' ← ' + fmtShort(d[d.length - 1])) : '—';
 };
-function periodText(title, head, list, withDetail, extra) {
-  const out = [title, SEP, ...head, SEP, '', ...totalsBlock(calc(list)), ...(extra || [])];
-  if (withDetail && list.length) out.push(...detailLines(list));
-  return out.join('\n');
+const rtl = lines => lines.join('\n').split('\n').map(l => l ? RLM + l : l).join('\n');
+function periodText(title, head, list, withDetail, extra, key, hideNet) {
+  const out = ['📋 ' + bold(title), ...head, SEP, ...totalsBlock(calc(list), hideNet), ...(extra || [])];
+  if (key) out.push('', BOX, key, BOX);
+  if (withDetail && list.length) out.push('', '📑 ' + bold('التفاصيل'), ...dayGroups(list));
+  return rtl(out);
 }
+const netKey = list => { const c = calc(list); return '✅ ' + bold('الصافي: ' + ltr(signedP(c.work - c.adv))); };
 function summaryText(withDetail) {
   const list = inRange().sort(byDate), from = $('sFrom').value, to = $('sTo').value;
   const head = from && to ? `من ${fmtShort(from)}\nإلى ${fmtShort(to)}` : from ? `من ${fmtShort(from)}` : to ? `حتى ${fmtShort(to)}` : 'كل الفترات';
-  return periodText('📋 ملخص العمل', ['📅 ' + head], list, withDetail === undefined ? $('sDetail').checked : withDetail);
+  return periodText('ملخص العمل', ['📅 ' + head], list, withDetail === undefined ? $('sDetail').checked : withDetail, null, netKey(list), true);
 }
 function currentText(d) {
   const list = [...state.items].sort(byDate), extra = [];
   if (state.carry) extra.push('↩️ مرحَّل من الدفعة السابقة: ' + signed(state.carry));
-  extra.push('🧾 المستحق الآن: ' + signed(due()));
-  return periodText('📋 الفترة الحالية (غير مدفوعة)', ['🗓 ' + rangeOf(list)], list, d, extra);
+  return periodText('الفترة الحالية (غير مدفوعة)', ['🗓 ' + rangeOf(list)], list, d, extra, '🧾 ' + bold('المستحق الآن: ' + ltr(signedP(due()))));
 }
 function weekText(k, d) {
   const list = state.items.filter(i => monday(i.date) === k).sort(byDate);
-  return periodText('📋 ملخص أسبوع', ['🗓 ' + weekLabel(k)], list, d);
+  return periodText('ملخص أسبوع', ['🗓 ' + weekLabel(k)], list, d, null, netKey(list), true);
 }
 function archiveText(a, d) {
   const list = [...a.items].sort(byDate), rem = round2(a.remain || 0), extra = [];
   if (a.carryIn) extra.push('↩️ مرحَّل قبلها: ' + signed(a.carryIn));
-  extra.push('🧾 المستحق: ' + signed(a.due), '💵 المستلم: ' + money(a.received));
+  extra.push('🧾 المستحق: ' + signed(a.due));
   if (rem) extra.push(rem > 0 ? '⏳ بقي لك (رُحِّل): ' + money(rem) : '➕ زيادة (خُصمت لاحقًا): ' + money(-rem));
-  if (a.note) extra.push('📝 ' + a.note);
-  return periodText('📋 كشف دفعة', ['📅 تاريخ الاستلام: ' + fmtShort(a.paidAt), '🗓 الفترة: ' + rangeOf(list)], list, d, extra);
+  if (a.note) extra.push('📝 ' + clean(a.note));
+  return periodText('كشف دفعة', ['📅 تاريخ الاستلام: ' + fmtShort(a.paidAt), '🗓 الفترة: ' + rangeOf(list)], list, d, extra, '💵 ' + bold('المستلم: ' + ltr(moneyP(a.received))));
 }
 function archivesText(d) {
   const arc = [...state.archive].sort((a, b) => a.paidAt.localeCompare(b.paidAt) || a.id - b.id);
-  const out = ['📋 كشف الدفعات', SEP, '🗂 عدد الدفعات: ' + ltr(arc.length), SEP];
+  const out = ['📋 ' + bold('كشف الدفعات'), '🗂 عدد الدفعات: ' + ltr(arc.length), SEP];
   let total = 0;
   arc.forEach((a, n) => {
     const list = [...a.items].sort(byDate), rem = round2(a.remain || 0);
     total += a.received;
-    const b = [`${n + 1}) 📅 ${fmtShort(a.paidAt)}`, '   🗓 ' + rangeOf(list), '   🧾 المستحق: ' + signed(a.due), '   💵 المستلم: ' + money(a.received)];
-    if (rem) b.push(rem > 0 ? '   ⏳ بقي لك: ' + money(rem) : '   ➕ زيادة: ' + money(-rem));
-    if (d) list.forEach(i => b.push('   • ' + fmtShort(i.date) + ' — ' + (i.type === 'work' ? (i.remote ? 'عن بعد' : fmtDur(i.mins)) + ' — ' + money(i.amount) : 'كريدي ' + signed(-i.amount))));
-    out.push('', b.join('\n'));
+    out.push('', '📅 ' + bold((n + 1) + ') ' + fmtShort(a.paidAt)), '🗓 ' + rangeOf(list), '🧾 المستحق: ' + signed(a.due), '💵 المستلم: ' + money(a.received));
+    if (rem) out.push(rem > 0 ? '⏳ بقي لك: ' + money(rem) : '➕ زيادة: ' + money(-rem));
+    if (d && list.length) out.push('', ...dayGroups(list));
   });
-  out.push('', SEP, '💵 مجموع المستلم: ' + money(total));
-  return out.join('\n');
+  out.push('', BOX, '💵 ' + bold('مجموع المستلم: ' + ltr(moneyP(total))), BOX);
+  return rtl(out);
 }
 async function doShare(text) {
   const S = plugin('Share');
