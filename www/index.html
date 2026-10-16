@@ -141,7 +141,7 @@
 
 <dialog id="menu">
   <h2>الإعدادات</h2>
-  <div class="shd">عام</div>
+  <div class="shd">العمل</div>
   <div class="grp">
     <div class="row">
       <div class="fld" style="flex:.8"><label for="cur">العملة</label><input type="text" id="cur" placeholder="DH"></div>
@@ -150,21 +150,28 @@
     <div class="hint">السعر الجديد يسري على الأيام الجديدة فقط</div>
     <div class="fld"><label for="forgetH">تنبيه نسيان الخروج بعد (ساعات)</label><input type="number" id="forgetH" inputmode="numeric" min="0" max="48" step="1"></div>
     <div class="hint">0 = بلا تنبيه. يظهر عند فتح التطبيق إن بقي الدخول مفتوحًا أكثر من هذه المدة</div>
+    <div class="rb" style="border-top:1px solid var(--bd)"><span class="bub"><svg class="ic"><use href="#i-search"/></svg></span><span class="t">البحث والفلتر<small>يظهر فوق السجلات والأرشيف</small></span><input type="checkbox" id="srchChk"></div>
+  </div>
+  <div class="shd">المظهر</div>
+  <div class="grp">
     <div class="fld"><label>لون التطبيق</label><div class="sw" id="sw"></div></div>
+      <div class="fld" style="border-top:1px solid var(--bd);padding-top:10px"><label>حجم الخط</label><div class="seg" id="fsSeg"><button data-v="0" type="button">عادي</button><button data-v="1" type="button">كبير</button><button data-v="2" type="button">أكبر</button></div></div>
     <div id="icBox">
       <div class="fld" style="border-top:1px solid var(--bd);padding-top:10px"><label>شكل أيقونة التطبيق</label><div class="seg" id="icSeg"><button data-s="a" type="button">دارة إلكترونية</button><button data-s="b" type="button">موجات</button></div></div>
       <div class="rb"><span class="t">لون الأيقونة يتبع لون التطبيق<small>قد تتأخر الشاشة الرئيسية قليلًا في إظهار التغيير</small></span><input type="checkbox" id="icFollow"></div>
     </div>
-    <div id="wgBox">
-      <div class="fld" style="border-top:1px solid var(--bd);padding-top:10px"><label>خلفية الودجت</label><div class="seg" id="wgBg"><button data-v="0" type="button">حسب الوضع</button><button data-v="1" type="button">شفافة</button><button data-v="2" type="button">بلا خلفية</button><button data-v="3" type="button">داكنة</button></div></div>
+  </div>
+  <div id="wgBox">
+  <div class="shd">الودجت</div>
+  <div class="grp">
+      <div class="fld"><label>خلفية الودجت</label><div class="seg" id="wgBg"><button data-v="0" type="button">حسب الوضع</button><button data-v="1" type="button">شفافة</button><button data-v="2" type="button">بلا خلفية</button><button data-v="3" type="button">داكنة</button></div></div>
       <div class="fld"><label>لون الأيقونة والنص</label><div class="seg" id="wgFg"><button data-v="0" type="button">تلقائي</button><button data-v="1" type="button">أبيض</button><button data-v="2" type="button">أسود</button></div></div>
       <div class="hint">«تلقائي» و«حسب الوضع» يتبعان الوضع الليلي/النهاري للهاتف</div>
       <div class="fld"><label>شكل أيقونات الودجت</label><div class="seg" id="wgIc"><button data-v="0" type="button">نقاط</button><button data-v="1" type="button">صلبة</button><button data-v="2" type="button">دائرية</button></div></div>
       <div class="rb"><span class="t">إظهار النص تحت الأيقونة</span><input type="checkbox" id="wgLabel"></div>
-    </div>
-    <div class="rb" style="border-top:1px solid var(--bd)"><span class="bub"><svg class="ic"><use href="#i-search"/></svg></span><span class="t">البحث والفلتر<small>يظهر فوق السجلات والأرشيف</small></span><input type="checkbox" id="srchChk"></div>
   </div>
   <div class="note" style="margin-top:8px">لتسجيل الدخول والخروج بضغطة من الشاشة الرئيسية: اضغط مطولًا على الشاشة ← الودجات ← «العمل». يلزم ضغطتان متتاليتان (الأولى للتأكيد) لتفادي اللمس بالخطأ.</div>
+  </div>
   <div class="shd">الأمان</div>
   <div class="grp">
     <button class="rb" id="pinBtn"><span class="bub"><svg class="ic"><use href="#i-lock"/></svg></span><span class="t">رمز القفل<small id="pinSt"></small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
@@ -174,7 +181,7 @@
   <div class="shd">النسخ الاحتياطي</div>
   <div class="grp">
     <div class="rb"><span class="bub"><svg class="ic"><use href="#i-save"/></svg></span><span class="t">نسخ احتياطي تلقائي<small>بعد كل تعديل</small></span><input type="checkbox" id="auto"></div>
-    <div class="info" id="bkWhere" style="color:var(--mut);font-size:13px"></div>
+    <div class="info" id="bkWhere" style="color:var(--mut);font-size:calc(13px*var(--fs,1))"></div>
     <button class="rb" id="bkPick"><span class="bub"><svg class="ic"><use href="#i-folder"/></svg></span><span class="t">اختيار مجلد لحفظ النسخ</span></button>
     <button class="rb" id="bkReset"><span class="bub"><svg class="ic"><use href="#i-restore"/></svg></span><span class="t">العودة للمكان الافتراضي</span></button>
     <button class="rb" id="bkNow"><span class="bub"><svg class="ic"><use href="#i-save"/></svg></span><span class="t">نسخة احتياطية جديدة الآن</span></button>
@@ -250,7 +257,7 @@
 </dialog>
 
 <div id="lock" hidden>
-  <div style="font-size:18px;font-weight:700">أدخل الرمز</div>
+  <div style="font-size:calc(18px*var(--fs,1));font-weight:700">أدخل الرمز</div>
   <div class="dots"><span></span><span></span><span></span><span></span></div>
   <div class="pad" id="pad"></div>
 </div>
