@@ -777,7 +777,7 @@ function updBkWhere() {
 }
 $('menuBtn').onclick = () => {
   $('srchChk').checked = state.search !== false; $('cur').value = state.currency; $('rate').value = state.rate; $('auto').checked = state.auto; $('forgetH').value = state.forgetH;
-  updIc(); updPinLabel(); $('bioRow').hidden = !bioOk; $('bioChk').checked = !!state.bio; updBkWhere(); updEnc(); buildSwatches(); showVer(); $('menu').showModal();
+  updIc(); updWg(); updPinLabel(); $('bioRow').hidden = !bioOk; $('bioChk').checked = !!state.bio; updBkWhere(); updEnc(); buildSwatches(); showVer(); $('menu').showModal();
 };
 async function showVer() { // رقم النسخة من التطبيق نفسه (يتغير مع كل بناء)
   const A = plugin('App'); if (!A || !A.getInfo) return;
@@ -819,6 +819,24 @@ function updIc() {
 }
 $('icSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; icPref.style = b.dataset.s; icSave(); updIc(); iconSync(); };
 $('icFollow').onchange = () => { icPref.follow = $('icFollow').checked; icSave(); iconSync(); };
+
+// ---------- مظهر الودجت ----------
+const WG_KEY = 'earnings_wg';
+const wgPref = { bg: 0, fg: 0, label: true };
+try { Object.assign(wgPref, JSON.parse(localStorage.getItem(WG_KEY)) || {}); } catch (e) {}
+function wgApply() {
+  try { localStorage.setItem(WG_KEY, JSON.stringify(wgPref)); } catch (e) {}
+  const W = nplug('WorkWidget'); if (W && W.setStyle) { try { W.setStyle(wgPref); } catch (e) {} }
+}
+function updWg() {
+  $('wgBox').hidden = !isNative();
+  [...$('wgBg').children].forEach(b => b.classList.toggle('on', +b.dataset.v === wgPref.bg));
+  [...$('wgFg').children].forEach(b => b.classList.toggle('on', +b.dataset.v === wgPref.fg));
+  $('wgLabel').checked = wgPref.label;
+}
+$('wgBg').onclick = e => { const b = e.target.closest('button'); if (!b) return; wgPref.bg = +b.dataset.v; wgApply(); updWg(); };
+$('wgFg').onclick = e => { const b = e.target.closest('button'); if (!b) return; wgPref.fg = +b.dataset.v; wgApply(); updWg(); };
+$('wgLabel').onchange = () => { wgPref.label = $('wgLabel').checked; wgApply(); };
 
 // ---------- النسخ الاحتياطي ----------
 const stamp = () => { const d = new Date(); return d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()) + '-' + pad2(d.getHours()) + pad2(d.getMinutes()) + pad2(d.getSeconds()); };
