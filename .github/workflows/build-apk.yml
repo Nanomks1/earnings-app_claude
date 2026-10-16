@@ -67,8 +67,15 @@ jobs:
           cp android-src/work_w_check.xml $R/drawable/
           cp android-src/work_widget_bg_glass.xml $R/drawable/
           cp android-src/work_widget_bg_none.xml $R/drawable/
-          cp android-src/work_w_play_k.xml $R/drawable/
-          cp android-src/work_w_stop_k.xml $R/drawable/
+          cp android-src/work_widget_bg_dark.xml $R/drawable/
+          cp android-src/work_w_play_s.xml $R/drawable/
+          cp android-src/work_w_stop_s.xml $R/drawable/
+          cp android-src/work_w_check_s.xml $R/drawable/
+          cp android-src/work_w_play_r.xml $R/drawable/
+          cp android-src/work_w_stop_r.xml $R/drawable/
+          cp android-src/work_w_check_r.xml $R/drawable/
+          cp android-src/work_w_colors.xml $R/values/work_w_colors.xml
+          cp android-src/work_w_colors_night.xml $R/values-night/work_w_colors.xml
           cp android-src/work_widget_info.xml $R/xml/
           M=android/app/src/main/AndroidManifest.xml
           sed -i 's#</application>#    <receiver android:name=".WorkWidgetProvider" android:exported="true"><intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter><meta-data android:name="android.appwidget.provider" android:resource="@xml/work_widget_info"/></receiver>\n    </application>#' $M
