@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="work_w_fg">#FFFFFFFF</color>
+    <color name="work_w_bg_solid">#D9121212</color>
+    <color name="work_w_bg_glass">#66000000</color>
+    <color name="work_w_stroke">#33FFFFFF</color>
+</resources>
