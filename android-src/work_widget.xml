@@ -8,17 +8,55 @@
     android:padding="6dp"
     android:background="@drawable/work_widget_bg">
     <ImageView
-        android:id="@+id/work_w_icon"
+        android:id="@+id/work_w_icon_a"
         android:layout_width="34dp"
         android:layout_height="34dp"
+        android:tint="@color/work_w_fg"
+        android:src="@drawable/work_w_play" />
+    <ImageView
+        android:id="@+id/work_w_icon_w"
+        android:layout_width="34dp"
+        android:layout_height="34dp"
+        android:tint="#FFFFFFFF"
+        android:visibility="gone"
+        android:src="@drawable/work_w_play" />
+    <ImageView
+        android:id="@+id/work_w_icon_k"
+        android:layout_width="34dp"
+        android:layout_height="34dp"
+        android:tint="#FF111111"
+        android:visibility="gone"
         android:src="@drawable/work_w_play" />
     <TextView
-        android:id="@+id/work_w_title"
+        android:id="@+id/work_w_title_a"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
         android:maxLines="1"
-        android:textColor="#FFFFFF"
+        android:textColor="@color/work_w_fg"
         android:textSize="12sp"
-        android:textStyle="normal" />
+        android:textStyle="normal"
+        android:text="" />
+    <TextView
+        android:id="@+id/work_w_title_w"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:maxLines="1"
+        android:textColor="#FFFFFFFF"
+        android:textSize="12sp"
+        android:textStyle="normal"
+        android:visibility="gone"
+        android:text="" />
+    <TextView
+        android:id="@+id/work_w_title_k"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:maxLines="1"
+        android:textColor="#FF111111"
+        android:textSize="12sp"
+        android:textStyle="normal"
+        android:visibility="gone"
+        android:text="" />
 </LinearLayout>
