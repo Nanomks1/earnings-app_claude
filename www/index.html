@@ -165,7 +165,7 @@ details.card summary div{flex:1}
 details.card summary b{font-size:15px}
 details.card summary small{display:block;font-size:12px;color:var(--mut);margin-top:2px}
 details.card .lines{margin-top:12px;border-top:1px dashed var(--bd);padding-top:10px;font-size:13px;color:var(--mut);line-height:1.9}
-#toast{position:fixed;inset-inline:16px;bottom:calc(96px + env(safe-area-inset-bottom));background:var(--text);color:var(--bg);padding:12px 14px;border-radius:14px;text-align:center;opacity:0;pointer-events:none;transition:opacity .25s;z-index:60;font-size:14px}
+#toast{position:fixed;inset-inline:16px;top:auto;margin:0;width:auto;height:auto;border:0;overflow:visible;bottom:calc(96px + env(safe-area-inset-bottom));background:var(--text);color:var(--bg);padding:12px 14px;border-radius:14px;text-align:center;opacity:0;pointer-events:none;transition:opacity .25s;z-index:60;font-size:14px}
 #toast.on{opacity:1}
 @media (prefers-color-scheme:dark){#toast{background:#2a3138;color:var(--text);border:1px solid #3b444c;box-shadow:0 6px 18px rgba(0,0,0,.45)}}
 #lock{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px}
@@ -179,7 +179,7 @@ details.card .lines{margin-top:12px;border-top:1px dashed var(--bd);padding-top:
 </style>
 </head>
 <body>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol><symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5l10.5 6.5L8 18.5z"/></symbol><symbol id="i-stop" viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="2"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol><symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol><symbol id="i-calendar" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5" rx="2.5"/><path d="M4 10h16M9 3.5v4M15 3.5v4"/></symbol><symbol id="i-cash" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="10" rx="2.5"/><circle cx="12" cy="12" r="2.5"/><path d="M6.5 12h.01M17.5 12h.01"/></symbol><symbol id="i-mcircle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M8 12h8"/></symbol><symbol id="i-tcircle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></symbol><symbol id="i-share" viewBox="0 0 24 24"><circle cx="6" cy="12" r="2.3"/><circle cx="18" cy="6" r="2.3"/><circle cx="18" cy="18" r="2.3"/><path d="M8.1 11l7.8-3.9M8.1 13l7.8 3.9"/></symbol><symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 0 1 2-2H10l2 2.5h6.5a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></symbol><symbol id="i-save" viewBox="0 0 24 24"><path d="M12 4v10M8 10.5l4 4 4-4M5 19h14"/></symbol><symbol id="i-restore" viewBox="0 0 24 24"><path d="M4.5 12a7.5 7.5 0 1 0 2.4-5.5M4 4.5V8h3.5"/></symbol><symbol id="i-file" viewBox="0 0 24 24"><path d="M7 3.5h6.5L18 8v11.5a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1z"/><path d="M13.5 3.5V8H18"/></symbol><symbol id="i-lock" viewBox="0 0 24 24"><rect x="5.5" y="10.5" width="13" height="9.5" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></symbol><symbol id="i-bars" viewBox="0 0 24 24"><path d="M5 20V12M12 20V5M19 20v-5"/></symbol><symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></symbol><symbol id="i-archive" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="4.5" rx="1.2"/><path d="M5 9.5V18a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 18V9.5M10 13h4"/></symbol><symbol id="i-home" viewBox="0 0 24 24"><path d="M3.5 11.5L12 4.5l8.5 7M6 10v9.5h12V10M10 19.5v-5h4v5"/></symbol></svg>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol><symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5l10.5 6.5L8 18.5z"/></symbol><symbol id="i-stop" viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="2"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol><symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol><symbol id="i-calendar" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5" rx="2.5"/><path d="M4 10h16M9 3.5v4M15 3.5v4"/></symbol><symbol id="i-cash" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="10" rx="2.5"/><circle cx="12" cy="12" r="2.5"/><path d="M6.5 12h.01M17.5 12h.01"/></symbol><symbol id="i-mcircle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M8 12h8"/></symbol><symbol id="i-tcircle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></symbol><symbol id="i-share" viewBox="0 0 24 24"><circle cx="6" cy="12" r="2.3"/><circle cx="18" cy="6" r="2.3"/><circle cx="18" cy="18" r="2.3"/><path d="M8.1 11l7.8-3.9M8.1 13l7.8 3.9"/></symbol><symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 0 1 2-2H10l2 2.5h6.5a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></symbol><symbol id="i-save" viewBox="0 0 24 24"><path d="M12 4v10M8 10.5l4 4 4-4M5 19h14"/></symbol><symbol id="i-restore" viewBox="0 0 24 24"><path d="M4.5 12a7.5 7.5 0 1 0 2.4-5.5M4 4.5V8h3.5"/></symbol><symbol id="i-file" viewBox="0 0 24 24"><path d="M7 3.5h6.5L18 8v11.5a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1z"/><path d="M13.5 3.5V8H18"/></symbol><symbol id="i-lock" viewBox="0 0 24 24"><rect x="5.5" y="10.5" width="13" height="9.5" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></symbol><symbol id="i-bars" viewBox="0 0 24 24"><path d="M5 20V12M12 20V5M19 20v-5"/></symbol><symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></symbol><symbol id="i-archive" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="4.5" rx="1.2"/><path d="M5 9.5V18a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 18V9.5M10 13h4"/></symbol><symbol id="i-edit" viewBox="0 0 24 24"><path d="M4.5 19.5h4L19 9l-4-4L4.5 15.5zM13 7l4 4"/></symbol><symbol id="i-home" viewBox="0 0 24 24"><path d="M3.5 11.5L12 4.5l8.5 7M6 10v9.5h12V10M10 19.5v-5h4v5"/></symbol></svg>
 <header>
   <h1>العمل</h1>
   <div class="hbtns">
@@ -221,6 +221,7 @@ details.card .lines{margin-top:12px;border-top:1px dashed var(--bd);padding-top:
   <div class="card chart" id="chartMonths"></div>
   <div class="card chart bal" id="chartBal"></div>
   <div class="card chart" id="chart"></div>
+  <div class="card chart" id="chartWd"></div>
 </main>
 
 <div class="bar">
@@ -282,6 +283,23 @@ details.card .lines{margin-top:12px;border-top:1px dashed var(--bd);padding-top:
   <div class="acts">
     <button id="pCancel" type="button">إلغاء</button>
     <button class="ok" id="pOk" type="button">تأكيد الاستلام</button>
+  </div>
+</dialog>
+
+<dialog id="apDlg">
+  <h2>تعديل الدفعة</h2>
+  <div class="info big2" id="aInfo"></div>
+  <label for="aDate">تاريخ الاستلام</label>
+  <input type="date" id="aDate">
+  <label for="aRecv">المبلغ المستلم</label>
+  <input type="number" id="aRecv" inputmode="decimal" min="0" step="any">
+  <div class="info" id="aRem"></div>
+  <label for="aNote">ملاحظة (اختياري)</label>
+  <input type="text" id="aNote">
+  <div class="note" id="aWarn"></div>
+  <div class="acts">
+    <button id="aCancel" type="button">إلغاء</button>
+    <button class="ok" id="aOk" type="button">حفظ</button>
   </div>
 </dialog>
 
@@ -384,7 +402,7 @@ details.card .lines{margin-top:12px;border-top:1px dashed var(--bd);padding-top:
   <div class="pad" id="pad"></div>
 </div>
 
-<div id="toast"></div>
+<div id="toast" popover="manual"></div>
 
 <script>
 const KEY = 'earnings_v1';
@@ -465,15 +483,23 @@ const fmtDay = s => dt(s).toLocaleDateString('ar-u-nu-latn', dt(s).getFullYear()
 const unit = (n, one, two, few) => n === 1 ? one : n === 2 ? two : n + ' ' + (n <= 10 ? few : one);
 const fmtDur = m => { m = Math.round(m); const h = Math.floor(m / 60), r = m % 60; return [h ? unit(h, 'ساعة', 'ساعتان', 'ساعات') : '', r ? unit(r, 'دقيقة', 'دقيقتان', 'دقائق') : ''].filter(Boolean).join(' و ') || '—'; };
 const fmtHM = m => { m = Math.round(m); return Math.floor(m / 60) + ':' + pad2(m % 60); };
-const toast = t => { const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove('on'), 3200); };
+const toast = t => { // popover: يظهر فوق النوافذ المفتوحة أيضًا
+  const e = $('toast'); e.textContent = t;
+  try { if (e.showPopover) { try { e.hidePopover(); } catch (x) {} e.showPopover(); } } catch (x) {}
+  e.classList.add('on'); clearTimeout(toast.t); clearTimeout(toast.h);
+  toast.t = setTimeout(() => {
+    e.classList.remove('on');
+    toast.h = setTimeout(() => { try { if (e.hidePopover) e.hidePopover(); } catch (x) {} }, 300);
+  }, 3200);
+};
 
 function calc(items) {
-  const o = { work: 0, adv: 0, mins: 0, ramt: 0, days: 0 }, ds = new Set();
+  const o = { work: 0, adv: 0, mins: 0, ramt: 0, days: 0, wd: 0 }, ds = new Set(), dh = new Set();
   items.forEach(i => {
-    if (i.type === 'work') { o.work += i.amount; o.mins += i.mins; if (i.remote) o.ramt += i.amount; ds.add(i.date); }
+    if (i.type === 'work') { o.work += i.amount; o.mins += i.mins; if (i.remote) o.ramt += i.amount; else if (i.mins > 0) dh.add(i.date); ds.add(i.date); }
     else o.adv += i.amount;
   });
-  o.days = ds.size;
+  o.days = ds.size; o.wd = dh.size;
   return o;
 }
 const due = () => { const c = calc(state.items); return state.carry + c.work - c.adv; };
@@ -556,6 +582,7 @@ function render() {
 }
 
 // ---------- دخول / خروج ----------
+const OPEN_WARN = 16 * 60, LONG_MIN = 14 * 60;
 const elapsedMins = () => {
   const o = state.open; if (!o) return 0;
   const m = (Date.now() - new Date(o.date + 'T' + o.start).getTime()) / 60000;
@@ -566,13 +593,23 @@ function renderShift() {
   $('shift').innerHTML = !o
     ? `<button class="clock" id="clockIn"><span class="bub">${ic('play')}</span><span><b>تسجيل دخول العمل</b><small>اضغط عند وصولك للعمل</small></span></button>`
     : `<div class="open"><div class="top"><span class="pulse"></span><div style="flex:1"><b>أنت الآن في العمل</b><br><small>دخلت <span dir="ltr">${o.start}</span></small></div><div class="el num" id="elapsed">${fmtHM(elapsedMins())}</div></div>
+       ${elapsedMins() > OPEN_WARN ? '<div class="note warn" id="openWarn">مضى وقت طويل على الدخول. تأكد من وقت الخروج.</div>' : ''}
        <div class="btns"><button id="clockOut">${ic('stop')}تسجيل الخروج</button><button id="clockCancel" aria-label="إلغاء">${ic('x')}</button></div></div>`;
 }
-setInterval(() => { const e = $('elapsed'); if (e && state.open) e.textContent = fmtHM(elapsedMins()); }, 30000);
+setInterval(() => {
+  const e = $('elapsed'); if (!e || !state.open) return;
+  e.textContent = fmtHM(elapsedMins());
+  if ((elapsedMins() > OPEN_WARN) !== !!$('openWarn')) renderShift();
+}, 30000);
 $('shift').onclick = e => {
   const id = e.target.closest('button') && e.target.closest('button').id;
   if (id === 'clockIn') { $('iDate').value = today(); $('iTime').value = nowTime(); $('inDlg').showModal(); }
-  else if (id === 'clockOut') openForm('work', null, { date: state.open.date, start: state.open.start, end: nowTime() });
+  else if (id === 'clockOut') {
+    const long = elapsedMins() > 1440;
+    openForm('work', null, { date: state.open.date, start: state.open.start, end: long ? '' : nowTime() });
+    if (long) $('fDur').textContent = 'مضى أكثر من 24 ساعة على الدخول. أدخل وقت الخروج الصحيح.';
+    else if (elapsedMins() > OPEN_WARN) $('fDur').textContent += ' — مدة طويلة، راجع وقت الخروج.';
+  }
   else if (id === 'clockCancel') { if (confirm('إلغاء تسجيل الدخول الحالي؟')) { state.open = null; save(); } }
 };
 $('iCancel').onclick = () => $('inDlg').close();
@@ -602,7 +639,7 @@ function renderArchive() {
         ${rem ? `<div class="kv"><span>${rem > 0 ? 'بقي لك (رُحِّل)' : 'زيادة (خُصمت لاحقًا)'}</span><b>${signed(rem)}</b></div>` : ''}
         ${a.note ? `<div class="kv"><span>ملاحظة</span><b style="direction:rtl">${esc(a.note)}</b></div>` : ''}
         ${lines ? '<div style="margin-top:8px">' + lines + '</div>' : ''}
-        <button class="pay sh1" data-id="${a.id}" style="width:100%;margin:12px 0 0;height:42px;font-size:14px">${ic('share')}مشاركة هذه الدفعة</button>
+        <div style="display:flex;gap:8px;margin-top:12px"><button class="pay ed1" data-id="${a.id}" style="flex:1;width:auto;margin:0;height:42px;font-size:14px">${ic('edit')}تعديل</button><button class="pay sh1" data-id="${a.id}" style="flex:2;width:auto;margin:0;height:42px;font-size:14px">${ic('share')}مشاركة هذه الدفعة</button></div>
       </div></details>`;
   }).join('') + `<button class="pay" style="margin:6px 0 0;width:100%" id="undoPay">${ic('restore')}التراجع عن آخر دفعة</button>`
     : emptyBox('archive', 'لا توجد دفعات سابقة بعد.<br>عند استلام دفعة تظهر هنا.');
@@ -735,9 +772,9 @@ function renderSummary() {
     stat('cash', '', mv(c.work), 'الأجور' + (c.ramt ? `<small>منها عن بعد ${money(c.ramt)}</small>` : '')) +
     stat('mcircle', 'cr', mv(c.adv, c.adv > 0), 'الكريدي') +
     stat('cash', '', mv(c.days ? Math.round(c.work / c.days * 10) / 10 : 0), 'متوسط أجر اليوم') +
-    stat('clock', '', `<span dir="ltr">${fmtHM(c.days ? c.mins / c.days : 0)}<small>س</small></span>`, 'متوسط الساعات في اليوم') +
+    stat('clock', '', `<span dir="ltr">${fmtHM(c.wd ? c.mins / c.wd : 0)}<small>س</small></span>`, 'متوسط الساعات في اليوم') +
     stat('tcircle', 'net', mv(Math.abs(c.work - c.adv), c.work - c.adv < 0), 'الصافي');
-  renderChart(); renderMonths(); renderBalance();
+  renderChart(); renderWeekday(); renderMonths(); renderBalance();
 }
 function renderChart() {
   const days = [];
@@ -749,6 +786,17 @@ function renderChart() {
       const h = mins[n] / 60;
       return `<div class="b ${mins[n] ? 'has' : ''} ${n === 6 ? 'today' : ''}"><span class="bv num">${mins[n] ? +h.toFixed(1) : ''}</span><i style="height:${mins[n] ? Math.max(6, Math.round(mins[n] / max * 84)) : 3}px"></i><span class="bd">${WD[dt(d).getDay()]}</span></div>`;
     }).join('') + '</div>';
+}
+function renderWeekday() {
+  const days = {};
+  inRange().forEach(i => { if (i.type === 'work') days[i.date] = (days[i.date] || 0) + i.amount; });
+  const sum = Array(7).fill(0), cnt = Array(7).fill(0);
+  Object.keys(days).forEach(d => { const w = dt(d).getDay(); sum[w] += days[d]; cnt[w]++; });
+  const head = '<div class="ch"><b>متوسط الأجر حسب اليوم</b><span>للفترة المحددة</span></div>';
+  if (!cnt.some(Boolean)) { $('chartWd').innerHTML = head + '<div class="nodata">لا توجد أيام عمل في هذه الفترة</div>'; return; }
+  const avg = sum.map((t, k) => cnt[k] ? t / cnt[k] : 0), max = Math.max(...avg, 1);
+  $('chartWd').innerHTML = head + '<div class="bars">' + [1, 2, 3, 4, 5, 6, 0].map(w =>
+    `<div class="b ${cnt[w] ? 'has' : ''}"><span class="bv num">${cnt[w] ? kfmt(avg[w]) : ''}</span><i style="height:${cnt[w] ? Math.max(6, Math.round(avg[w] / max * 84)) : 3}px"></i><span class="bd">${WD[w]}</span></div>`).join('') + '</div>';
 }
 const kfmt = n => { const a = Math.abs(n), t = a >= 1000 ? (Math.round(a / 100) / 10) + 'k' : String(Math.round(a)); return (n < 0 ? '-' : '') + t; };
 function renderMonths() {
@@ -873,6 +921,8 @@ $('fSave').onclick = () => {
         Object.assign(rec, { mins: editing.mins, rate: editing.rate, remote: false });
       } else return toast('أدخل البداية والنهاية (والاستراحة أقل من المدة)');
     } else {
+      const same = $('fStart').value === $('fEnd').value;
+      if (same ? !confirm('البداية تساوي النهاية، وستُحسب المدة 24 ساعة. متابعة؟') : m > LONG_MIN && !confirm('مدة الوردية ' + fmtDur(m) + '، وهي طويلة. هل هي صحيحة؟')) return;
       Object.assign(rec, { remote: false, start: $('fStart').value, end: $('fEnd').value, brk: parseInt($('fBrk').value) || 0, mins: m, rate: editing && editing.rate ? editing.rate : state.rate });
     }
     rec.amount = rec.mins / 60 * rec.rate;
@@ -920,6 +970,8 @@ $('pOk').onclick = () => {
 };
 $('arch').onclick = e => {
   if (e.target.closest('#shareAll')) { askShare('مشاركة كل الدفعات', d => archivesText(d)); return; }
+  const ed = e.target.closest('.ed1');
+  if (ed) { const a = state.archive.find(x => x.id == ed.dataset.id); if (a) openAp(a); return; }
   const s1 = e.target.closest('.sh1');
   if (s1) { const a = state.archive.find(x => x.id == s1.dataset.id); if (a) askShare('مشاركة الدفعة', d => archiveText(a, d)); return; }
   if (!e.target.closest('#undoPay')) return;
@@ -930,6 +982,39 @@ $('arch').onclick = e => {
   save(); setView('list'); toast('تم التراجع عن الدفعة');
 };
 
+let apEdit = null;
+function laterCount() { return apEdit ? state.archive.length - state.archive.findIndex(x => x.id === apEdit.id) - 1 : 0; }
+function openAp(a) {
+  apEdit = a; $('aDate').value = a.paidAt || ''; $('aRecv').value = a.received; $('aNote').value = a.note || '';
+  $('aInfo').textContent = 'المستحق: ' + signed(a.due);
+  $('aWarn').textContent = 'تغيير المبلغ المستلم يغيّر الرصيد المرحَّل في الدفعات اللاحقة وفي الفترة الحالية بالفرق نفسه.';
+  updAp(); $('apDlg').showModal();
+}
+function updAp() {
+  const r = parseFloat($('aRecv').value);
+  if (!apEdit || isNaN(r)) { $('aRem').textContent = ''; return; }
+  const rem = round2(apEdit.due - r);
+  $('aRem').textContent = rem === 0 ? 'لا يوجد فرق.' : rem > 0 ? 'بقي لك ' + money(rem) + ' ويُرحَّل.' : 'زيادة ' + money(-rem) + ' تُخصم لاحقًا.';
+}
+$('aRecv').addEventListener('input', updAp);
+$('aCancel').onclick = () => $('apDlg').close();
+$('aOk').onclick = () => {
+  const a = apEdit, r = parseFloat($('aRecv').value), paidAt = $('aDate').value;
+  if (!a || isNaN(r) || r < 0 || !paidAt) return toast('أدخل التاريخ والمبلغ');
+  const delta = round2(r - a.received);
+  if (delta && !confirm('تغيير المبلغ المستلم بمقدار ' + signed(delta) + ' سيعدّل الرصيد المرحَّل بعده. متابعة؟')) return;
+  const idx = state.archive.findIndex(x => x.id === a.id);
+  a.paidAt = paidAt; a.note = $('aNote').value.trim(); a.received = r; a.remain = round2(a.due - r);
+  if (delta) {
+    for (let j = idx + 1; j < state.archive.length; j++) {
+      const b = state.archive[j];
+      b.carryIn = round2((b.carryIn || 0) - delta); b.due = round2(b.due - delta); b.remain = round2((b.remain || 0) - delta);
+    }
+    state.carry = round2(state.carry - delta);
+  }
+  apEdit = null; $('apDlg').close(); save(); toast('تم تعديل الدفعة');
+};
+
 // ---------- القفل ----------
 async function hashPin(p) {
   if (window.crypto && crypto.subtle) {
@@ -938,7 +1023,9 @@ async function hashPin(p) {
   }
   return 'x' + p;
 }
-let entered = '', hiddenAt = 0;
+let entered = '', hiddenAt = 0, pinFail = {};
+try { pinFail = JSON.parse(localStorage.getItem('earnings_pinfail')) || {}; } catch (e) {}
+const savePinFail = () => { try { localStorage.setItem('earnings_pinfail', JSON.stringify(pinFail)); } catch (e) {} };
 (function buildPad() {
   const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'];
   $('pad').innerHTML = keys.map(k => k ? `<button data-k="${k}">${k}</button>` : '<span></span>').join('');
@@ -948,11 +1035,16 @@ function showLock() { if (!state.pin) return; entered = ''; drawDots(); $('lock'
 $('pad').onclick = async e => {
   const b = e.target.closest('button'); if (!b) return;
   const k = b.dataset.k;
+  if (Date.now() < (pinFail.until || 0)) return toast('محاولات كثيرة. انتظر ' + Math.ceil((pinFail.until - Date.now()) / 1000) + ' ثانية');
   if (k === '⌫') entered = entered.slice(0, -1); else if (entered.length < 4) entered += k;
   drawDots();
   if (entered.length === 4) {
-    if (await hashPin(entered) === state.pin) { $('lock').hidden = true; entered = ''; }
-    else { $('lock').classList.add('shake'); setTimeout(() => { $('lock').classList.remove('shake'); entered = ''; drawDots(); }, 350); }
+    if (await hashPin(entered) === state.pin) { $('lock').hidden = true; entered = ''; pinFail = {}; savePinFail(); }
+    else {
+      pinFail.n = (pinFail.n || 0) + 1;
+      if (pinFail.n % 5 === 0) { const sec = Math.min(30 * (pinFail.n / 5), 600); pinFail.until = Date.now() + sec * 1000; toast('5 محاولات خاطئة. انتظر ' + sec + ' ثانية'); }
+      savePinFail();
+      $('lock').classList.add('shake'); setTimeout(() => { $('lock').classList.remove('shake'); entered = ''; drawDots(); }, 350); }
   }
 };
 document.addEventListener('visibilitychange', () => {
