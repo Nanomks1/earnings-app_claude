@@ -591,7 +591,7 @@ jobs:
           public class WorkWidgetProvider extends AppWidgetProvider {
               static final String ACT = "com.pd.earnings.WIDGET_TOGGLE";
               static final String REVERT = "com.pd.earnings.WIDGET_REVERT";
-              static final long ARM_MS = 5000;
+              static final long ARM_MS = 60000;
 
               static SharedPreferences prefs(Context c) {
                   return c.getSharedPreferences("work_widget", Context.MODE_PRIVATE);
@@ -675,7 +675,7 @@ jobs:
                   if (REVERT.equals(i.getAction())) {
                       SharedPreferences rp = prefs(c);
                       long ra = rp.getLong("armedAt", 0);
-                      if (ra > 0 && System.currentTimeMillis() - ra > ARM_MS - 200) {
+                      if (ra > 0 && System.currentTimeMillis() - ra > ARM_MS - 2000) {
                           rp.edit().putLong("armedAt", 0).commit();
                       }
                       refreshAll(c);
@@ -697,28 +697,11 @@ jobs:
                           Intent ri = new Intent(c, WorkWidgetProvider.class);
                           ri.setAction(REVERT);
                           PendingIntent rpi = PendingIntent.getBroadcast(c, 1, ri, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-                          am.set(AlarmManager.RTC, now + ARM_MS + 300, rpi);
+                          am.set(AlarmManager.RTC, now + ARM_MS, rpi);
                       } catch (Exception e) {
                           // لا شيء
                       }
-                      final BroadcastReceiver.PendingResult pr = goAsync();
-                      final Context app = c.getApplicationContext();
-                      new Thread(new Runnable() {
-                          @Override
-                          public void run() {
-                              try {
-                                  Thread.sleep(ARM_MS + 300);
-                              } catch (InterruptedException e) {
-                                  // لا شيء
-                              }
-                              SharedPreferences q = prefs(app);
-                              if (q.getLong("armedAt", 0) == now) {
-                                  q.edit().putLong("armedAt", 0).commit();
-                                  refreshAll(app);
-                              }
-                              pr.finish();
-                          }
-                      }).start();
+
                   }
               }
           }
