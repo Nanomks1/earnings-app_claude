@@ -331,9 +331,13 @@ details.card .lines{margin-top:12px;border-top:1px dashed var(--bd);padding-top:
     </div>
     <div class="hint">السعر الجديد يسري على الأيام الجديدة فقط</div>
     <div class="fld"><label>لون التطبيق</label><div class="sw" id="sw"></div></div>
+    <div id="icBox">
+      <div class="fld" style="border-top:1px solid var(--bd);padding-top:10px"><label>شكل أيقونة التطبيق</label><div class="seg" id="icSeg"><button data-s="a" type="button">دارة إلكترونية</button><button data-s="b" type="button">موجات</button></div></div>
+      <div class="rb"><span class="t">لون الأيقونة يتبع لون التطبيق<small>قد تتأخر الشاشة الرئيسية قليلًا في إظهار التغيير</small></span><input type="checkbox" id="icFollow"></div>
+    </div>
     <div class="rb" style="border-top:1px solid var(--bd)"><span class="bub"><svg class="ic"><use href="#i-search"/></svg></span><span class="t">البحث والفلتر<small>يظهر فوق السجلات والأرشيف</small></span><input type="checkbox" id="srchChk"></div>
   </div>
-  <div class="note" style="margin-top:8px">لتسجيل الدخول والخروج بضغطة من الشاشة الرئيسية: اضغط مطولًا على الشاشة ← الودجات ← «العمل».</div>
+  <div class="note" style="margin-top:8px">لتسجيل الدخول والخروج بضغطة من الشاشة الرئيسية: اضغط مطولًا على الشاشة ← الودجات ← «العمل». يلزم ضغطتان متتاليتان (الأولى للتأكيد) لتفادي اللمس بالخطأ.</div>
   <div class="shd">الأمان</div>
   <div class="grp">
     <button class="rb" id="pinBtn"><span class="bub"><svg class="ic"><use href="#i-lock"/></svg></span><span class="t">رمز القفل<small id="pinSt"></small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
@@ -558,6 +562,7 @@ function applyTheme() {
   set('--prish', dark ? 'none' : `0 12px 24px -10px rgba(${r},${g},${b},.55)`);
   const SB = plugin('StatusBar');
   if (SB) { try { SB.setStyle({ style: dark ? 'DARK' : 'LIGHT' }); } catch (e) {} }
+  try { iconSync(); } catch (e) {}
 }
 if (window.matchMedia) { try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme); } catch (e) {} }
 function buildSwatches() {
@@ -1195,7 +1200,7 @@ function updBkWhere() {
 }
 $('menuBtn').onclick = () => {
   $('srchChk').checked = state.search !== false; $('cur').value = state.currency; $('rate').value = state.rate; $('auto').checked = state.auto;
-  updPinLabel(); $('bioRow').hidden = !bioOk; $('bioChk').checked = !!state.bio; updBkWhere(); updEnc(); buildSwatches(); showVer(); $('menu').showModal();
+  updIc(); updPinLabel(); $('bioRow').hidden = !bioOk; $('bioChk').checked = !!state.bio; updBkWhere(); updEnc(); buildSwatches(); showVer(); $('menu').showModal();
 };
 async function showVer() { // رقم النسخة من التطبيق نفسه (يتغير مع كل بناء)
   const A = plugin('App'); if (!A || !A.getInfo) return;
@@ -1207,6 +1212,35 @@ $('menuClose').onclick = () => {
   state.auto = $('auto').checked;
   $('menu').close(); save();
 };
+
+// ---------- أيقونة التطبيق (شكلان × ثمانية ألوان) ----------
+const IC_KEY = 'earnings_icon';
+const icPref = { style: 'a', follow: true, idx: 0, applied: 'a0' };
+try { Object.assign(icPref, JSON.parse(localStorage.getItem(IC_KEY)) || {}); } catch (e) {}
+const icSave = () => { try { localStorage.setItem(IC_KEY, JSON.stringify(icPref)); } catch (e) {} };
+function nearestColor(hex) {
+  const t = hex2rgb(hex); let bi = 0, bd = 1e9;
+  PALETTE.forEach((p, i) => { const r = hex2rgb(p), d = (r[0] - t[0]) ** 2 + (r[1] - t[1]) ** 2 + (r[2] - t[2]) ** 2; if (d < bd) { bd = d; bi = i; } });
+  return bi;
+}
+let icTimer;
+function iconSync() {
+  if (!isNative()) return;
+  if (icPref.follow) icPref.idx = nearestColor(state.color || DEF_COLOR);
+  const id = icPref.style + icPref.idx;
+  if (icPref.applied === id) return;
+  clearTimeout(icTimer);
+  icTimer = setTimeout(async () => {
+    const P = nplug('AppIcon'); if (!P) return;
+    try { await P.set({ id }); icPref.applied = id; icSave(); } catch (e) {}
+  }, 800);
+}
+function updIc() {
+  [...$('icSeg').children].forEach(b => b.classList.toggle('on', b.dataset.s === icPref.style));
+  $('icFollow').checked = icPref.follow; $('icBox').hidden = !isNative();
+}
+$('icSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; icPref.style = b.dataset.s; icSave(); updIc(); iconSync(); };
+$('icFollow').onchange = () => { icPref.follow = $('icFollow').checked; icSave(); iconSync(); };
 
 // ---------- النسخ الاحتياطي ----------
 const stamp = () => { const d = new Date(); return d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()) + '-' + pad2(d.getHours()) + pad2(d.getMinutes()) + pad2(d.getSeconds()); };
