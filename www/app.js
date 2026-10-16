@@ -821,8 +821,8 @@ $('icSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return
 $('icFollow').onchange = () => { icPref.follow = $('icFollow').checked; icSave(); iconSync(); };
 
 // ---------- مظهر الودجت ----------
-const WG_KEY = 'earnings_wg';
-const wgPref = { bg: 0, fg: 0, label: true };
+const WG_KEY = 'earnings_wg2';
+const wgPref = { bg: 0, fg: 0, ic: 0, label: true };
 try { Object.assign(wgPref, JSON.parse(localStorage.getItem(WG_KEY)) || {}); } catch (e) {}
 function wgApply() {
   try { localStorage.setItem(WG_KEY, JSON.stringify(wgPref)); } catch (e) {}
@@ -830,12 +830,12 @@ function wgApply() {
 }
 function updWg() {
   $('wgBox').hidden = !isNative();
-  [...$('wgBg').children].forEach(b => b.classList.toggle('on', +b.dataset.v === wgPref.bg));
-  [...$('wgFg').children].forEach(b => b.classList.toggle('on', +b.dataset.v === wgPref.fg));
+  [['wgBg', 'bg'], ['wgFg', 'fg'], ['wgIc', 'ic']].forEach(([id, k]) => [...$(id).children].forEach(b => b.classList.toggle('on', +b.dataset.v === wgPref[k])));
   $('wgLabel').checked = wgPref.label;
 }
-$('wgBg').onclick = e => { const b = e.target.closest('button'); if (!b) return; wgPref.bg = +b.dataset.v; wgApply(); updWg(); };
-$('wgFg').onclick = e => { const b = e.target.closest('button'); if (!b) return; wgPref.fg = +b.dataset.v; wgApply(); updWg(); };
+[['wgBg', 'bg'], ['wgFg', 'fg'], ['wgIc', 'ic']].forEach(([id, k]) => {
+  $(id).onclick = e => { const b = e.target.closest('button'); if (!b) return; wgPref[k] = +b.dataset.v; wgApply(); updWg(); };
+});
 $('wgLabel').onchange = () => { wgPref.label = $('wgLabel').checked; wgApply(); };
 
 // ---------- النسخ الاحتياطي ----------
