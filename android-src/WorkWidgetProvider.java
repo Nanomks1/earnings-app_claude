@@ -77,15 +77,30 @@ public class WorkWidgetProvider extends AppWidgetProvider {
         long armed = p.getLong("armedAt", 0);
         boolean arm = armed > 0 && System.currentTimeMillis() - armed <= ARM_MS;
         RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.work_widget);
-        v.setTextViewText(R.id.work_w_title, arm ? "تأكيد" : (open ? "خروج" : "دخول"));
-        int bg = p.getInt("wBg", 0);
-        boolean dark = p.getInt("wFg", 0) == 1 && !arm;
-        int icon = arm ? R.drawable.work_w_check : (open ? (dark ? R.drawable.work_w_stop_k : R.drawable.work_w_stop) : (dark ? R.drawable.work_w_play_k : R.drawable.work_w_play));
-        int bgRes = arm ? R.drawable.work_widget_bg_on : (bg == 1 ? R.drawable.work_widget_bg_glass : (bg == 2 ? R.drawable.work_widget_bg_none : R.drawable.work_widget_bg));
-        v.setImageViewResource(R.id.work_w_icon, icon);
+        int bg = p.getInt("wBg2", 0);
+        int fg = arm ? 1 : p.getInt("wFg2", 0);
+        int set = p.getInt("wIc", 0);
+        int kind = arm ? 2 : (open ? 1 : 0);
+        int[][] glyphs = {
+            {R.drawable.work_w_play, R.drawable.work_w_stop, R.drawable.work_w_check},
+            {R.drawable.work_w_play_s, R.drawable.work_w_stop_s, R.drawable.work_w_check_s},
+            {R.drawable.work_w_play_r, R.drawable.work_w_stop_r, R.drawable.work_w_check_r}
+        };
+        int icon = glyphs[set < 0 || set > 2 ? 0 : set][kind];
+        int[] bgs = {R.drawable.work_widget_bg, R.drawable.work_widget_bg_glass, R.drawable.work_widget_bg_none, R.drawable.work_widget_bg_dark};
+        int bgRes = arm ? R.drawable.work_widget_bg_on : bgs[bg < 0 || bg > 3 ? 0 : bg];
+        int[] icons = {R.id.work_w_icon_a, R.id.work_w_icon_w, R.id.work_w_icon_k};
+        int[] titles = {R.id.work_w_title_a, R.id.work_w_title_w, R.id.work_w_title_k};
+        boolean label = p.getBoolean("wLabel", true);
+        String txt = arm ? "تأكيد" : (open ? "خروج" : "دخول");
+        for (int k = 0; k < 3; k++) {
+            boolean on = k == (fg < 0 || fg > 2 ? 0 : fg);
+            v.setImageViewResource(icons[k], icon);
+            v.setViewVisibility(icons[k], on ? View.VISIBLE : View.GONE);
+            v.setTextViewText(titles[k], txt);
+            v.setViewVisibility(titles[k], on && label ? View.VISIBLE : View.GONE);
+        }
         v.setInt(R.id.work_w_root, "setBackgroundResource", bgRes);
-        v.setTextColor(R.id.work_w_title, dark ? 0xFF111111 : 0xFFFFFFFF);
-        v.setViewVisibility(R.id.work_w_title, p.getBoolean("wLabel", true) ? View.VISIBLE : View.GONE);
         Intent i = new Intent(c, WorkWidgetProvider.class);
         i.setAction(ACT);
         PendingIntent pi = PendingIntent.getBroadcast(c, 0, i, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
