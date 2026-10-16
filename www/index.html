@@ -70,7 +70,7 @@ h1{font-size:22px;margin:0;font-weight:800}
 .empty .ic{width:24px;height:24px}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:18px;padding:14px;box-shadow:var(--sh)}
 .seg{display:flex;gap:4px;padding:4px;background:var(--card2);border-radius:14px}
-.seg button{flex:1;height:36px;border:0;border-radius:10px;background:none;font-size:13.5px;font-weight:600;color:var(--mut)}
+.seg button{flex:1;min-width:0;height:36px;padding:0 4px;border:0;border-radius:10px;background:none;font-size:13px;font-weight:600;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .seg button.on{background:var(--pri);color:var(--onpri)}
 .dates{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
 .dates>div{min-width:0}
@@ -224,7 +224,7 @@ details.card .lines{margin-top:12px;border-top:1px dashed var(--bd);padding-top:
 <main class="list" id="summary" hidden>
   <div class="card">
     <div class="seg" id="sSeg">
-      <button data-m="cur" class="on">الفترة الحالية</button>
+      <button data-m="cur" class="on" style="flex:1.5">الفترة الحالية</button>
       <button data-m="month">الشهر</button>
       <button data-m="week">7 أيام</button>
       <button data-m="all">الكل</button>
@@ -859,6 +859,7 @@ $('shareCur').onclick = () => {
 const stat = (icon, cls, val, label) => `<div class="stat ${cls}"><span class="bub ${cls === 'cr' ? 'neg' : ''}">${ic(icon)}</span><div class="sv num">${val}</div><div class="sl">${label}</div></div>`;
 const mv = (n, neg) => `<span dir="ltr">${neg ? '−' : ''}${num(n)}<small>${esc(state.currency)}</small></span>`;
 function renderSummary() {
+  if (sumMode === 'cur') curDates();
   const c = calc(inRange());
   const dueN = due();
   $('sumOut').innerHTML =
@@ -933,10 +934,14 @@ function renderBalance() {
     `<div class="ax"><span>${esc(sd(pts[0]))}</span><span>${esc(sd(pts[pts.length - 1]))}</span></div>` +
     `<div class="mm"><span>أدنى: ${signed(Math.min(...vs))}</span><span>أعلى: ${signed(Math.max(...vs))}</span></div>`;
 }
+function curDates() { // من بداية الفترة الحالية إلى اليوم
+  const ds = state.items.map(i => i.date).filter(Boolean).sort();
+  $('sFrom').value = ds.length ? ds[0] : today(); $('sTo').value = today();
+}
 function setMode(m) {
   sumMode = m;
   const d = new Date();
-  if (m === 'cur') { $('sFrom').value = ''; $('sTo').value = ''; }
+  if (m === 'cur') curDates();
   else if (m === 'month') { $('sFrom').value = iso(new Date(d.getFullYear(), d.getMonth(), 1)); $('sTo').value = today(); }
   else if (m === 'week') { const w = new Date(); w.setDate(w.getDate() - 6); $('sFrom').value = iso(w); $('sTo').value = today(); }
   else if (m === 'all') { $('sFrom').value = ''; $('sTo').value = ''; }
