@@ -161,6 +161,10 @@ details.card summary small{display:block;font-size:calc(12px*var(--fs,1));color:
 details.card .lines{margin-top:12px;border-top:1px dashed var(--bd);padding-top:10px;font-size:calc(13px*var(--fs,1));color:var(--mut);line-height:1.9}
 #toast{position:fixed;inset-inline:16px;top:auto;margin:0;width:auto;height:auto;border:0;overflow:visible;bottom:calc(96px + env(safe-area-inset-bottom));background:var(--text);color:var(--bg);padding:12px 14px;border-radius:14px;text-align:center;opacity:0;pointer-events:none;transition:opacity .25s;z-index:60;font-size:calc(14px*var(--fs,1))}
 #toast.on{opacity:1}
+#undoBar{position:fixed;inset-inline:16px;top:auto;margin:0;width:auto;height:auto;border:0;overflow:visible;bottom:calc(96px + env(safe-area-inset-bottom));background:var(--text);color:var(--bg);padding:6px 6px 6px 16px;border-radius:14px;display:none;align-items:center;justify-content:space-between;gap:10px;z-index:60;font-size:calc(14px*var(--fs,1))}
+#undoBar.on{display:flex}
+#undoBar button{height:38px;padding:0 16px;border:0;border-radius:10px;background:var(--pri);color:var(--onpri);font-weight:700}
+@media (prefers-color-scheme:dark){#undoBar{background:#2a3138;color:var(--text);border:1px solid #3b444c;box-shadow:0 6px 18px rgba(0,0,0,.45)}}
 @media (prefers-color-scheme:dark){#toast{background:#2a3138;color:var(--text);border:1px solid #3b444c;box-shadow:0 6px 18px rgba(0,0,0,.45)}}
 #lock{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px}
 #lock .dots{display:flex;gap:14px;direction:ltr}
