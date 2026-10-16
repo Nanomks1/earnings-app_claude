@@ -224,8 +224,9 @@ details.card .lines{margin-top:12px;border-top:1px dashed var(--bd);padding-top:
 <main class="list" id="summary" hidden>
   <div class="card">
     <div class="seg" id="sSeg">
-      <button data-m="month" class="on">هذا الشهر</button>
-      <button data-m="week">آخر 7 أيام</button>
+      <button data-m="cur" class="on">الفترة الحالية</button>
+      <button data-m="month">الشهر</button>
+      <button data-m="week">7 أيام</button>
       <button data-m="all">الكل</button>
     </div>
     <div class="dates">
@@ -481,7 +482,7 @@ const saveBk = () => localStorage.setItem('earnings_bk', JSON.stringify(bk));
 let enc = {};
 try { enc = JSON.parse(localStorage.getItem('earnings_enc')) || {}; } catch (e) {}
 const saveEnc = () => localStorage.setItem('earnings_enc', JSON.stringify(enc));
-let editing = null, mode = 'work', view = 'list', fromShift = false, sumMode = 'month';
+let editing = null, mode = 'work', view = 'list', fromShift = false, sumMode = 'cur';
 let fq = '', ft = 'all', fT;
 const nz = s => String(s || '').toLowerCase().replace(/[\u064B-\u065F\u0670\u0640]/g, '').replace(/[أإآٱ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه');
 const kind = i => i.type === 'adv' ? 'adv' : i.remote ? 'remote' : 'work';
@@ -740,6 +741,7 @@ function renderArchive() {
 // ---------- الملخص والمشاركة ----------
 const allItems = () => [...state.archive.flatMap(a => a.items), ...state.items];
 function inRange() {
+  if (sumMode === 'cur') return state.items;
   const from = $('sFrom').value, to = $('sTo').value;
   return allItems().filter(i => (!from || i.date >= from) && (!to || i.date <= to));
 }
@@ -858,7 +860,9 @@ const stat = (icon, cls, val, label) => `<div class="stat ${cls}"><span class="b
 const mv = (n, neg) => `<span dir="ltr">${neg ? '−' : ''}${num(n)}<small>${esc(state.currency)}</small></span>`;
 function renderSummary() {
   const c = calc(inRange());
+  const dueN = due();
   $('sumOut').innerHTML =
+    (sumMode === 'cur' ? stat('tcircle', 'net', mv(Math.abs(dueN), dueN < 0), 'المستحق الآن') + (state.carry ? stat('cash', '', mv(Math.abs(state.carry), state.carry < 0), 'مرحَّل من قبل') : '') : '') +
     stat('calendar', '', c.days, 'أيام العمل') +
     stat('clock', '', `<span dir="ltr">${fmtHM(c.mins)}<small>س</small></span>`, 'مجموع الساعات') +
     stat('cash', '', mv(c.work), 'الأجور' + (c.ramt ? `<small>منها عن بعد ${money(c.ramt)}</small>` : '')) +
@@ -932,7 +936,8 @@ function renderBalance() {
 function setMode(m) {
   sumMode = m;
   const d = new Date();
-  if (m === 'month') { $('sFrom').value = iso(new Date(d.getFullYear(), d.getMonth(), 1)); $('sTo').value = today(); }
+  if (m === 'cur') { $('sFrom').value = ''; $('sTo').value = ''; }
+  else if (m === 'month') { $('sFrom').value = iso(new Date(d.getFullYear(), d.getMonth(), 1)); $('sTo').value = today(); }
   else if (m === 'week') { const w = new Date(); w.setDate(w.getDate() - 6); $('sFrom').value = iso(w); $('sTo').value = today(); }
   else if (m === 'all') { $('sFrom').value = ''; $('sTo').value = ''; }
   [...document.querySelectorAll('#sSeg button')].forEach(b => b.classList.toggle('on', b.dataset.m === sumMode));
@@ -1503,7 +1508,7 @@ function handleBack() {
 (function () { const A = plugin('App'); if (A && A.addListener) A.addListener('backButton', handleBack); })();
 
 applyTheme();
-setMode('month');
+setMode('cur');
 render();
 showLock();
 checkBio().then(tryBio);
