@@ -32,8 +32,9 @@ public class WorkWidgetPlugin extends Plugin {
     @PluginMethod
     public void setStyle(PluginCall call) {
         SharedPreferences.Editor e = WorkWidgetProvider.prefs(getContext()).edit();
-        e.putInt("wBg", call.getInt("bg", 0));
-        e.putInt("wFg", call.getInt("fg", 0));
+        e.putInt("wBg2", call.getInt("bg", 0));
+        e.putInt("wFg2", call.getInt("fg", 0));
+        e.putInt("wIc", call.getInt("ic", 0));
         e.putBoolean("wLabel", Boolean.TRUE.equals(call.getBoolean("label", true)));
         e.commit();
         WorkWidgetProvider.refreshAll(getContext());
