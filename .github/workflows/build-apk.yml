@@ -21,6 +21,9 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Show resolved library versions
+        run: npm ls --depth=0
+
       - name: Add Android platform
         run: npx cap add android
 
@@ -261,6 +264,324 @@ jobs:
           }
           JAVA
           sed -i '/^dependencies {/a\    implementation "androidx.documentfile:documentfile:1.0.1"' android/app/build.gradle
+
+      - name: Fingerprint lock + home-screen widget
+        run: |
+          P=android/app/src/main/java/com/pd/earnings
+          R=android/app/src/main/res
+          mkdir -p $P $R/layout $R/drawable $R/xml
+          cat > $P/BioPlugin.java <<'JAVA'
+          package com.pd.earnings;
+
+          import androidx.appcompat.app.AppCompatActivity;
+          import androidx.biometric.BiometricManager;
+          import androidx.biometric.BiometricPrompt;
+          import androidx.core.content.ContextCompat;
+          import com.getcapacitor.JSObject;
+          import com.getcapacitor.Plugin;
+          import com.getcapacitor.PluginCall;
+          import com.getcapacitor.PluginMethod;
+          import com.getcapacitor.annotation.CapacitorPlugin;
+
+          @CapacitorPlugin(name = "Bio")
+          public class BioPlugin extends Plugin {
+              private static final int AUTH = BiometricManager.Authenticators.BIOMETRIC_STRONG
+                      | BiometricManager.Authenticators.BIOMETRIC_WEAK;
+
+              @PluginMethod
+              public void available(PluginCall call) {
+                  int r = BiometricManager.from(getContext()).canAuthenticate(AUTH);
+                  JSObject o = new JSObject();
+                  o.put("ok", r == BiometricManager.BIOMETRIC_SUCCESS);
+                  call.resolve(o);
+              }
+
+              @PluginMethod
+              public void authenticate(final PluginCall call) {
+                  final AppCompatActivity a = getActivity();
+                  if (a == null) {
+                      call.reject("no activity");
+                      return;
+                  }
+                  a.runOnUiThread(new Runnable() {
+                      @Override
+                      public void run() {
+                          try {
+                              BiometricPrompt.PromptInfo info = new BiometricPrompt.PromptInfo.Builder()
+                                      .setTitle("العمل")
+                                      .setSubtitle("افتح التطبيق بالبصمة")
+                                      .setNegativeButtonText("استعمال الرمز")
+                                      .setAllowedAuthenticators(AUTH)
+                                      .build();
+                              BiometricPrompt bp = new BiometricPrompt(a, ContextCompat.getMainExecutor(a),
+                                      new BiometricPrompt.AuthenticationCallback() {
+                                          @Override
+                                          public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result) {
+                                              call.resolve();
+                                          }
+
+                                          @Override
+                                          public void onAuthenticationError(int code, CharSequence msg) {
+                                              call.reject(String.valueOf(msg));
+                                          }
+                                      });
+                              bp.authenticate(info);
+                          } catch (Exception e) {
+                              call.reject(String.valueOf(e.getMessage()));
+                          }
+                      }
+                  });
+              }
+          }
+          JAVA
+          cat > $P/WorkWidgetProvider.java <<'JAVA'
+          package com.pd.earnings;
+
+          import android.app.PendingIntent;
+          import android.appwidget.AppWidgetManager;
+          import android.appwidget.AppWidgetProvider;
+          import android.content.ComponentName;
+          import android.content.Context;
+          import android.content.Intent;
+          import android.content.SharedPreferences;
+          import android.widget.RemoteViews;
+          import java.text.SimpleDateFormat;
+          import java.util.Date;
+          import java.util.Locale;
+          import org.json.JSONArray;
+          import org.json.JSONException;
+          import org.json.JSONObject;
+
+          public class WorkWidgetProvider extends AppWidgetProvider {
+              static final String ACT = "com.pd.earnings.WIDGET_TOGGLE";
+
+              static SharedPreferences prefs(Context c) {
+                  return c.getSharedPreferences("work_widget", Context.MODE_PRIVATE);
+              }
+
+              static String fmt(String pattern, long t) {
+                  return new SimpleDateFormat(pattern, Locale.US).format(new Date(t));
+              }
+
+              static void toggle(Context c) {
+                  synchronized (WorkWidgetProvider.class) {
+                      SharedPreferences p = prefs(c);
+                      long now = System.currentTimeMillis();
+                      JSONArray ev;
+                      try {
+                          ev = new JSONArray(p.getString("events", "[]"));
+                      } catch (JSONException e) {
+                          ev = new JSONArray();
+                      }
+                      try {
+                          JSONObject o = new JSONObject();
+                          SharedPreferences.Editor ed = p.edit();
+                          if (p.getBoolean("open", false)) {
+                              o.put("t", "out");
+                              o.put("date", p.getString("date", ""));
+                              o.put("start", p.getString("start", ""));
+                              o.put("startTs", p.getLong("startTs", now));
+                              o.put("end", fmt("HH:mm", now));
+                              o.put("endTs", now);
+                              ed.putBoolean("open", false);
+                          } else {
+                              o.put("t", "in");
+                              o.put("date", fmt("yyyy-MM-dd", now));
+                              o.put("start", fmt("HH:mm", now));
+                              o.put("startTs", now);
+                              ed.putBoolean("open", true);
+                              ed.putString("date", fmt("yyyy-MM-dd", now));
+                              ed.putString("start", fmt("HH:mm", now));
+                              ed.putLong("startTs", now);
+                          }
+                          ev.put(o);
+                          ed.putString("events", ev.toString());
+                          ed.commit();
+                      } catch (JSONException e) {
+                          // لا شيء
+                      }
+                  }
+              }
+
+              static void draw(Context c, AppWidgetManager m, int id) {
+                  SharedPreferences p = prefs(c);
+                  boolean open = p.getBoolean("open", false);
+                  RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.work_widget);
+                  v.setTextViewText(R.id.work_w_title, open ? "تسجيل الخروج" : "تسجيل الدخول");
+                  v.setTextViewText(R.id.work_w_sub, open ? "دخلت " + p.getString("start", "") : "اضغط عند وصولك للعمل");
+                  v.setImageViewResource(R.id.work_w_icon, open ? R.drawable.work_w_stop : R.drawable.work_w_play);
+                  Intent i = new Intent(c, WorkWidgetProvider.class);
+                  i.setAction(ACT);
+                  PendingIntent pi = PendingIntent.getBroadcast(c, 0, i, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                  v.setOnClickPendingIntent(R.id.work_w_root, pi);
+                  m.updateAppWidget(id, v);
+              }
+
+              static void refreshAll(Context c) {
+                  AppWidgetManager m = AppWidgetManager.getInstance(c);
+                  int[] ids = m.getAppWidgetIds(new ComponentName(c, WorkWidgetProvider.class));
+                  for (int id : ids) draw(c, m, id);
+              }
+
+              @Override
+              public void onUpdate(Context c, AppWidgetManager m, int[] ids) {
+                  for (int id : ids) draw(c, m, id);
+              }
+
+              @Override
+              public void onReceive(Context c, Intent i) {
+                  super.onReceive(c, i);
+                  if (i != null && ACT.equals(i.getAction())) {
+                      toggle(c);
+                      refreshAll(c);
+                  }
+              }
+          }
+          JAVA
+          cat > $P/WorkWidgetPlugin.java <<'JAVA'
+          package com.pd.earnings;
+
+          import android.content.SharedPreferences;
+          import com.getcapacitor.JSArray;
+          import com.getcapacitor.JSObject;
+          import com.getcapacitor.Plugin;
+          import com.getcapacitor.PluginCall;
+          import com.getcapacitor.PluginMethod;
+          import com.getcapacitor.annotation.CapacitorPlugin;
+          import org.json.JSONException;
+
+          @CapacitorPlugin(name = "WorkWidget")
+          public class WorkWidgetPlugin extends Plugin {
+
+              @PluginMethod
+              public void takeEvents(PluginCall call) {
+                  synchronized (WorkWidgetProvider.class) {
+                      SharedPreferences p = WorkWidgetProvider.prefs(getContext());
+                      JSArray arr;
+                      try {
+                          arr = new JSArray(p.getString("events", "[]"));
+                      } catch (JSONException e) {
+                          arr = new JSArray();
+                      }
+                      p.edit().putString("events", "[]").commit();
+                      JSObject o = new JSObject();
+                      o.put("events", arr);
+                      call.resolve(o);
+                  }
+              }
+
+              @PluginMethod
+              public void setOpen(PluginCall call) {
+                  synchronized (WorkWidgetProvider.class) {
+                      SharedPreferences.Editor e = WorkWidgetProvider.prefs(getContext()).edit();
+                      boolean open = Boolean.TRUE.equals(call.getBoolean("open", false));
+                      e.putBoolean("open", open);
+                      if (open) {
+                          Double ts = call.getDouble("ts");
+                          e.putString("date", call.getString("date", ""));
+                          e.putString("start", call.getString("start", ""));
+                          e.putLong("startTs", ts == null ? System.currentTimeMillis() : ts.longValue());
+                      }
+                      e.commit();
+                  }
+                  WorkWidgetProvider.refreshAll(getContext());
+                  call.resolve();
+              }
+          }
+          JAVA
+          cat > $P/MainActivity.java <<'JAVA'
+          package com.pd.earnings;
+
+          import android.os.Bundle;
+          import com.getcapacitor.BridgeActivity;
+
+          public class MainActivity extends BridgeActivity {
+              @Override
+              public void onCreate(Bundle savedInstanceState) {
+                  registerPlugin(SafBackupPlugin.class);
+                  registerPlugin(BioPlugin.class);
+                  registerPlugin(WorkWidgetPlugin.class);
+                  super.onCreate(savedInstanceState);
+              }
+          }
+          JAVA
+          cat > $R/layout/work_widget.xml <<'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:id="@+id/work_w_root"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:orientation="horizontal"
+              android:gravity="center_vertical"
+              android:padding="12dp"
+              android:background="@drawable/work_widget_bg">
+              <ImageView
+                  android:id="@+id/work_w_icon"
+                  android:layout_width="28dp"
+                  android:layout_height="28dp"
+                  android:src="@drawable/work_w_play" />
+              <LinearLayout
+                  android:layout_width="0dp"
+                  android:layout_height="wrap_content"
+                  android:layout_weight="1"
+                  android:layout_marginStart="10dp"
+                  android:orientation="vertical">
+                  <TextView
+                      android:id="@+id/work_w_title"
+                      android:layout_width="match_parent"
+                      android:layout_height="wrap_content"
+                      android:maxLines="1"
+                      android:textColor="#FFFFFF"
+                      android:textSize="15sp"
+                      android:textStyle="bold" />
+                  <TextView
+                      android:id="@+id/work_w_sub"
+                      android:layout_width="match_parent"
+                      android:layout_height="wrap_content"
+                      android:maxLines="1"
+                      android:textColor="#CCFFFFFF"
+                      android:textSize="12sp" />
+              </LinearLayout>
+          </LinearLayout>
+          XML
+          cat > $R/drawable/work_widget_bg.xml <<'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+              <solid android:color="#2C6E69" />
+              <corners android:radius="24dp" />
+          </shape>
+          XML
+          cat > $R/drawable/work_w_play.xml <<'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+              <path android:fillColor="#FFFFFFFF" android:pathData="M8,5.5L18.5,12L8,18.5Z" />
+          </vector>
+          XML
+          cat > $R/drawable/work_w_stop.xml <<'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+              <path android:fillColor="#FFFFFFFF" android:pathData="M7,7L17,7L17,17L7,17Z" />
+          </vector>
+          XML
+          cat > $R/xml/work_widget_info.xml <<'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+              android:minWidth="110dp"
+              android:minHeight="40dp"
+              android:targetCellWidth="2"
+              android:targetCellHeight="1"
+              android:updatePeriodMillis="0"
+              android:initialLayout="@layout/work_widget"
+              android:resizeMode="horizontal|vertical"
+              android:widgetCategory="home_screen" />
+          XML
+          M=android/app/src/main/AndroidManifest.xml
+          sed -i 's#</application>#    <receiver android:name=".WorkWidgetProvider" android:exported="true"><intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter><meta-data android:name="android.appwidget.provider" android:resource="@xml/work_widget_info"/></receiver>\n    </application>#' $M
+          grep -q 'WorkWidgetProvider' $M || { echo "widget receiver was not added to the manifest"; exit 1; }
+          sed -i '/^dependencies {/a\    implementation "androidx.biometric:biometric:1.1.0"' android/app/build.gradle
+          grep -q 'androidx.biometric' android/app/build.gradle || { echo "biometric dependency was not added"; exit 1; }
 
       - name: Android 16 (API 36) + arm64 only + storage permissions
         run: |
