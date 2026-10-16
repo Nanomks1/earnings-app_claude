@@ -571,6 +571,7 @@ jobs:
           cat > $P/WorkWidgetProvider.java <<'JAVA'
           package com.pd.earnings;
 
+          import android.app.AlarmManager;
           import android.app.PendingIntent;
           import android.appwidget.AppWidgetManager;
           import android.appwidget.AppWidgetProvider;
@@ -589,6 +590,7 @@ jobs:
 
           public class WorkWidgetProvider extends AppWidgetProvider {
               static final String ACT = "com.pd.earnings.WIDGET_TOGGLE";
+              static final String REVERT = "com.pd.earnings.WIDGET_REVERT";
               static final long ARM_MS = 5000;
 
               static SharedPreferences prefs(Context c) {
@@ -669,7 +671,17 @@ jobs:
               @Override
               public void onReceive(final Context c, Intent i) {
                   super.onReceive(c, i);
-                  if (i == null || !ACT.equals(i.getAction())) return;
+                  if (i == null) return;
+                  if (REVERT.equals(i.getAction())) {
+                      SharedPreferences rp = prefs(c);
+                      long ra = rp.getLong("armedAt", 0);
+                      if (ra > 0 && System.currentTimeMillis() - ra > ARM_MS - 200) {
+                          rp.edit().putLong("armedAt", 0).commit();
+                      }
+                      refreshAll(c);
+                      return;
+                  }
+                  if (!ACT.equals(i.getAction())) return;
                   SharedPreferences p = prefs(c);
                   final long now = System.currentTimeMillis();
                   long armed = p.getLong("armedAt", 0);
@@ -680,6 +692,15 @@ jobs:
                   } else {
                       p.edit().putLong("armedAt", now).commit();
                       refreshAll(c);
+                      try {
+                          AlarmManager am = (AlarmManager) c.getSystemService(Context.ALARM_SERVICE);
+                          Intent ri = new Intent(c, WorkWidgetProvider.class);
+                          ri.setAction(REVERT);
+                          PendingIntent rpi = PendingIntent.getBroadcast(c, 1, ri, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                          am.set(AlarmManager.RTC, now + ARM_MS + 300, rpi);
+                      } catch (Exception e) {
+                          // لا شيء
+                      }
                       final BroadcastReceiver.PendingResult pr = goAsync();
                       final Context app = c.getApplicationContext();
                       new Thread(new Runnable() {
