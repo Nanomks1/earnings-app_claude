@@ -107,6 +107,15 @@ function calc(items) {
 const due = () => { const c = calc(state.items); return state.carry + c.work - c.adv; };
 
 let bkTimer;
+let undoT;
+function hideUndo() { const e = $('undoBar'); e.classList.remove('on'); e._fn = null; clearTimeout(undoT); try { if (e.hidePopover) e.hidePopover(); } catch (x) {} }
+function undoBar(msg, fn) {
+  const e = $('undoBar'); $('undoMsg').textContent = msg; e._fn = fn;
+  try { if (e.showPopover) { try { e.hidePopover(); } catch (x) {} e.showPopover(); } } catch (x) {}
+  e.classList.add('on'); clearTimeout(undoT); undoT = setTimeout(hideUndo, 7000);
+}
+$('undoBtn').onclick = () => { const f = $('undoBar')._fn; hideUndo(); if (f) f(); };
+
 function save(noBackup) {
   localStorage.setItem(KEY, JSON.stringify(state));
   render(); syncWidget();
@@ -606,9 +615,10 @@ $('fSave').onclick = () => {
   $('form').close(); save();
 };
 $('fDel').onclick = () => {
-  if (!confirm('حذف هذا السجل؟')) return;
-  state.items = state.items.filter(i => i.id !== editing.id);
+  const it = editing;
+  state.items = state.items.filter(i => i.id !== it.id);
   $('form').close(); save();
+  undoBar('تم حذف السجل', () => { if (!state.items.some(i => i.id === it.id)) { state.items = [...state.items, it]; save(); toast('تمت استعادة السجل'); } });
 };
 
 // ---------- استلام الدفعة والأرشيف ----------
