@@ -1,19 +1,4 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl"><head><meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="light dark">
-<title>build-apk.yml</title>
-<style>
-:root{--bg:#f3f5f7;--fg:#1b1f24;--card:#fff;--pri:#2c6e69}
-@media (prefers-color-scheme:dark){:root{--bg:#14181c;--fg:#e6e8eb;--card:#1d2328;--pri:#4a8a84}}
-body{margin:0;padding:12px;background:var(--bg);color:var(--fg);font-family:system-ui,sans-serif}
-button{width:100%;padding:14px;font-size:16px;border:0;border-radius:12px;background:var(--pri);color:#fff;margin-bottom:10px}
-p{margin:0 0 10px;font-size:14px}
-textarea{width:100%;box-sizing:border-box;height:70vh;direction:ltr;text-align:left;font:12px/1.5 monospace;background:var(--card);color:var(--fg);border:1px solid #8884;border-radius:10px;padding:10px}
-</style></head><body>
-<button id="b">نسخ الملف كاملًا</button>
-<p id="m">المسار في المستودع: .github/workflows/build-apk.yml</p>
-<textarea id="t" readonly>name: Build APK
+name: Build APK
 
 on:
   workflow_dispatch:
@@ -46,9 +31,9 @@ jobs:
         run: |
           R=android/app/src/main/res
           mkdir -p $R/values $R/values-night
-          printf &#x27;&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;\n&lt;resources&gt;\n    &lt;bool name=&quot;work_light_bars&quot;&gt;true&lt;/bool&gt;\n&lt;/resources&gt;\n&#x27; &gt; $R/values/work_bool.xml
-          printf &#x27;&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;\n&lt;resources&gt;\n    &lt;bool name=&quot;work_light_bars&quot;&gt;false&lt;/bool&gt;\n&lt;/resources&gt;\n&#x27; &gt; $R/values-night/work_bool.xml
-          sed -i &#x27;s#\(&lt;style name=&quot;AppTheme.NoActionBar&quot;[^&gt;]*&gt;\)#\1\n        &lt;item name=&quot;android:windowLightStatusBar&quot;&gt;@bool/work_light_bars&lt;/item&gt;\n        &lt;item name=&quot;android:windowLightNavigationBar&quot;&gt;@bool/work_light_bars&lt;/item&gt;#&#x27; $R/values/styles.xml
+          printf '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <bool name="work_light_bars">true</bool>\n</resources>\n' > $R/values/work_bool.xml
+          printf '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <bool name="work_light_bars">false</bool>\n</resources>\n' > $R/values-night/work_bool.xml
+          sed -i 's#\(<style name="AppTheme.NoActionBar"[^>]*>\)#\1\n        <item name="android:windowLightStatusBar">@bool/work_light_bars</item>\n        <item name="android:windowLightNavigationBar">@bool/work_light_bars</item>#' $R/values/styles.xml
 
       - name: App icons (2 styles x 8 colors, switchable)
         run: |
@@ -63,7 +48,7 @@ jobs:
           P=android/app/src/main/java/com/pd/earnings
           mkdir -p $P
           cp android-src/SafBackupPlugin.java $P/
-          sed -i &#x27;/^dependencies {/a\    implementation &quot;androidx.documentfile:documentfile:1.0.1&quot;&#x27; android/app/build.gradle
+          sed -i '/^dependencies {/a\    implementation "androidx.documentfile:documentfile:1.0.1"' android/app/build.gradle
 
       - name: Fingerprint lock + home-screen widget
         run: |
@@ -82,28 +67,28 @@ jobs:
           cp android-src/work_w_check.xml $R/drawable/
           cp android-src/work_widget_info.xml $R/xml/
           M=android/app/src/main/AndroidManifest.xml
-          sed -i &#x27;s#&lt;/application&gt;#    &lt;receiver android:name=&quot;.WorkWidgetProvider&quot; android:exported=&quot;true&quot;&gt;&lt;intent-filter&gt;&lt;action android:name=&quot;android.appwidget.action.APPWIDGET_UPDATE&quot;/&gt;&lt;/intent-filter&gt;&lt;meta-data android:name=&quot;android.appwidget.provider&quot; android:resource=&quot;@xml/work_widget_info&quot;/&gt;&lt;/receiver&gt;\n    &lt;/application&gt;#&#x27; $M
-          grep -q &#x27;WorkWidgetProvider&#x27; $M || { echo &quot;widget receiver was not added to the manifest&quot;; exit 1; }
-          sed -i &#x27;/^dependencies {/a\    implementation &quot;androidx.biometric:biometric:1.1.0&quot;&#x27; android/app/build.gradle
-          grep -q &#x27;androidx.biometric&#x27; android/app/build.gradle || { echo &quot;biometric dependency was not added&quot;; exit 1; }
+          sed -i 's#</application>#    <receiver android:name=".WorkWidgetProvider" android:exported="true"><intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter><meta-data android:name="android.appwidget.provider" android:resource="@xml/work_widget_info"/></receiver>\n    </application>#' $M
+          grep -q 'WorkWidgetProvider' $M || { echo "widget receiver was not added to the manifest"; exit 1; }
+          sed -i '/^dependencies {/a\    implementation "androidx.biometric:biometric:1.1.0"' android/app/build.gradle
+          grep -q 'androidx.biometric' android/app/build.gradle || { echo "biometric dependency was not added"; exit 1; }
 
       - name: Android 16 (API 36) + arm64 only + storage permissions
         run: |
-          sed -i &#x27;s/targetSdkVersion = .*/targetSdkVersion = 36/&#x27; android/variables.gradle
-          sed -i &#x27;/defaultConfig {/a\        ndk { abiFilters &quot;arm64-v8a&quot; }&#x27; android/app/build.gradle
+          sed -i 's/targetSdkVersion = .*/targetSdkVersion = 36/' android/variables.gradle
+          sed -i '/defaultConfig {/a\        ndk { abiFilters "arm64-v8a" }' android/app/build.gradle
           M=android/app/src/main/AndroidManifest.xml
-          sed -i &#x27;s#&lt;application#&lt;uses-permission android:name=&quot;android.permission.READ_EXTERNAL_STORAGE&quot; android:maxSdkVersion=&quot;32&quot;/&gt;\n    &lt;uses-permission android:name=&quot;android.permission.WRITE_EXTERNAL_STORAGE&quot; android:maxSdkVersion=&quot;29&quot;/&gt;\n    &lt;application#&#x27; $M
-          sed -i &#x27;s#&lt;application#&lt;application android:requestLegacyExternalStorage=&quot;true&quot;#&#x27; $M
+          sed -i 's#<application#<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29"/>\n    <application#' $M
+          sed -i 's#<application#<application android:requestLegacyExternalStorage="true"#' $M
 
       - name: Version number (changes with every build)
         env:
           N: ${{ github.run_number }}
         run: |
           G=android/app/build.gradle
-          sed -i &quot;s/versionCode [0-9][0-9]*/versionCode $N/; s/versionName \&quot;[^\&quot;]*\&quot;/versionName \&quot;2.0.$N\&quot;/&quot; $G
-          grep -q &quot;versionCode $N\$&quot; $G || { echo &quot;versionCode was not updated&quot;; exit 1; }
-          grep -q &quot;versionName \&quot;2.0.$N\&quot;&quot; $G || { echo &quot;versionName was not updated&quot;; exit 1; }
-          echo &quot;Version: 2.0.$N (code $N)&quot;
+          sed -i "s/versionCode [0-9][0-9]*/versionCode $N/; s/versionName \"[^\"]*\"/versionName \"2.0.$N\"/" $G
+          grep -q "versionCode $N\$" $G || { echo "versionCode was not updated"; exit 1; }
+          grep -q "versionName \"2.0.$N\"" $G || { echo "versionName was not updated"; exit 1; }
+          echo "Version: 2.0.$N (code $N)"
 
       - name: Sync web assets
         run: npx cap sync android
@@ -115,43 +100,34 @@ jobs:
       - name: Sign APK
         env:
           KS_B64: ${{ secrets.KEYSTORE_B64 || secrets.KEYSTORE_BASE64 || secrets.KEYSTORE }}
-          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD || secrets.STORE_PASSWORD || secrets.KS_PASSWORD || &#x27;workpass123&#x27; }}
+          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD || secrets.STORE_PASSWORD || secrets.KS_PASSWORD || 'workpass123' }}
           KEY_ALIAS_IN: ${{ secrets.KEY_ALIAS || secrets.KEYSTORE_ALIAS || secrets.ALIAS }}
           KEY_PASS_IN: ${{ secrets.KEY_PASSWORD || secrets.KEYSTORE_KEY_PASSWORD }}
         run: |
-          if [ -n &quot;$KS_B64&quot; ]; then
-            echo &quot;Keystore source: repository secret&quot;
-            echo &quot;$KS_B64&quot; | tr -d &#x27; \r\n&#x27; | base64 -d &gt; work.p12 || { echo &quot;::error::The keystore secret is not valid base64&quot;; exit 1; }
+          if [ -n "$KS_B64" ]; then
+            echo "Keystore source: repository secret"
+            echo "$KS_B64" | tr -d ' \r\n' | base64 -d > work.p12 || { echo "::error::The keystore secret is not valid base64"; exit 1; }
           else
-            echo &quot;::warning::No keystore secret found. Using a temporary key, so every update needs an uninstall first.&quot;
-            keytool -genkeypair -keystore work.p12 -storetype pkcs12 -alias work -keyalg RSA -keysize 2048 -validity 10000 -storepass &quot;$KS_PASS&quot; -keypass &quot;$KS_PASS&quot; -dname &quot;CN=Work App&quot;
+            echo "::warning::No keystore secret found. Using a temporary key, so every update needs an uninstall first."
+            keytool -genkeypair -keystore work.p12 -storetype pkcs12 -alias work -keyalg RSA -keysize 2048 -validity 10000 -storepass "$KS_PASS" -keypass "$KS_PASS" -dname "CN=Work App"
             KEY_ALIAS_IN=work
             KEY_PASS_IN=
           fi
           BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
           $BT/zipalign -f -p 4 android/app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
           ARGS=(--ks work.p12 --ks-pass env:KS_PASS)
-          if [ -n &quot;$KEY_ALIAS_IN&quot; ]; then ARGS+=(--ks-key-alias &quot;$KEY_ALIAS_IN&quot;); fi
-          if [ -n &quot;$KEY_PASS_IN&quot; ]; then ARGS+=(--key-pass env:KEY_PASS_IN); fi
-          $BT/apksigner sign &quot;${ARGS[@]}&quot; --out work-release.apk aligned.apk
+          if [ -n "$KEY_ALIAS_IN" ]; then ARGS+=(--ks-key-alias "$KEY_ALIAS_IN"); fi
+          if [ -n "$KEY_PASS_IN" ]; then ARGS+=(--key-pass env:KEY_PASS_IN); fi
+          $BT/apksigner sign "${ARGS[@]}" --out work-release.apk aligned.apk
           $BT/apksigner verify work-release.apk
-          echo &quot;Signed OK&quot;
+          echo "Signed OK"
 
       - name: Name the APK by version
         env:
           N: ${{ github.run_number }}
-        run: mv work-release.apk &quot;work-v2.0.$N.apk&quot;
+        run: mv work-release.apk "work-v2.0.$N.apk"
 
       - uses: actions/upload-artifact@v4
         with:
           name: work-v2.0.${{ github.run_number }}
           path: work-v2.0.${{ github.run_number }}.apk
-</textarea>
-<script>
-document.getElementById('b').onclick=async function(){
-var t=document.getElementById('t'),m=document.getElementById('m');
-try{await navigator.clipboard.writeText(t.value);m.textContent='تم النسخ ✓'}
-catch(e){t.focus();t.select();t.setSelectionRange(0,t.value.length);
-try{document.execCommand('copy');m.textContent='تم النسخ ✓'}catch(e2){m.textContent='حدّد النص واضغط نسخ يدويًا'}}
-};
-</script></body></html>
