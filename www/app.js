@@ -7,7 +7,7 @@ const PALETTE = ['#2c6e69', '#3d6a8f', '#4a7c59', '#6b5b95', '#a0623a', '#a14d63
 const WD = ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
 
 function norm(d) {
-  const s = { v: 5, items: [], archive: [], carry: 0, currency: 'DH', rate: DEF_RATE, auto: true, pin: '', bio: false, search: true, color: DEF_COLOR, open: null };
+  const s = { v: 5, items: [], archive: [], carry: 0, currency: 'DH', rate: DEF_RATE, auto: true, pin: '', bio: false, search: true, color: DEF_COLOR, open: null, forgetH: 12 };
   if (!d || typeof d !== 'object') return s;
   if (typeof d.currency === 'string') s.currency = d.currency;
   if (Number(d.rate) > 0) s.rate = Number(d.rate);
@@ -16,6 +16,7 @@ function norm(d) {
   s.bio = d.bio === true;
   s.search = d.search !== false;
   s.carry = Number(d.carry) || 0;
+  s.forgetH = d.forgetH === undefined ? 12 : Math.max(0, Math.min(48, Math.round(Number(d.forgetH)) || 0));
   if (/^#[0-9a-f]{6}$/i.test(d.color || '')) s.color = d.color;
   if (d.open && d.open.date && d.open.start) s.open = { date: d.open.date, start: d.open.start };
   const fix = i => {
@@ -708,7 +709,7 @@ $('pad').onclick = async e => {
   if (k === '⌫') entered = entered.slice(0, -1); else if (entered.length < 4) entered += k;
   drawDots();
   if (entered.length === 4) {
-    if (await hashPin(entered) === state.pin) { $('lock').hidden = true; entered = ''; pinFail = {}; savePinFail(); }
+    if (await hashPin(entered) === state.pin) { $('lock').hidden = true; setTimeout(checkForgot, 400); entered = ''; pinFail = {}; savePinFail(); }
     else {
       pinFail.n = (pinFail.n || 0) + 1;
       if (pinFail.n % 5 === 0) { const sec = Math.min(30 * (pinFail.n / 5), 600); pinFail.until = Date.now() + sec * 1000; toast('5 محاولات خاطئة. انتظر ' + sec + ' ثانية'); }
@@ -754,7 +755,7 @@ async function tryBio() {
   const B = nplug('Bio');
   if (!B || !bioOk || !state.bio || bioBusy || $('lock').hidden) return;
   bioBusy = true;
-  try { await B.authenticate(); $('lock').hidden = true; entered = ''; pinFail = {}; savePinFail(); } catch (e) { /* أُلغيت: يبقى الرمز */ }
+  try { await B.authenticate(); $('lock').hidden = true; setTimeout(checkForgot, 400); entered = ''; pinFail = {}; savePinFail(); } catch (e) { /* أُلغيت: يبقى الرمز */ }
   bioBusy = false;
 }
 $('bioChk').onchange = async () => {
@@ -775,7 +776,7 @@ function updBkWhere() {
   $('bkReset').hidden = !bk.tree;
 }
 $('menuBtn').onclick = () => {
-  $('srchChk').checked = state.search !== false; $('cur').value = state.currency; $('rate').value = state.rate; $('auto').checked = state.auto;
+  $('srchChk').checked = state.search !== false; $('cur').value = state.currency; $('rate').value = state.rate; $('auto').checked = state.auto; $('forgetH').value = state.forgetH;
   updIc(); updPinLabel(); $('bioRow').hidden = !bioOk; $('bioChk').checked = !!state.bio; updBkWhere(); updEnc(); buildSwatches(); showVer(); $('menu').showModal();
 };
 async function showVer() { // رقم النسخة من التطبيق نفسه (يتغير مع كل بناء)
@@ -786,7 +787,8 @@ $('menuClose').onclick = () => {
   state.currency = $('cur').value.trim();
   const r = parseFloat($('rate').value); if (r > 0) state.rate = r;
   state.auto = $('auto').checked;
-  $('menu').close(); save();
+  const fh = parseInt($('forgetH').value, 10); if (!isNaN(fh)) state.forgetH = Math.max(0, Math.min(48, fh));
+  $('menu').close(); save(); checkForgot();
 };
 
 // ---------- أيقونة التطبيق (شكلان × ثمانية ألوان) ----------
@@ -832,6 +834,7 @@ function markBk(ok) {
   try { localStorage.setItem('earnings_lastbk', JSON.stringify(lastBk)); } catch (e) {}
   if (ok) warnedAuto = false;
   else if (!warnedAuto) { warnedAuto = true; toast('تعذر حفظ النسخة التلقائية. افتح الإعدادات وتحقق من مكان النسخ'); }
+  try { checkBkStale(); } catch (e) {}
 }
 
 async function putFile(name, data) {
@@ -1037,7 +1040,7 @@ function syncWidget() { // يعكس حالة الدخول الحالية على 
 }
 async function pullWidget() { // يستلم ما سجّله الودجت وهو مغلق التطبيق
   const W = nplug('WorkWidget');
-  if (!W) { widgetReady = true; return; }
+  if (!W) { widgetReady = true; foregroundChecks(); return; }
   widgetReady = false;
   try {
     const r = await W.takeEvents(); let changed = false, msg = '', n = 0;
@@ -1057,10 +1060,35 @@ async function pullWidget() { // يستلم ما سجّله الودجت وهو 
     if (changed) save();
     if (msg) toast(msg);
   } catch (e) {}
-  widgetReady = true; syncWidget();
+  widgetReady = true; syncWidget(); foregroundChecks();
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) pullWidget(); });
 (function () { const A = plugin('App'); if (A && A.addListener) A.addListener('appStateChange', st => { if (st && st.isActive) pullWidget(); }); })();
+
+// ---------- تنبيهات: نسخة احتياطية قديمة + نسيان الخروج ----------
+const BK_STALE_DAYS = 3;
+function checkBkStale() {
+  const el = $('bkWarn'); if (!el) return;
+  const days = lastBk.okAt ? (Date.now() - lastBk.okAt) / 864e5 : Infinity;
+  const stale = !isEmpty(state) && days > BK_STALE_DAYS;
+  el.hidden = !stale;
+  if (!stale) return;
+  const n = Math.floor(days);
+  el.textContent = isFinite(days) ? `لم تُحفظ نسخة احتياطية ناجحة منذ ${n} ${n < 11 ? 'أيام' : 'يومًا'}. اضغط للتحقق.` : 'لا توجد نسخة احتياطية ناجحة مسجَّلة. اضغط للتحقق.';
+}
+$('bkWarn').onclick = () => $('menuBtn').onclick();
+let forgetAsked = 0;
+function checkForgot() {
+  const h = state.forgetH, o = state.open;
+  if (!o || !(h > 0) || !$('lock').hidden || document.querySelector('dialog[open]')) return;
+  const m = elapsedMins();
+  if (m < h * 60 || Date.now() - forgetAsked < 3600000) return;
+  forgetAsked = Date.now();
+  setTimeout(() => {
+    if (state.open && confirm('أنت مسجّل دخول منذ ' + Math.floor(m / 60) + ' ساعة (من ' + o.start + '). هل نسيت تسجيل الخروج؟\n\nموافق = تسجيل الخروج الآن')) { const b = $('clockOut'); if (b) b.click(); }
+  }, 300);
+}
+function foregroundChecks() { try { checkBkStale(); checkForgot(); } catch (e) {} }
 
 // ---------- زر الرجوع ----------
 let lastBack = 0;

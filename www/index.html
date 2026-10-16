@@ -22,6 +22,7 @@
   <div class="big num" id="total">0</div>
   <div class="mini" id="mini"></div>
 </section>
+<div class="bkwarn" id="bkWarn" hidden></div>
 <section class="shift" id="shift"></section>
 <button class="pay" id="payBtn"><svg class="ic"><use href="#i-tcircle"/></svg>استلمت الدفعة</button>
 
@@ -147,6 +148,8 @@
       <div class="fld"><label for="rate">سعر الساعة</label><input type="number" id="rate" inputmode="decimal" min="0" step="any"></div>
     </div>
     <div class="hint">السعر الجديد يسري على الأيام الجديدة فقط</div>
+    <div class="fld"><label for="forgetH">تنبيه نسيان الخروج بعد (ساعات)</label><input type="number" id="forgetH" inputmode="numeric" min="0" max="48" step="1"></div>
+    <div class="hint">0 = بلا تنبيه. يظهر عند فتح التطبيق إن بقي الدخول مفتوحًا أكثر من هذه المدة</div>
     <div class="fld"><label>لون التطبيق</label><div class="sw" id="sw"></div></div>
     <div id="icBox">
       <div class="fld" style="border-top:1px solid var(--bd);padding-top:10px"><label>شكل أيقونة التطبيق</label><div class="seg" id="icSeg"><button data-s="a" type="button">دارة إلكترونية</button><button data-s="b" type="button">موجات</button></div></div>

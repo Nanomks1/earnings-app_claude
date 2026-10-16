@@ -23,6 +23,8 @@ h1{font-size:22px;margin:0;font-weight:800}
 .mini .k{display:block;font-size:12px;opacity:.8;margin-bottom:3px}
 .mini .v{display:block;font-size:15px;font-weight:700;direction:ltr}
 .shift{margin:12px 16px 0}
+.bkwarn{margin:12px 16px 0;padding:10px 12px;border-radius:12px;background:var(--card);border:1px solid var(--neg);color:var(--neg);font-size:12.5px;line-height:1.6;cursor:pointer}
+.bkwarn[hidden]{display:none}
 .clock{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;border-radius:18px;border:1px dashed var(--pri);background:var(--card);text-align:start}
 .bub{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--tint);color:var(--pritx);flex:none}
 .bub.neg{background:var(--ntint);color:var(--neg)}
