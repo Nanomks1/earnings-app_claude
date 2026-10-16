@@ -184,10 +184,15 @@ details.card .lines{margin-top:12px;border-top:1px dashed var(--bd);padding-top:
 .flt .seg{margin-top:8px}
 .fres{display:flex;justify-content:space-between;margin:8px 4px 0;font-size:12.5px;color:var(--mut);font-weight:600}
 .fres b{direction:ltr;color:var(--text)}
+.rb .bub{width:32px;height:32px;border-radius:10px;flex:none}
+.rb .bub .ic{width:18px;height:18px}
+.rb span.t{flex:1;min-width:0}
+.rb small{display:block;font-size:12px;color:var(--mut);margin-top:1px}
+.rb .chev{width:16px;height:16px;color:var(--mut)}
 </style>
 </head>
 <body>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></symbol><symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol><symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5l10.5 6.5L8 18.5z"/></symbol><symbol id="i-stop" viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="2"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol><symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol><symbol id="i-calendar" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5" rx="2.5"/><path d="M4 10h16M9 3.5v4M15 3.5v4"/></symbol><symbol id="i-cash" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="10" rx="2.5"/><circle cx="12" cy="12" r="2.5"/><path d="M6.5 12h.01M17.5 12h.01"/></symbol><symbol id="i-mcircle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M8 12h8"/></symbol><symbol id="i-tcircle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></symbol><symbol id="i-share" viewBox="0 0 24 24"><circle cx="6" cy="12" r="2.3"/><circle cx="18" cy="6" r="2.3"/><circle cx="18" cy="18" r="2.3"/><path d="M8.1 11l7.8-3.9M8.1 13l7.8 3.9"/></symbol><symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 0 1 2-2H10l2 2.5h6.5a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></symbol><symbol id="i-save" viewBox="0 0 24 24"><path d="M12 4v10M8 10.5l4 4 4-4M5 19h14"/></symbol><symbol id="i-restore" viewBox="0 0 24 24"><path d="M4.5 12a7.5 7.5 0 1 0 2.4-5.5M4 4.5V8h3.5"/></symbol><symbol id="i-file" viewBox="0 0 24 24"><path d="M7 3.5h6.5L18 8v11.5a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1z"/><path d="M13.5 3.5V8H18"/></symbol><symbol id="i-lock" viewBox="0 0 24 24"><rect x="5.5" y="10.5" width="13" height="9.5" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></symbol><symbol id="i-bars" viewBox="0 0 24 24"><path d="M5 20V12M12 20V5M19 20v-5"/></symbol><symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></symbol><symbol id="i-archive" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="4.5" rx="1.2"/><path d="M5 9.5V18a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 18V9.5M10 13h4"/></symbol><symbol id="i-edit" viewBox="0 0 24 24"><path d="M4.5 19.5h4L19 9l-4-4L4.5 15.5zM13 7l4 4"/></symbol><symbol id="i-finger" viewBox="0 0 24 24"><path d="M12 4a7 7 0 0 0-7 7v2M12 4a7 7 0 0 1 7 7v1.5c0 2.5-.7 4.5-2 6.5M12 8a3 3 0 0 0-3 3v3.5c0 1.5-.5 3-1.5 4.5M12 8a3 3 0 0 1 3 3v1.5M12 12v2.5c0 2-.6 4-1.8 5.5M15.5 16.5c-.3 1-.7 1.8-1.2 2.6"/></symbol><symbol id="i-home" viewBox="0 0 24 24"><path d="M3.5 11.5L12 4.5l8.5 7M6 10v9.5h12V10M10 19.5v-5h4v5"/></symbol></svg>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-chev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></symbol><symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol><symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5l10.5 6.5L8 18.5z"/></symbol><symbol id="i-stop" viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="2"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol><symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol><symbol id="i-calendar" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5" rx="2.5"/><path d="M4 10h16M9 3.5v4M15 3.5v4"/></symbol><symbol id="i-cash" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="10" rx="2.5"/><circle cx="12" cy="12" r="2.5"/><path d="M6.5 12h.01M17.5 12h.01"/></symbol><symbol id="i-mcircle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M8 12h8"/></symbol><symbol id="i-tcircle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></symbol><symbol id="i-share" viewBox="0 0 24 24"><circle cx="6" cy="12" r="2.3"/><circle cx="18" cy="6" r="2.3"/><circle cx="18" cy="18" r="2.3"/><path d="M8.1 11l7.8-3.9M8.1 13l7.8 3.9"/></symbol><symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 0 1 2-2H10l2 2.5h6.5a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></symbol><symbol id="i-save" viewBox="0 0 24 24"><path d="M12 4v10M8 10.5l4 4 4-4M5 19h14"/></symbol><symbol id="i-restore" viewBox="0 0 24 24"><path d="M4.5 12a7.5 7.5 0 1 0 2.4-5.5M4 4.5V8h3.5"/></symbol><symbol id="i-file" viewBox="0 0 24 24"><path d="M7 3.5h6.5L18 8v11.5a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1z"/><path d="M13.5 3.5V8H18"/></symbol><symbol id="i-lock" viewBox="0 0 24 24"><rect x="5.5" y="10.5" width="13" height="9.5" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></symbol><symbol id="i-bars" viewBox="0 0 24 24"><path d="M5 20V12M12 20V5M19 20v-5"/></symbol><symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></symbol><symbol id="i-archive" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="4.5" rx="1.2"/><path d="M5 9.5V18a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 18V9.5M10 13h4"/></symbol><symbol id="i-edit" viewBox="0 0 24 24"><path d="M4.5 19.5h4L19 9l-4-4L4.5 15.5zM13 7l4 4"/></symbol><symbol id="i-finger" viewBox="0 0 24 24"><path d="M12 4a7 7 0 0 0-7 7v2M12 4a7 7 0 0 1 7 7v1.5c0 2.5-.7 4.5-2 6.5M12 8a3 3 0 0 0-3 3v3.5c0 1.5-.5 3-1.5 4.5M12 8a3 3 0 0 1 3 3v1.5M12 12v2.5c0 2-.6 4-1.8 5.5M15.5 16.5c-.3 1-.7 1.8-1.2 2.6"/></symbol><symbol id="i-home" viewBox="0 0 24 24"><path d="M3.5 11.5L12 4.5l8.5 7M6 10v9.5h12V10M10 19.5v-5h4v5"/></symbol></svg>
 <header>
   <h1>العمل</h1>
   <div class="hbtns">
@@ -326,28 +331,29 @@ details.card .lines{margin-top:12px;border-top:1px dashed var(--bd);padding-top:
     </div>
     <div class="hint">السعر الجديد يسري على الأيام الجديدة فقط</div>
     <div class="fld"><label>لون التطبيق</label><div class="sw" id="sw"></div></div>
+    <div class="rb" style="border-top:1px solid var(--bd)"><span class="bub"><svg class="ic"><use href="#i-search"/></svg></span><span class="t">البحث والفلتر<small>يظهر فوق السجلات والأرشيف</small></span><input type="checkbox" id="srchChk"></div>
   </div>
   <div class="note" style="margin-top:8px">لتسجيل الدخول والخروج بضغطة من الشاشة الرئيسية: اضغط مطولًا على الشاشة ← الودجات ← «العمل».</div>
   <div class="shd">الأمان</div>
   <div class="grp">
-    <button class="rb" id="pinBtn"><svg class="ic"><use href="#i-lock"/></svg><span>رمز القفل</span><em id="pinSt"></em></button>
-    <div class="rb" id="bioRow" hidden><svg class="ic"><use href="#i-finger"/></svg><span>فتح بالبصمة</span><input type="checkbox" id="bioChk"></div>
-    <button class="rb" id="encBtn"><svg class="ic"><use href="#i-lock"/></svg><span>تشفير النسخ الاحتياطي</span><em id="encSt"></em></button>
+    <button class="rb" id="pinBtn"><span class="bub"><svg class="ic"><use href="#i-lock"/></svg></span><span class="t">رمز القفل<small id="pinSt"></small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
+    <div class="rb" id="bioRow" hidden><span class="bub"><svg class="ic"><use href="#i-finger"/></svg></span><span class="t">فتح بالبصمة</span><input type="checkbox" id="bioChk"></div>
+    <button class="rb" id="encBtn"><span class="bub"><svg class="ic"><use href="#i-lock"/></svg></span><span class="t">تشفير النسخ الاحتياطي<small id="encSt"></small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
   </div>
   <div class="shd">النسخ الاحتياطي</div>
   <div class="grp">
-    <div class="rb"><svg class="ic"><use href="#i-save"/></svg><span>نسخ احتياطي تلقائي بعد كل تعديل</span><input type="checkbox" id="auto"></div>
+    <div class="rb"><span class="bub"><svg class="ic"><use href="#i-save"/></svg></span><span class="t">نسخ احتياطي تلقائي<small>بعد كل تعديل</small></span><input type="checkbox" id="auto"></div>
     <div class="info" id="bkWhere" style="color:var(--mut);font-size:13px"></div>
-    <button class="rb" id="bkPick"><svg class="ic"><use href="#i-folder"/></svg><span>اختيار مجلد لحفظ النسخ</span></button>
-    <button class="rb" id="bkReset"><svg class="ic"><use href="#i-restore"/></svg><span>العودة للمكان الافتراضي</span></button>
-    <button class="rb" id="bkNow"><svg class="ic"><use href="#i-save"/></svg><span>نسخة احتياطية جديدة الآن</span></button>
-    <button class="rb" id="csvBtn"><svg class="ic"><use href="#i-file"/></svg><span>تصدير كل السجلات (CSV)</span></button>
+    <button class="rb" id="bkPick"><span class="bub"><svg class="ic"><use href="#i-folder"/></svg></span><span class="t">اختيار مجلد لحفظ النسخ</span></button>
+    <button class="rb" id="bkReset"><span class="bub"><svg class="ic"><use href="#i-restore"/></svg></span><span class="t">العودة للمكان الافتراضي</span></button>
+    <button class="rb" id="bkNow"><span class="bub"><svg class="ic"><use href="#i-save"/></svg></span><span class="t">نسخة احتياطية جديدة الآن</span></button>
   </div>
-  <div class="shd">الاستعادة</div>
+  <div class="shd">التصدير والاستعادة</div>
   <div class="grp">
-    <button class="rb" id="bkRestore"><svg class="ic"><use href="#i-restore"/></svg><span>استعادة من النسخة التلقائية</span></button>
-    <button class="rb" id="bkList"><svg class="ic"><use href="#i-archive"/></svg><span>اختيار نسخة سابقة</span></button>
-    <button class="rb" id="bkFile"><svg class="ic"><use href="#i-file"/></svg><span>استعادة من ملف</span></button>
+    <button class="rb" id="csvBtn"><span class="bub"><svg class="ic"><use href="#i-file"/></svg></span><span class="t">تصدير كل السجلات (CSV)</span></button>
+    <button class="rb" id="bkRestore"><span class="bub"><svg class="ic"><use href="#i-restore"/></svg></span><span class="t">استعادة من النسخة التلقائية</span></button>
+    <button class="rb" id="bkList"><span class="bub"><svg class="ic"><use href="#i-archive"/></svg></span><span class="t">اختيار نسخة سابقة</span></button>
+    <button class="rb" id="bkFile"><span class="bub"><svg class="ic"><use href="#i-file"/></svg></span><span class="t">استعادة من ملف</span></button>
   </div>
   <input type="file" id="file" accept=".json,application/json" hidden>
   <div class="note">التلقائية تُحدَّث مع كل تغيير، ويُحتفظ بآخر 3 نسخ سابقة (مرة في اليوم). الزر اليدوي ينشئ ملفًا جديدًا باسمه التاريخ والوقت.</div>
@@ -430,13 +436,14 @@ const PALETTE = ['#2c6e69', '#3d6a8f', '#4a7c59', '#6b5b95', '#a0623a', '#a14d63
 const WD = ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
 
 function norm(d) {
-  const s = { v: 5, items: [], archive: [], carry: 0, currency: 'DH', rate: DEF_RATE, auto: true, pin: '', bio: false, color: DEF_COLOR, open: null };
+  const s = { v: 5, items: [], archive: [], carry: 0, currency: 'DH', rate: DEF_RATE, auto: true, pin: '', bio: false, search: true, color: DEF_COLOR, open: null };
   if (!d || typeof d !== 'object') return s;
   if (typeof d.currency === 'string') s.currency = d.currency;
   if (Number(d.rate) > 0) s.rate = Number(d.rate);
   s.auto = d.auto !== false;
   s.pin = typeof d.pin === 'string' ? d.pin : '';
   s.bio = d.bio === true;
+  s.search = d.search !== false;
   s.carry = Number(d.carry) || 0;
   if (/^#[0-9a-f]{6}$/i.test(d.color || '')) s.color = d.color;
   if (d.open && d.open.date && d.open.start) s.open = { date: d.open.date, start: d.open.start };
@@ -586,6 +593,7 @@ function emptyBox(icon, text) { return `<div class="empty"><span class="bub">${i
 
 function renderFltRes() {
   const box = $('fRes');
+  $('flt').hidden = state.search === false || view === 'sum';
   $('qClr').hidden = !fq;
   if (!isFlt()) { box.hidden = true; return; }
   const m = (view === 'arc' ? state.archive.flatMap(a => a.items) : state.items).filter(match), c = calc(m);
@@ -595,6 +603,11 @@ function renderFltRes() {
 $('q').oninput = () => { clearTimeout(fT); fT = setTimeout(() => { fq = nz($('q').value.trim()); render(); }, 150); };
 $('q').onkeydown = e => { if (e.key === 'Enter') $('q').blur(); };
 $('qClr').onclick = () => { $('q').value = ''; fq = ''; render(); $('q').focus(); };
+$('srchChk').onchange = () => {
+  state.search = $('srchChk').checked;
+  if (!state.search) { clearTimeout(fT); fq = ''; ft = 'all'; $('q').value = ''; [...$('fSeg').children].forEach(x => x.classList.toggle('on', x.dataset.t === 'all')); }
+  save(); render();
+};
 $('fSeg').onclick = e => {
   const b = e.target.closest('button'); if (!b) return;
   ft = b.dataset.t; [...$('fSeg').children].forEach(x => x.classList.toggle('on', x === b)); render();
@@ -755,7 +768,7 @@ function dayGroups(list) {
     if (k) out.push('');
     const net = g.reduce((t, i) => t + (i.type === 'work' ? i.amount : -i.amount), 0);
     out.push('📌 ' + bold(fmtDay(g[0].date)) + (g.length > 1 ? ' • ' + ltr(signedP(round2(net))) : ''));
-    g.forEach(i => out.push(itemLine(i)));
+    [...g].sort((a, b) => (a.type === 'adv') - (b.type === 'adv')).forEach(i => out.push(itemLine(i)));
   });
   return out;
 }
@@ -1181,7 +1194,7 @@ function updBkWhere() {
   $('bkReset').hidden = !bk.tree;
 }
 $('menuBtn').onclick = () => {
-  $('cur').value = state.currency; $('rate').value = state.rate; $('auto').checked = state.auto;
+  $('srchChk').checked = state.search !== false; $('cur').value = state.currency; $('rate').value = state.rate; $('auto').checked = state.auto;
   updPinLabel(); $('bioRow').hidden = !bioOk; $('bioChk').checked = !!state.bio; updBkWhere(); updEnc(); buildSwatches(); showVer(); $('menu').showModal();
 };
 async function showVer() { // رقم النسخة من التطبيق نفسه (يتغير مع كل بناء)
