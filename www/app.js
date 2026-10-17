@@ -1299,3 +1299,19 @@ render();
 showLock();
 checkBio().then(tryBio);
 pullWidget();
+
+// ---------- فحص الواي فاي (مؤقت) ----------
+(function () {
+  const out = t => { $('wfOut').textContent = t; };
+  const run = async (m, a) => {
+    const P = nplug('WifiProbe'); if (!P) return out('متاح في التطبيق فقط');
+    out('...');
+    try { const r = await P[m](a); out(m === 'rootProbe' ? 'root:\n' + (r.out || '(لا شيء)') : JSON.stringify(r, null, 1)); } catch (e) { out('خطأ: ' + ((e && e.message) || e)); }
+  };
+  $('rowWf').onclick = () => $('wfDlg').showModal();
+  $('wfRun').onclick = () => run('probe');
+  $('wfAsk').onclick = async () => { const P = nplug('WifiProbe'); if (!P) return out('متاح في التطبيق فقط'); try { await P.askNearby(); } catch (e) {} run('probe'); };
+  $('wfRoot').onclick = () => run('rootProbe');
+  $('wfCopy').onclick = async () => { try { await navigator.clipboard.writeText($('wfOut').textContent); toast('تم النسخ'); } catch (e) { toast('تعذر النسخ، حدّد النص وانسخه'); } };
+  $('wfClose').onclick = () => $('wfDlg').close();
+})();
