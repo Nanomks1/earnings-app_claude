@@ -96,10 +96,10 @@ jobs:
           N: ${{ github.run_number }}
         run: |
           G=android/app/build.gradle
-          sed -i "s/versionCode [0-9][0-9]*/versionCode $N/; s/versionName \"[^\"]*\"/versionName \"2.0.$N\"/" $G
+          sed -i "s/versionCode [0-9][0-9]*/versionCode $N/; s/versionName \"[^\"]*\"/versionName \"3.0.$N\"/" $G
           grep -q "versionCode $N\$" $G || { echo "versionCode was not updated"; exit 1; }
-          grep -q "versionName \"2.0.$N\"" $G || { echo "versionName was not updated"; exit 1; }
-          echo "Version: 2.0.$N (code $N)"
+          grep -q "versionName \"3.0.$N\"" $G || { echo "versionName was not updated"; exit 1; }
+          echo "Version: 3.0.$N (code $N)"
 
       - name: Sync web assets
         run: npx cap sync android
@@ -136,9 +136,9 @@ jobs:
       - name: Name the APK by version
         env:
           N: ${{ github.run_number }}
-        run: mv work-release.apk "work-v2.0.$N.apk"
+        run: mv work-release.apk "work-v3.0.$N.apk"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: work-v2.0.${{ github.run_number }}
-          path: work-v2.0.${{ github.run_number }}.apk
+          name: work-v3.0.${{ github.run_number }}
+          path: work-v3.0.${{ github.run_number }}.apk
