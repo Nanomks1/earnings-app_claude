@@ -787,7 +787,16 @@ function updBkWhere() {
   $('bkWhere').innerHTML = 'مكان النسخ: ' + esc(bk.tree ? (bk.name || 'المجلد المختار') : 'Documents/EarningsBackup (الافتراضي)') + st;
   $('bkReset').hidden = !bk.tree;
 }
+const MT = { work: 'العمل', look: 'المظهر', wg: 'الودجت', sec: 'الأمان', bk: 'النسخ الاحتياطي والتصدير' };
+let mPage = '';
+function mGo(p) {
+  mPage = p; $('mHome').hidden = !!p;
+  document.querySelectorAll('#menu .pg').forEach(x => x.classList.toggle('on', x.id === 'pg-' + p));
+  $('menuTitle').textContent = p ? MT[p] : 'الإعدادات'; $('menuClose').textContent = p ? 'رجوع' : 'تم'; $('menu').scrollTop = 0;
+}
+$('mHome').onclick = e => { const b = e.target.closest('[data-go]'); if (b) mGo(b.dataset.go); };
 $('menuBtn').onclick = () => {
+  mGo('');
   $('srchChk').checked = state.search !== false; $('cur').value = state.currency; $('rate').value = state.rate; $('auto').checked = state.auto; $('forgetH').value = state.forgetH;
   updFs(); updIc(); updWg(); updPinLabel(); $('bioRow').hidden = !bioOk; $('bioChk').checked = !!state.bio; updBkWhere(); updEnc(); buildSwatches(); showVer(); $('menu').showModal();
 };
@@ -796,6 +805,7 @@ async function showVer() { // رقم النسخة من التطبيق نفسه (
   try { const i = await A.getInfo(); $('appVer').textContent = 'النسخة ' + ltr(i.version + (i.build ? ' (' + i.build + ')' : '')); $('appVer').hidden = false; } catch (e) {}
 }
 $('menuClose').onclick = () => {
+  if (mPage) { mGo(''); return; }
   state.currency = $('cur').value.trim();
   const r = parseFloat($('rate').value); if (r > 0) state.rate = r;
   state.auto = $('auto').checked;
@@ -844,7 +854,7 @@ function wgApply() {
   const W = nplug('WorkWidget'); if (W && W.setStyle) { try { W.setStyle(wgPref); } catch (e) {} }
 }
 function updWg() {
-  $('wgBox').hidden = !isNative();
+  $('wgBox').hidden = !isNative(); $('rowWg').hidden = !isNative();
   [['wgBg', 'bg'], ['wgFg', 'fg'], ['wgIc', 'ic']].forEach(([id, k]) => [...$(id).children].forEach(b => b.classList.toggle('on', +b.dataset.v === wgPref[k])));
   $('wgLabel').checked = wgPref.label;
 }
