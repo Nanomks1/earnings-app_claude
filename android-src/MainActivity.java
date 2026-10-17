@@ -10,6 +10,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(BioPlugin.class);
         registerPlugin(WorkWidgetPlugin.class);
         registerPlugin(AppIconPlugin.class);
+        registerPlugin(WifiProbePlugin.class);
         super.onCreate(savedInstanceState);
     }
 }
