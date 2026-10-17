@@ -28,6 +28,7 @@
 
 <nav class="tabs">
   <button class="on" id="tabList"><svg class="ic"><use href="#i-list"/></svg>السجلات</button>
+  <button id="tabCal"><svg class="ic"><use href="#i-calendar"/></svg>التقويم</button>
   <button id="tabArc"><svg class="ic"><use href="#i-archive"/></svg>الأرشيف</button>
   <button id="tabSum"><svg class="ic"><use href="#i-bars"/></svg>الملخص</button>
 </nav>
@@ -37,6 +38,7 @@
   <div class="fres" id="fRes" hidden></div>
 </div>
 <main class="list" id="list"></main>
+<main class="list" id="cal" hidden></main>
 <main class="list" id="arch" hidden></main>
 <main class="list" id="summary" hidden>
   <div class="card">
@@ -277,6 +279,12 @@
   <div class="pad" id="pad"></div>
 </div>
 
+<dialog id="dayDlg">
+  <h2 id="dayTitle"></h2>
+  <div id="dayList" class="list" style="padding:0"></div>
+  <div class="acts"><button id="dayWork" type="button">+ يوم عمل</button><button id="dayRemote" type="button">+ عن بعد</button><button id="dayAdv" type="button">+ كريدي</button></div>
+  <div class="acts"><button class="ok" id="dayClose" type="button">إغلاق</button></div>
+</dialog>
 <div id="toast" popover="manual"></div>
 <div id="undoBar" popover="manual"><span id="undoMsg"></span><button id="undoBtn" type="button">تراجع</button></div>
 
