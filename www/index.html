@@ -150,6 +150,7 @@
     <button class="rb" data-go="wg" id="rowWg"><span class="bub"><svg class="ic"><use href="#i-home"/></svg></span><span class="t">الودجت<small>الشكل والألوان</small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
     <button class="rb" data-go="sec"><span class="bub"><svg class="ic"><use href="#i-lock"/></svg></span><span class="t">الأمان<small>رمز القفل والبصمة وتشفير النسخ</small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
     <button class="rb" data-go="bk"><span class="bub"><svg class="ic"><use href="#i-save"/></svg></span><span class="t">النسخ الاحتياطي والتصدير<small>النسخ التلقائي والاستعادة وCSV</small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
+    <button class="rb" id="rowWf" type="button"><span class="bub"><svg class="ic"><use href="#i-sliders"/></svg></span><span class="t">فحص الواي فاي (مؤقت)<small>اختبار لميزة قادمة، يُحذف لاحقًا</small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
   </div>
   <div class="note" id="appVer" style="text-align:center" hidden></div>
   </div>
@@ -261,6 +262,14 @@
     <button id="pwCancel" type="button">إلغاء</button>
     <button class="ok" id="pwOk" type="button">استعادة</button>
   </div>
+</dialog>
+
+<dialog id="wfDlg">
+  <h2>فحص الواي فاي</h2>
+  <pre id="wfOut" dir="ltr" style="user-select:text;-webkit-user-select:text;white-space:pre-wrap;word-break:break-all;font-size:calc(12px*var(--fs,1));max-height:42vh;overflow:auto;margin:0">اضغط «فحص» وأنت متصل بواي فاي العمل.</pre>
+  <div class="acts" style="flex-wrap:wrap"><button id="wfRun" type="button" style="flex:1 1 45%">فحص</button><button id="wfAsk" type="button" style="flex:1 1 45%">إذن الأجهزة القريبة</button></div>
+  <div class="acts" style="margin-top:8px;flex-wrap:wrap"><button id="wfRoot" type="button" style="flex:1 1 45%">فحص بالروت</button><button id="wfCopy" type="button" style="flex:1 1 45%">نسخ</button></div>
+  <div class="acts" style="margin-top:8px"><button id="wfClose" type="button">إغلاق</button></div>
 </dialog>
 
 <dialog id="shDlg">
