@@ -1335,7 +1335,7 @@ async function wfCfgShow() {
   $('wfOn').checked = !!c.on; $('wfRootChk').checked = !!c.root;
   $('wfRootChk').disabled = !c.on; $('wfRootRow').style.opacity = c.on ? '' : '.5';
   const ws = (c.workSsid || '').trim();
-  $('wfInfo').innerHTML = 'شبكة العمل: ' + (ws ? esc(ws) : 'غير محدّدة') + (c.on && !c.root ? '<br>الروت مطفأ: لا يمكن معرفة اسم الشبكة، فتُسجَّل الأحداث بلا اسم.' : '') + (c.on && c.root && !ws ? '<br>اتصل بشبكة العمل ثم اضغط «اعتمد الشبكة الحالية».' : '');
+  $('wfInfo').innerHTML = 'شبكة العمل: ' + (ws ? esc(ws) : 'غير محدّدة') + (c.on && !c.root ? '<br>الروت مطفأ: لا يمكن معرفة اسم الشبكة، فتُسجَّل الأحداث بلا اسم.' : '') + (c.on && c.root && !ws ? '<br>اتصل بشبكة العمل ثم اضغط «اعتمد الشبكة الحالية».' : '') + (c.on ? '<br><small>آخر استدعاء من النظام: ' + (c.cbT ? wfHM(c.cbT) + ' (' + c.cbN + ')' : 'لا شيء') + '</small>' : '');
 }
 $('wfOn').onchange = async () => {
   const W = nplug('WifiTrack'), v = $('wfOn').checked;
