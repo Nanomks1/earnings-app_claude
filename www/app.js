@@ -244,7 +244,7 @@ function render() {
   }).join('') : isFlt() ? emptyBox('search', 'لا توجد نتائج مطابقة.') : emptyBox('clock', 'لا توجد سجلات في الفترة الحالية.<br>سجّل دخول العمل أو أضف يومًا.');
   renderArchive();
   renderFltRes();
-  renderSummary();
+  renderSummary(); renderCal();
 }
 
 // ---------- دخول / خروج ----------
@@ -532,14 +532,131 @@ $('sShare').onclick = () => doShare(summaryText());
 
 function setView(v) {
   view = v;
-  $('list').hidden = v !== 'list'; $('arch').hidden = v !== 'arc'; $('summary').hidden = v !== 'sum'; $('flt').hidden = v === 'sum'; renderFltRes();
+  $('list').hidden = v !== 'list'; $('arch').hidden = v !== 'arc'; $('cal').hidden = v !== 'cal'; $('summary').hidden = v !== 'sum'; $('flt').hidden = v === 'sum' || v === 'cal'; renderFltRes();
   $('tabList').classList.toggle('on', v === 'list');
-  $('tabArc').classList.toggle('on', v === 'arc');
+  $('tabArc').classList.toggle('on', v === 'arc'); $('tabCal').classList.toggle('on', v === 'cal');
   $('tabSum').classList.toggle('on', v === 'sum');
 }
 $('tabList').onclick = () => setView('list');
-$('tabArc').onclick = () => setView('arc');
+$('tabArc').onclick = () => setView('arc'); $('tabCal').onclick = () => setView('cal');
 $('tabSum').onclick = () => setView('sum');
+
+// ---------- التقويم الشهري وتقرير PDF ----------
+let calM = today().slice(0, 7), calDay = '';
+const CAL_WD = ['إث', 'ثل', 'أر', 'خم', 'جم', 'سب', 'أح'];
+const monthLabel = k => dt(k + '-01').toLocaleDateString('ar-u-nu-latn', { month: 'long', year: 'numeric' });
+function renderCal() {
+  const [y, m] = calM.split('-').map(Number), n = new Date(y, m, 0).getDate(), lead = (new Date(y, m - 1, 1).getDay() + 6) % 7;
+  const items = allItems().filter(i => i.date.slice(0, 7) === calM), by = {};
+  items.forEach(i => (by[i.date] = by[i.date] || []).push(i));
+  const td = today(); let cells = '';
+  for (let k = 0; k < lead; k++) cells += '<div class="cd o"></div>';
+  for (let d = 1; d <= n; d++) {
+    const ds = calM + '-' + pad2(d), L = by[ds] || [];
+    const mins = L.filter(i => i.type === 'work' && !i.remote).reduce((s, i) => s + i.mins, 0);
+    const rem = L.some(i => i.type === 'work' && i.remote), adv = L.some(i => i.type === 'adv');
+    const cls = mins > 0 ? 'w' : rem ? 'r' : adv ? 'a' : ds < td ? 'e' : '';
+    const sub = mins > 0 ? fmtHM(mins) : rem ? 'عن بعد' : adv ? 'كريدي' : '';
+    const dots = (mins > 0 && rem ? '<i class="r"></i>' : '') + (adv && (mins > 0 || rem) ? '<i class="a"></i>' : '');
+    cells += `<button class="cd ${cls}${ds === td ? ' td' : ''}" data-d="${ds}">${dots}${d}${sub ? '<b>' + sub + '</b>' : ''}</button>`;
+  }
+  const c = calc(items);
+  const box = (k, v) => `<div>${k}<b class="num">${v}</b></div>`;
+  $('cal').innerHTML = `<div class="card"><div class="cal-h"><button data-nav="-1" aria-label="الشهر السابق">›</button><b>${monthLabel(calM)}</b><button data-nav="1" aria-label="الشهر التالي">‹</button></div>
+    <div class="cg">${CAL_WD.map(w => `<span class="cw">${w}</span>`).join('')}${cells}</div>
+    <div class="lg"><span>■ عمل بالساعات</span><span>▢ عن بعد</span><span>◌ يوم بلا سجل</span></div>
+    <div class="cs">${box('الأيام', c.days)}${box('الساعات', fmtHM(c.mins))}${box('الأجور', money(c.work))}${c.adv ? box('الكريدي', signed(-c.adv)) : ''}</div></div>
+    <button class="pay" id="calPdf" style="margin:12px 0 0;width:100%">${ic('file')}تقرير PDF لهذا الشهر</button>`;
+}
+function openDay(ds) {
+  const L = allItems().filter(i => i.date === ds).sort((a, b) => a.id - b.id), ed = L.filter(i => state.items.includes(i));
+  if (L.length === 1 && ed.length === 1) { openForm(modeOf(ed[0]), ed[0]); return; }
+  calDay = ds; $('dayTitle').textContent = fmtDay(ds);
+  $('dayList').innerHTML = L.length ? L.map(itemRow).join('') : emptyBox('calendar', 'لا توجد سجلات في هذا اليوم.');
+  $('dayDlg').showModal();
+}
+$('cal').onclick = e => {
+  const nv = e.target.closest('[data-nav]');
+  if (nv) { const [y, m] = calM.split('-').map(Number), d = new Date(y, m - 1 + +nv.dataset.nav, 1); calM = d.getFullYear() + '-' + pad2(d.getMonth() + 1); renderCal(); return; }
+  const dd = e.target.closest('[data-d]'); if (dd) { openDay(dd.dataset.d); return; }
+  if (e.target.closest('#calPdf')) sharePdf();
+};
+$('dayList').onclick = e => {
+  const b = e.target.closest('.item'); if (!b) return;
+  const it = state.items.find(i => i.id == b.dataset.id);
+  if (!it) return toast('هذا السجل في الأرشيف');
+  $('dayDlg').close(); openForm(modeOf(it), it);
+};
+const addOn = m => { const d = calDay; $('dayDlg').close(); openForm(m); $('fDate').value = d; };
+$('dayWork').onclick = () => addOn('work'); $('dayRemote').onclick = () => addOn('remote'); $('dayAdv').onclick = () => addOn('adv');
+$('dayClose').onclick = () => $('dayDlg').close();
+
+function reportPages(key) {
+  const items = allItems().filter(i => i.date.slice(0, 7) === key).sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
+  if (!items.length) return null;
+  const c = calc(items), W = 1240, H = 1754, M = 80, R = W - M, INK = '#1b1f24', GR = '#6b7280', pages = [];
+  let cv, x, y;
+  const T = (s, px, wt, dir, al, xx, yy, col) => { x.font = wt + ' ' + px + 'px sans-serif'; x.direction = dir; x.textAlign = al; x.fillStyle = col || INK; x.fillText(s, xx, yy); };
+  const cols = [['date', 300], ['type', 130], ['from', 120], ['to', 120], ['brk', 130], ['hrs', 130], ['amt', 150]];
+  let cum = 0; cols.forEach(k => { k.push(R - cum, R - cum - k[1] / 2); cum += k[1]; });
+  const head = () => {
+    x.fillStyle = '#eef1f4'; x.fillRect(M, y - 38, W - 2 * M, 54);
+    const names = ['التاريخ', 'النوع', 'من', 'إلى', 'استراحة', 'الساعات', 'المبلغ' + (state.currency ? ' (' + state.currency + ')' : '')];
+    cols.forEach((k, i) => i === 0 ? T(names[i], 26, '700', 'rtl', 'right', k[2] - 12, y, INK) : T(names[i], 26, '700', 'rtl', 'center', k[3], y, INK));
+    y += 56;
+  };
+  const newPage = first => { cv = document.createElement('canvas'); cv.width = W; cv.height = H; x = cv.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, W, H); pages.push(cv); y = 120; if (!first) head(); };
+  newPage(true);
+  T('تقرير ' + monthLabel(key), 54, '700', 'rtl', 'right', R, y, INK); y += 64;
+  const sum = [['عدد الأيام', ltr(String(c.days))], ['ساعات العمل', ltr(fmtHM(c.mins))], ['أجر العمل بالساعات', money(c.work - c.ramt)]];
+  if (c.ramt) sum.push(['أجر العمل عن بعد', money(c.ramt)]);
+  if (c.adv) sum.push(['الكريدي', '−' + money(c.adv)]);
+  sum.push(['الصافي', money(c.work - c.adv)]);
+  sum.forEach(([k, v], i) => { T(k + ': ' + v, 32, i === sum.length - 1 ? '700' : '400', 'rtl', 'right', R, y, INK); y += 46; });
+  y += 40; head();
+  items.forEach(i => {
+    if (y > H - 130) newPage(false);
+    const wk = i.type === 'work' && !i.remote, d = dt(i.date).toLocaleDateString('ar-u-nu-latn', { weekday: 'long', day: 'numeric', month: 'long' });
+    const v = [d, i.type === 'adv' ? 'كريدي' : i.remote ? 'عن بعد' : 'عمل', wk && i.start || '—', wk && i.end || '—', wk && i.brk ? i.brk + ' د' : '—', wk ? fmtHM(i.mins) : '—', (i.type === 'adv' ? '−' : '') + num(i.amount)];
+    cols.forEach((k, j) => j === 0 ? T(v[j], 27, '400', 'rtl', 'right', k[2] - 12, y, INK) : T(v[j], 27, '400', j === 1 ? 'rtl' : 'ltr', 'center', k[3], y, i.type === 'adv' && j === 6 ? '#b91c1c' : INK));
+    x.fillStyle = '#e5e8ec'; x.fillRect(M, y + 16, W - 2 * M, 2); y += 54;
+  });
+  pages.forEach((p, k) => { x = p.getContext('2d'); T('صفحة ' + (k + 1) + ' من ' + pages.length, 22, '400', 'rtl', 'center', W / 2, H - 50, GR); });
+  return pages.map(p => { const s = atob(p.toDataURL('image/jpeg', 0.92).split(',')[1]), b = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i); return { w: W, h: H, b }; });
+}
+function pdfBytes(pg) {
+  const enc = new TextEncoder(), chunks = [], offs = []; let pos = 0;
+  const add = d => { const b = typeof d === 'string' ? enc.encode(d) : d; chunks.push(b); pos += b.length; };
+  const obj = (id, body) => { offs[id] = pos; add(id + ' 0 obj\n' + body + '\nendobj\n'); };
+  add('%PDF-1.4\n');
+  obj(1, '<< /Type /Catalog /Pages 2 0 R >>');
+  obj(2, '<< /Type /Pages /Kids [' + pg.map((_, k) => (3 + 3 * k) + ' 0 R').join(' ') + '] /Count ' + pg.length + ' >>');
+  pg.forEach((p, k) => {
+    const pid = 3 + 3 * k, cid = pid + 1, iid = pid + 2, cs = 'q 595 0 0 842 0 0 cm /Im0 Do Q';
+    obj(pid, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /XObject << /Im0 ${iid} 0 R >> >> /Contents ${cid} 0 R >>`);
+    obj(cid, `<< /Length ${cs.length} >>\nstream\n${cs}\nendstream`);
+    offs[iid] = pos; add(`${iid} 0 obj\n<< /Type /XObject /Subtype /Image /Width ${p.w} /Height ${p.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${p.b.length} >>\nstream\n`); add(p.b); add('\nendstream\nendobj\n');
+  });
+  const total = 3 + 3 * pg.length, xr = pos; let xt = 'xref\n0 ' + total + '\n0000000000 65535 f \n';
+  for (let i = 1; i < total; i++) xt += String(offs[i]).padStart(10, '0') + ' 00000 n \n';
+  add(xt + 'trailer\n<< /Size ' + total + ' /Root 1 0 R >>\nstartxref\n' + xr + '\n%%EOF');
+  const out = new Uint8Array(pos); let q = 0; chunks.forEach(b => { out.set(b, q); q += b.length; }); return out;
+}
+async function sharePdf() {
+  let bytes; try { const pg = reportPages(calM); if (!pg) return toast('لا توجد سجلات في هذا الشهر'); bytes = pdfBytes(pg); } catch (e) { return toast('تعذر إنشاء التقرير'); }
+  const name = 'work-report-' + calM + '.pdf', FS = plugin('Filesystem'), S = plugin('Share');
+  try {
+    if (FS && S) {
+      let s = ''; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+      await FS.writeFile({ path: name, data: btoa(s), directory: 'CACHE' });
+      const u = await FS.getUri({ path: name, directory: 'CACHE' });
+      await S.share({ title: 'العمل', url: u.uri, dialogTitle: 'تقرير PDF' });
+    } else {
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' })); a.download = name; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    }
+  } catch (e) { if (!/cancel/i.test(String((e && e.message) || e))) toast('تعذر مشاركة التقرير'); }
+}
 
 // ---------- النموذج ----------
 const toMin = t => { const m = /^(\d{1,2}):(\d{2})$/.exec(t || ''); return m ? (+m[1]) * 60 + (+m[2]) : null; };
