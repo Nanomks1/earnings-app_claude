@@ -140,8 +140,18 @@
 </dialog>
 
 <dialog id="menu">
-  <h2>الإعدادات</h2>
-  <div class="shd">العمل</div>
+  <h2 id="menuTitle">الإعدادات</h2>
+  <div id="mHome">
+  <div class="grp">
+    <button class="rb" data-go="work"><span class="bub"><svg class="ic"><use href="#i-clock"/></svg></span><span class="t">العمل<small>العملة وسعر الساعة والتنبيه والبحث</small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
+    <button class="rb" data-go="look"><span class="bub"><svg class="ic"><use href="#i-sliders"/></svg></span><span class="t">المظهر<small>اللون وحجم الخط وأيقونة التطبيق</small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
+    <button class="rb" data-go="wg" id="rowWg"><span class="bub"><svg class="ic"><use href="#i-home"/></svg></span><span class="t">الودجت<small>الشكل والألوان</small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
+    <button class="rb" data-go="sec"><span class="bub"><svg class="ic"><use href="#i-lock"/></svg></span><span class="t">الأمان<small>رمز القفل والبصمة وتشفير النسخ</small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
+    <button class="rb" data-go="bk"><span class="bub"><svg class="ic"><use href="#i-save"/></svg></span><span class="t">النسخ الاحتياطي والتصدير<small>النسخ التلقائي والاستعادة وCSV</small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
+  </div>
+  <div class="note" id="appVer" style="text-align:center" hidden></div>
+  </div>
+  <div class="pg" id="pg-work">
   <div class="grp">
     <div class="row">
       <div class="fld" style="flex:.8"><label for="cur">العملة</label><input type="text" id="cur" placeholder="DH"></div>
@@ -152,7 +162,8 @@
     <div class="hint">0 = بلا تنبيه. يظهر عند فتح التطبيق إن بقي الدخول مفتوحًا أكثر من هذه المدة</div>
     <div class="rb" style="border-top:1px solid var(--bd)"><span class="bub"><svg class="ic"><use href="#i-search"/></svg></span><span class="t">البحث والفلتر<small>يظهر فوق السجلات والأرشيف</small></span><input type="checkbox" id="srchChk"></div>
   </div>
-  <div class="shd">المظهر</div>
+  </div>
+  <div class="pg" id="pg-look">
   <div class="grp">
     <div class="fld"><label>لون التطبيق</label><div class="sw" id="sw"></div></div>
       <div class="fld" style="border-top:1px solid var(--bd);padding-top:10px"><label>حجم الخط</label><div class="seg" id="fsSeg"><button data-v="0" type="button">عادي</button><button data-v="1" type="button">كبير</button><button data-v="2" type="button">أكبر</button></div></div>
@@ -161,8 +172,9 @@
       <div class="rb"><span class="t">لون الأيقونة يتبع لون التطبيق<small>قد تتأخر الشاشة الرئيسية قليلًا في إظهار التغيير</small></span><input type="checkbox" id="icFollow"></div>
     </div>
   </div>
+  </div>
+  <div class="pg" id="pg-wg">
   <div id="wgBox">
-  <div class="shd">الودجت</div>
   <div class="grp">
       <div class="fld"><label>خلفية الودجت</label><div class="seg" id="wgBg"><button data-v="0" type="button">حسب الوضع</button><button data-v="1" type="button">شفافة</button><button data-v="2" type="button">بلا خلفية</button><button data-v="3" type="button">داكنة</button></div></div>
       <div class="fld"><label>لون الأيقونة والنص</label><div class="seg" id="wgFg"><button data-v="0" type="button">تلقائي</button><button data-v="1" type="button">أبيض</button><button data-v="2" type="button">أسود</button></div></div>
@@ -172,12 +184,15 @@
   </div>
   <div class="note" style="margin-top:8px">لتسجيل الدخول والخروج بضغطة من الشاشة الرئيسية: اضغط مطولًا على الشاشة ← الودجات ← «العمل». يلزم ضغطتان متتاليتان (الأولى للتأكيد) لتفادي اللمس بالخطأ.</div>
   </div>
-  <div class="shd">الأمان</div>
+  </div>
+  <div class="pg" id="pg-sec">
   <div class="grp">
     <button class="rb" id="pinBtn"><span class="bub"><svg class="ic"><use href="#i-lock"/></svg></span><span class="t">رمز القفل<small id="pinSt"></small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
     <div class="rb" id="bioRow" hidden><span class="bub"><svg class="ic"><use href="#i-finger"/></svg></span><span class="t">فتح بالبصمة</span><input type="checkbox" id="bioChk"></div>
     <button class="rb" id="encBtn"><span class="bub"><svg class="ic"><use href="#i-lock"/></svg></span><span class="t">تشفير النسخ الاحتياطي<small id="encSt"></small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
   </div>
+  </div>
+  <div class="pg" id="pg-bk">
   <div class="shd">النسخ الاحتياطي</div>
   <div class="grp">
     <div class="rb"><span class="bub"><svg class="ic"><use href="#i-save"/></svg></span><span class="t">نسخ احتياطي تلقائي<small>بعد كل تعديل</small></span><input type="checkbox" id="auto"></div>
@@ -195,7 +210,7 @@
   </div>
   <input type="file" id="file" accept=".json,application/json" hidden>
   <div class="note">التلقائية تُحدَّث مع كل تغيير، ويُحتفظ بآخر 3 نسخ سابقة (مرة في اليوم). الزر اليدوي ينشئ ملفًا جديدًا باسمه التاريخ والوقت.</div>
-  <div class="note" id="appVer" style="text-align:center" hidden></div>
+  </div>
   <div class="acts"><button class="ok" id="menuClose" type="button">تم</button></div>
 </dialog>
 
