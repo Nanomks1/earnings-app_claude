@@ -405,6 +405,22 @@ function archivesText(d) {
   out.push('', BOX, '💵 ' + bold('مجموع المستلم: ' + ltr(moneyP(total))), BOX);
   return rtl(out);
 }
+function currentCfg(d) {
+  const list = [...state.items].sort(byDate), extra = [];
+  if (state.carry) extra.push(['مرحَّل من الدفعة السابقة', signed(state.carry)]);
+  extra.push(['المستحق الآن', signed(due()), true]);
+  return { title: 'الفترة الحالية (غير مدفوعة)', sub: 'الفترة: ' + rangeOf(list), items: list, detail: d, extra };
+}
+function weekCfg(k, d) {
+  return { title: 'ملخص أسبوع', sub: weekLabel(k), items: state.items.filter(i => monday(i.date) === k).sort(byDate), detail: d };
+}
+function archiveCfg(a, d) {
+  const list = [...a.items].sort(byDate), rem = round2(a.remain || 0), extra = [];
+  if (a.carryIn) extra.push(['مرحَّل قبلها', signed(a.carryIn)]);
+  extra.push(['المستحق', signed(a.due)], ['المستلم', money(a.received), true]);
+  if (rem) extra.push([rem > 0 ? 'بقي لك (رُحِّل)' : 'زيادة (خُصمت لاحقًا)', money(Math.abs(rem))]);
+  return { title: 'كشف دفعة', sub: 'الاستلام: ' + fmtShort(a.paidAt) + ' • الفترة: ' + rangeOf(list), items: list, detail: d, extra };
+}
 async function doShare(text) {
   const S = plugin('Share');
   try {
@@ -413,9 +429,10 @@ async function doShare(text) {
     else { await navigator.clipboard.writeText(text); toast('تم نسخ النص'); }
   } catch (e) {}
 }
-let pendingShare = null;
-function askShare(title, build) {
-  pendingShare = build;
+let pendingShare = null, pendingPdf = null;
+function askShare(title, build, pdf) {
+  pendingShare = build; pendingPdf = pdf || null;
+  $('shPdfRow').style.display = pdf ? '' : 'none';
   $('shTitle').textContent = title;
   $('shDetail').checked = localStorage.getItem('earnings_sd') !== '0';
   $('shDlg').showModal();
@@ -425,6 +442,10 @@ $('shGo').onclick = async () => {
   const d = $('shDetail').checked; localStorage.setItem('earnings_sd', d ? '1' : '0');
   const text = pendingShare(d); $('shDlg').close(); await doShare(text);
 };
+$('shPdf').onclick = async () => {
+  const d = $('shDetail').checked; localStorage.setItem('earnings_sd', d ? '1' : '0');
+  const p = pendingPdf(d); $('shDlg').close(); await sharePdf(p.cfg, p.name);
+};
 $('shCopy').onclick = async () => {
   const d = $('shDetail').checked; localStorage.setItem('earnings_sd', d ? '1' : '0');
   const text = pendingShare(d); $('shDlg').close();
@@ -432,7 +453,7 @@ $('shCopy').onclick = async () => {
 };
 $('shareCur').onclick = () => {
   if (!state.items.length) return toast('لا توجد سجلات في الفترة الحالية');
-  askShare('مشاركة الفترة الحالية', d => currentText(d));
+  askShare('مشاركة الفترة الحالية', d => currentText(d), d => ({ cfg: currentCfg(d), name: 'work-current-' + today() + '.pdf' }));
 };
 const stat = (icon, cls, val, label) => `<div class="stat ${cls}"><span class="bub ${cls === 'cr' ? 'neg' : ''}">${ic(icon)}</span><div class="sv num">${val}</div><div class="sl">${label}</div></div>`;
 const mv = (n, neg) => `<span dir="ltr">${neg ? '−' : ''}${num(n)}<small>${esc(state.currency)}</small></span>`;
@@ -579,7 +600,7 @@ $('cal').onclick = e => {
   const nv = e.target.closest('[data-nav]');
   if (nv) { const [y, m] = calM.split('-').map(Number), d = new Date(y, m - 1 + +nv.dataset.nav, 1); calM = d.getFullYear() + '-' + pad2(d.getMonth() + 1); renderCal(); return; }
   const dd = e.target.closest('[data-d]'); if (dd) { openDay(dd.dataset.d); return; }
-  if (e.target.closest('#calPdf')) sharePdf();
+  if (e.target.closest('#calPdf')) sharePdf(monthCfg(calM), 'work-report-' + calM + '.pdf');
 };
 $('dayList').onclick = e => {
   const b = e.target.closest('.item'); if (!b) return;
@@ -591,8 +612,11 @@ const addOn = m => { const d = calDay; $('dayDlg').close(); openForm(m); $('fDat
 $('dayWork').onclick = () => addOn('work'); $('dayRemote').onclick = () => addOn('remote'); $('dayAdv').onclick = () => addOn('adv');
 $('dayClose').onclick = () => $('dayDlg').close();
 
-function reportPages(key) {
-  const items = allItems().filter(i => i.date.slice(0, 7) === key).sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
+function monthCfg(key) {
+  return { title: 'تقرير ' + monthLabel(key), items: allItems().filter(i => i.date.slice(0, 7) === key).sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id), detail: true };
+}
+function reportPages(cfg) {
+  const items = cfg.items;
   if (!items.length) return null;
   const c = calc(items), W = 1240, H = 1754, M = 80, R = W - M, INK = '#1b1f24', GR = '#6b7280', pages = [];
   let cv, x, y;
@@ -607,14 +631,16 @@ function reportPages(key) {
   };
   const newPage = first => { cv = document.createElement('canvas'); cv.width = W; cv.height = H; x = cv.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, W, H); pages.push(cv); y = 120; if (!first) head(); };
   newPage(true);
-  T('تقرير ' + monthLabel(key), 54, '700', 'rtl', 'right', R, y, INK); y += 64;
+  T(cfg.title, 54, '700', 'rtl', 'right', R, y, INK); y += 64;
+  if (cfg.sub) { T(cfg.sub, 30, '400', 'rtl', 'right', R, y, GR); y += 54; }
   const sum = [['عدد الأيام', ltr(String(c.days))], ['ساعات العمل', ltr(fmtHM(c.mins))], ['أجر العمل بالساعات', money(c.work - c.ramt)]];
   if (c.ramt) sum.push(['أجر العمل عن بعد', money(c.ramt)]);
   if (c.adv) sum.push(['الكريدي', '−' + money(c.adv)]);
-  sum.push(['الصافي', money(c.work - c.adv)]);
-  sum.forEach(([k, v], i) => { T(k + ': ' + v, 32, i === sum.length - 1 ? '700' : '400', 'rtl', 'right', R, y, INK); y += 46; });
-  y += 40; head();
-  items.forEach(i => {
+  sum.push(['الصافي', money(c.work - c.adv), true]);
+  (cfg.extra || []).forEach(r => sum.push(r));
+  sum.forEach(([k, v, b]) => { T(k + ': ' + v, 32, b ? '700' : '400', 'rtl', 'right', R, y, INK); y += 46; });
+  if (cfg.detail) { y += 40; head(); }
+  (cfg.detail ? items : []).forEach(i => {
     if (y > H - 130) newPage(false);
     const wk = i.type === 'work' && !i.remote, d = dt(i.date).toLocaleDateString('ar-u-nu-latn', { weekday: 'long', day: 'numeric', month: 'long' });
     const v = [d, i.type === 'adv' ? 'كريدي' : i.remote ? 'عن بعد' : 'عمل', wk && i.start || '—', wk && i.end || '—', wk && i.brk ? i.brk + ' د' : '—', wk ? fmtHM(i.mins) : '—', (i.type === 'adv' ? '−' : '') + num(i.amount)];
@@ -642,9 +668,10 @@ function pdfBytes(pg) {
   add(xt + 'trailer\n<< /Size ' + total + ' /Root 1 0 R >>\nstartxref\n' + xr + '\n%%EOF');
   const out = new Uint8Array(pos); let q = 0; chunks.forEach(b => { out.set(b, q); q += b.length; }); return out;
 }
-async function sharePdf() {
-  let bytes; try { const pg = reportPages(calM); if (!pg) return toast('لا توجد سجلات في هذا الشهر'); bytes = pdfBytes(pg); } catch (e) { return toast('تعذر إنشاء التقرير'); }
-  const name = 'work-report-' + calM + '.pdf', FS = plugin('Filesystem'), S = plugin('Share');
+async function sharePdf(cfg, name) {
+  let bytes; try { const pg = reportPages(cfg); if (!pg) return toast('لا توجد سجلات للتقرير'); bytes = pdfBytes(pg); } catch (e) { return toast('تعذر إنشاء التقرير'); }
+  name = name.replace(/[^\w.-]/g, '');
+  const FS = plugin('Filesystem'), S = plugin('Share');
   try {
     if (FS && S) {
       let s = ''; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
@@ -698,7 +725,7 @@ $('addAdv').onclick = () => openForm('adv');
 $('fCancel').onclick = () => $('form').close();
 $('list').onclick = e => {
   const w = e.target.closest('.wkb');
-  if (w) { const k = w.dataset.wk; askShare('مشاركة الأسبوع', d => weekText(k, d)); return; }
+  if (w) { const k = w.dataset.wk; askShare('مشاركة الأسبوع', d => weekText(k, d), d => ({ cfg: weekCfg(k, d), name: 'work-week-' + k + '.pdf' })); return; }
   const b = e.target.closest('.item'); if (!b) return;
   const it = state.items.find(i => i.id == b.dataset.id);
   if (it) openForm(modeOf(it), it);
@@ -771,7 +798,7 @@ $('arch').onclick = e => {
   const ed = e.target.closest('.ed1');
   if (ed) { const a = state.archive.find(x => x.id == ed.dataset.id); if (a) openAp(a); return; }
   const s1 = e.target.closest('.sh1');
-  if (s1) { const a = state.archive.find(x => x.id == s1.dataset.id); if (a) askShare('مشاركة الدفعة', d => archiveText(a, d)); return; }
+  if (s1) { const a = state.archive.find(x => x.id == s1.dataset.id); if (a) askShare('مشاركة الدفعة', d => archiveText(a, d), d => ({ cfg: archiveCfg(a, d), name: 'work-batch-' + a.paidAt + '.pdf' })); return; }
   if (!e.target.closest('#undoPay')) return;
   if (!confirm('التراجع عن آخر دفعة؟ ستعود أيامها إلى الفترة الحالية.')) return;
   const a = state.archive.pop();
