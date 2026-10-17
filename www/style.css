@@ -187,3 +187,5 @@ details.card .lines{margin-top:12px;border-top:1px dashed var(--bd);padding-top:
 .rb span.t{flex:1;min-width:0}
 .rb small{display:block;font-size:calc(12px*var(--fs,1));color:var(--mut);margin-top:1px}
 .rb .chev{width:16px;height:16px;color:var(--mut)}
+
+.pg{display:none}.pg.on{display:block}
