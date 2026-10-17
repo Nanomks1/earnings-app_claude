@@ -2,6 +2,8 @@ package com.pd.earnings;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -45,10 +47,50 @@ public class WifiTrackPlugin extends Plugin {
                     s.edit().putBoolean("root", root.booleanValue()).commit();
                 }
                 if (on != null) {
-                    s.edit().putBoolean("on", on.booleanValue()).putString("state", "d").putString("ssid", "").remove("net").commit();
-                    WifiTracker.register(c);
+                    s.edit().putBoolean("on", on.booleanValue()).putString("state", "d").putString("ssid", "").commit();
+                    if (on.booleanValue()) {
+                        askNotif();
+                        WifiTracker.restart(c);
+                    } else {
+                        WifiTracker.stop(c);
+                    }
                 }
                 call.resolve();
+            }
+        }).start();
+    }
+
+    // إذن الإشعارات (أندرويد 13+) كي يظهر إشعار الخدمة
+    private void askNotif() {
+        try {
+            if (Build.VERSION.SDK_INT >= 33 && getContext().checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        getActivity().requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 77);
+                    }
+                });
+            }
+        } catch (Exception e) {
+            // تجاهل
+        }
+    }
+
+    // يستثني التطبيق من توفير البطارية بالروت (أوامر ثابتة)
+    @PluginMethod
+    public void batteryExempt(final PluginCall call) {
+        final Context c = getContext();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                if (!WifiTracker.useRoot(c)) {
+                    call.reject("root-off");
+                    return;
+                }
+                String a = WifiTracker.su("dumpsys deviceidle whitelist +" + c.getPackageName(), 8000);
+                WifiTracker.su("cmd appops set " + c.getPackageName() + " RUN_ANY_IN_BACKGROUND allow", 8000);
+                if (a != null && a.contains(c.getPackageName())) call.resolve();
+                else call.reject("failed");
             }
         }).start();
     }

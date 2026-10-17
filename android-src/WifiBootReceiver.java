@@ -8,6 +8,6 @@ public class WifiBootReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         if (Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) WifiTracker.closeAtBoot(context);
-        WifiTracker.register(context);
+        WifiTracker.start(context);
     }
 }

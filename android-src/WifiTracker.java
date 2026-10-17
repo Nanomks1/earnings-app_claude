@@ -1,13 +1,9 @@
 package com.pd.earnings;
 
-import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.net.ConnectivityManager;
-import android.net.Network;
-import android.net.NetworkCapabilities;
-import android.net.NetworkRequest;
+import android.os.Build;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.regex.Matcher;
@@ -18,7 +14,6 @@ import org.json.JSONObject;
 // تتبع اتصال/انقطاع الواي فاي في خانة منفصلة عن السجل. الأحداث تُخزَّن في SharedPreferences.
 final class WifiTracker {
     private static final String PREFS = "wifi_track";
-    private static final String ACTION = "com.pd.earnings.WIFI_CHANGE";
     private static final int MAX_EVENTS = 400;
     private static final Pattern INFO = Pattern.compile("SSID: \"(.*?)\", BSSID: ([0-9a-fA-F:]{17})");
     private static final Object LOCK = new Object();
@@ -38,33 +33,31 @@ final class WifiTracker {
         return prefs(c).getBoolean("root", false);
     }
 
-    private static PendingIntent pending(Context c) {
-        Intent i = new Intent(c.getApplicationContext(), WifiEventReceiver.class).setAction(ACTION);
-        return PendingIntent.getBroadcast(c.getApplicationContext(), 7, i,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE);
-    }
-
-    static void unregister(Context c) {
-        try {
-            ConnectivityManager cm = (ConnectivityManager) c.getSystemService(Context.CONNECTIVITY_SERVICE);
-            cm.unregisterNetworkCallback(pending(c));
-        } catch (Exception e) {
-            // لم يكن مسجَّلًا
-        }
-    }
-
-    // يُسجَّل عند فتح التطبيق وعند إقلاع الجهاز وبعد التحديث، لأن النظام لا يحتفظ بالتسجيل بعد الإقلاع
-    static void register(Context c) {
-        unregister(c);
+    // تشغيل خدمة المراقبة (تُستدعى من التطبيق وعند الإقلاع)
+    static void start(Context c) {
         if (!isOn(c)) return;
         try {
-            ConnectivityManager cm = (ConnectivityManager) c.getSystemService(Context.CONNECTIVITY_SERVICE);
-            NetworkRequest rq = new NetworkRequest.Builder().addTransportType(NetworkCapabilities.TRANSPORT_WIFI).build();
-            prefs(c).edit().putLong("reg_t", System.currentTimeMillis()).commit();
-            cm.registerNetworkCallback(rq, pending(c));
+            Context a = c.getApplicationContext();
+            Intent i = new Intent(a, WifiWatchService.class);
+            if (Build.VERSION.SDK_INT >= 26) a.startForegroundService(i);
+            else a.startService(i);
         } catch (Exception e) {
-            // يبقى التطبيق يعمل بدون تتبع
+            // قد يرفض النظام البدء من الخلفية؛ تبدأ عند فتح التطبيق
         }
+    }
+
+    static void stop(Context c) {
+        try {
+            Context a = c.getApplicationContext();
+            a.stopService(new Intent(a, WifiWatchService.class));
+        } catch (Exception e) {
+            // تجاهل
+        }
+    }
+
+    static void restart(Context c) {
+        stop(c);
+        start(c);
     }
 
     // أمر ثابت فقط: لا يدخل أي نص من الواجهة في أمر الروت أبدًا
@@ -98,14 +91,14 @@ final class WifiTracker {
 
     // يرجع {الاسم, BSSID} للشبكة المتصلة الآن، أو null
     static String[] readWifiRoot() {
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < 3; i++) {
             String out = su("dumpsys wifi | grep -m1 \"mWifiInfo.*Supplicant state: COMPLETED\"", 3000);
             if (out != null) {
                 Matcher m = INFO.matcher(out);
                 if (m.find()) return new String[]{m.group(1), m.group(2).toLowerCase()};
             }
             try {
-                Thread.sleep(700);
+                Thread.sleep(1000);
             } catch (InterruptedException e) {
                 break;
             }
@@ -113,99 +106,51 @@ final class WifiTracker {
         return null;
     }
 
-    private static boolean wifiConnected(Context c) {
-        ConnectivityManager cm = (ConnectivityManager) c.getSystemService(Context.CONNECTIVITY_SERVICE);
-        for (Network n : cm.getAllNetworks()) {
-            NetworkCapabilities nc = cm.getNetworkCapabilities(n);
-            if (nc != null && nc.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) return true;
-        }
-        return false;
+    static void count(Context c, long t) {
+        SharedPreferences s = prefs(c);
+        s.edit().putInt("cb_n", s.getInt("cb_n", 0) + 1).putLong("cb_t", t).commit();
     }
 
-    static void onChange(final Context c, final Intent in, final Runnable done) {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    handle(c.getApplicationContext(), networkId(in));
-                } catch (Throwable t) {
-                    // لا نُسقط التطبيق من مستقبِل في الخلفية
-                } finally {
-                    if (done != null) done.run();
-                }
-            }
-        }).start();
-    }
-
-    private static String networkId(Intent in) {
-        try {
-            Object o = in == null ? null : in.getParcelableExtra("android.net.extra.NETWORK");
-            return o == null ? null : o.toString();
-        } catch (Throwable t) {
-            return null;
-        }
-    }
-
-    // يصفّر الحالة ويعيد التسجيل ليلتقط الاتصال الحالي
+    // يصفّر الحالة ويعيد تشغيل المراقبة ليلتقط الاتصال الحالي
     static void reset(Context c) {
         synchronized (LOCK) {
-            prefs(c).edit().putString("state", "d").putString("ssid", "").remove("net").commit();
+            prefs(c).edit().putString("state", "d").putString("ssid", "").commit();
         }
-        register(c);
+        restart(c);
     }
 
-    private static void handle(Context c, String net) throws Exception {
-        if (!isOn(c)) return;
-        long now = System.currentTimeMillis();
+    static String state(Context c) {
+        return prefs(c).getString("state", "d");
+    }
+
+    // اتصال بالواي فاي. flag=1 يعني أن الوقت تقريبي
+    static void onConnected(Context c, long t, String ssid, String bssid, int flag) throws Exception {
         SharedPreferences s = prefs(c);
-        s.edit().putInt("cb_n", s.getInt("cb_n", 0) + 1).putLong("cb_t", now).commit();
-        boolean wifi = wifiConnected(c);
-        // أثناء الانقطاع قد يبقى النظام يعدّ الشبكة متصلة لحظات، فنعيد الفحص قبل الحكم
-        if (wifi && "c".equals(s.getString("state", "d"))) {
-            for (int i = 0; i < 2 && wifi; i++) {
-                try {
-                    Thread.sleep(800);
-                } catch (InterruptedException e) {
-                    break;
-                }
-                wifi = wifiConnected(c);
-            }
-        }
-        int flag = now - s.getLong("reg_t", 0) < 5000 ? 1 : 0;
-        String ssid = null;
-        String bssid = null;
-        if (wifi && useRoot(c)) {
-            boolean known = "c".equals(s.getString("state", "d")) && !s.getString("ssid", "").isEmpty()
-                    && net != null && net.equals(s.getString("net", ""));
-            if (!known) {
-                String[] r = readWifiRoot();
-                if (r != null) {
-                    ssid = r[0];
-                    bssid = r[1];
-                    if (net != null) s.edit().putString("net", net).commit();
-                }
-            }
-        }
         synchronized (LOCK) {
             String st = s.getString("state", "d");
             String last = s.getString("ssid", "");
-            if (wifi) {
-                if ("c".equals(st)) {
-                    if (ssid == null) return;
-                    if (last.isEmpty()) {
-                        patchLast(s, ssid, bssid);
-                        s.edit().putString("ssid", ssid).commit();
-                        return;
-                    }
-                    if (ssid.equals(last)) return;
-                    add(s, now, "d", null, null, flag);
+            if ("c".equals(st)) {
+                if (ssid == null) return;
+                if (last.isEmpty()) {
+                    patchLast(s, ssid, bssid);
+                    s.edit().putString("ssid", ssid).commit();
+                    return;
                 }
-                add(s, now, "c", ssid, bssid, flag);
-                s.edit().putString("state", "c").putString("ssid", ssid == null ? "" : ssid).commit();
-            } else if ("c".equals(st)) {
-                add(s, now, "d", null, null, flag);
-                s.edit().putString("state", "d").putString("ssid", "").remove("net").commit();
+                if (ssid.equals(last)) return;
+                add(s, t, "d", null, null, flag);
             }
+            add(s, t, "c", ssid, bssid, flag);
+            s.edit().putString("state", "c").putString("ssid", ssid == null ? "" : ssid).commit();
+        }
+    }
+
+    // انقطاع الواي فاي
+    static void onDisconnected(Context c, long t, int flag) throws Exception {
+        SharedPreferences s = prefs(c);
+        synchronized (LOCK) {
+            if (!"c".equals(s.getString("state", "d"))) return;
+            add(s, t, "d", null, null, flag);
+            s.edit().putString("state", "d").putString("ssid", "").commit();
         }
     }
 

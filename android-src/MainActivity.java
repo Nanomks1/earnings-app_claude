@@ -10,9 +10,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(BioPlugin.class);
         registerPlugin(WorkWidgetPlugin.class);
         registerPlugin(AppIconPlugin.class);
-        registerPlugin(WifiProbePlugin.class);
         registerPlugin(WifiTrackPlugin.class);
         super.onCreate(savedInstanceState);
-        WifiTracker.register(this);
+        WifiTracker.start(this);
     }
 }
