@@ -60,6 +60,10 @@ jobs:
           cp android-src/WorkWidgetPlugin.java $P/
           cp android-src/MainActivity.java $P/
           cp android-src/WifiProbePlugin.java $P/
+          cp android-src/WifiTracker.java $P/
+          cp android-src/WifiEventReceiver.java $P/
+          cp android-src/WifiBootReceiver.java $P/
+          cp android-src/WifiTrackPlugin.java $P/
           cp android-src/work_widget.xml $R/layout/
           cp android-src/work_widget_bg.xml $R/drawable/
           cp android-src/work_widget_bg_on.xml $R/drawable/
@@ -80,6 +84,8 @@ jobs:
           cp android-src/work_widget_info.xml $R/xml/
           M=android/app/src/main/AndroidManifest.xml
           sed -i 's#</application>#    <receiver android:name=".WorkWidgetProvider" android:exported="true"><intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter><meta-data android:name="android.appwidget.provider" android:resource="@xml/work_widget_info"/></receiver>\n    </application>#' $M
+          sed -i 's#</application>#    <receiver android:name=".WifiEventReceiver" android:exported="false"/>\n    <receiver android:name=".WifiBootReceiver" android:exported="true"><intent-filter><action android:name="android.intent.action.BOOT_COMPLETED"/><action android:name="android.intent.action.MY_PACKAGE_REPLACED"/></intent-filter></receiver>\n    </application>#' $M
+          grep -q 'WifiBootReceiver' $M || { echo "wifi receivers were not added to the manifest"; exit 1; }
           grep -q 'WorkWidgetProvider' $M || { echo "widget receiver was not added to the manifest"; exit 1; }
           sed -i '/^dependencies {/a\    implementation "androidx.biometric:biometric:1.1.0"' android/app/build.gradle
           grep -q 'androidx.biometric' android/app/build.gradle || { echo "biometric dependency was not added"; exit 1; }
@@ -90,7 +96,7 @@ jobs:
           sed -i '/defaultConfig {/a\        ndk { abiFilters "arm64-v8a" }' android/app/build.gradle
           M=android/app/src/main/AndroidManifest.xml
           sed -i 's#<application#<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29"/>\n    <application#' $M
-          sed -i 's#<application#<uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>\n    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" android:usesPermissionFlags="neverForLocation"/>\n    <application#' $M
+          sed -i 's#<application#<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>\n    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>\n    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" android:usesPermissionFlags="neverForLocation"/>\n    <application#' $M
           grep -q 'NEARBY_WIFI_DEVICES' $M || { echo "wifi permissions were not added to the manifest"; exit 1; }
           sed -i 's#<application#<application android:requestLegacyExternalStorage="true"#' $M
 
