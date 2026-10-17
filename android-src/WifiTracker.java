@@ -99,13 +99,13 @@ final class WifiTracker {
     // يرجع {الاسم, BSSID} للشبكة المتصلة الآن، أو null
     static String[] readWifiRoot() {
         for (int i = 0; i < 2; i++) {
-            String out = su("dumpsys wifi | grep -m1 \"mWifiInfo.*Supplicant state: COMPLETED\"", 6000);
+            String out = su("dumpsys wifi | grep -m1 \"mWifiInfo.*Supplicant state: COMPLETED\"", 3000);
             if (out != null) {
                 Matcher m = INFO.matcher(out);
                 if (m.find()) return new String[]{m.group(1), m.group(2).toLowerCase()};
             }
             try {
-                Thread.sleep(1500);
+                Thread.sleep(700);
             } catch (InterruptedException e) {
                 break;
             }
@@ -122,12 +122,12 @@ final class WifiTracker {
         return false;
     }
 
-    static void onChange(final Context c, final Runnable done) {
+    static void onChange(final Context c, final Intent in, final Runnable done) {
         new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    handle(c.getApplicationContext());
+                    handle(c.getApplicationContext(), networkId(in));
                 } catch (Throwable t) {
                     // لا نُسقط التطبيق من مستقبِل في الخلفية
                 } finally {
@@ -137,35 +137,90 @@ final class WifiTracker {
         }).start();
     }
 
-    private static void handle(Context c) throws Exception {
+    private static String networkId(Intent in) {
+        try {
+            Object o = in == null ? null : in.getParcelableExtra("android.net.extra.NETWORK");
+            return o == null ? null : o.toString();
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    // يصفّر الحالة ويعيد التسجيل ليلتقط الاتصال الحالي
+    static void reset(Context c) {
+        synchronized (LOCK) {
+            prefs(c).edit().putString("state", "d").putString("ssid", "").remove("net").commit();
+        }
+        register(c);
+    }
+
+    private static void handle(Context c, String net) throws Exception {
         if (!isOn(c)) return;
         long now = System.currentTimeMillis();
         SharedPreferences s = prefs(c);
+        s.edit().putInt("cb_n", s.getInt("cb_n", 0) + 1).putLong("cb_t", now).commit();
         boolean wifi = wifiConnected(c);
+        // أثناء الانقطاع قد يبقى النظام يعدّ الشبكة متصلة لحظات، فنعيد الفحص قبل الحكم
+        if (wifi && "c".equals(s.getString("state", "d"))) {
+            for (int i = 0; i < 2 && wifi; i++) {
+                try {
+                    Thread.sleep(800);
+                } catch (InterruptedException e) {
+                    break;
+                }
+                wifi = wifiConnected(c);
+            }
+        }
         int flag = now - s.getLong("reg_t", 0) < 5000 ? 1 : 0;
         String ssid = null;
         String bssid = null;
         if (wifi && useRoot(c)) {
-            String[] r = readWifiRoot();
-            if (r != null) {
-                ssid = r[0];
-                bssid = r[1];
+            boolean known = "c".equals(s.getString("state", "d")) && !s.getString("ssid", "").isEmpty()
+                    && net != null && net.equals(s.getString("net", ""));
+            if (!known) {
+                String[] r = readWifiRoot();
+                if (r != null) {
+                    ssid = r[0];
+                    bssid = r[1];
+                    if (net != null) s.edit().putString("net", net).commit();
+                }
             }
-        } else if (wifi && "c".equals(s.getString("state", "d"))) {
-            return;
         }
         synchronized (LOCK) {
             String st = s.getString("state", "d");
             String last = s.getString("ssid", "");
             if (wifi) {
-                boolean changed = "c".equals(st) && ssid != null && !last.isEmpty() && !ssid.equals(last);
-                if ("c".equals(st) && !changed) return;
-                if (changed) add(s, now, "d", null, null, flag);
+                if ("c".equals(st)) {
+                    if (ssid == null) return;
+                    if (last.isEmpty()) {
+                        patchLast(s, ssid, bssid);
+                        s.edit().putString("ssid", ssid).commit();
+                        return;
+                    }
+                    if (ssid.equals(last)) return;
+                    add(s, now, "d", null, null, flag);
+                }
                 add(s, now, "c", ssid, bssid, flag);
                 s.edit().putString("state", "c").putString("ssid", ssid == null ? "" : ssid).commit();
             } else if ("c".equals(st)) {
                 add(s, now, "d", null, null, flag);
-                s.edit().putString("state", "d").putString("ssid", "").commit();
+                s.edit().putString("state", "d").putString("ssid", "").remove("net").commit();
+            }
+        }
+    }
+
+    // يملأ اسم الشبكة في آخر حدث اتصال إن كان فارغًا
+    private static void patchLast(SharedPreferences s, String ssid, String bssid) throws Exception {
+        JSONArray a = new JSONArray(s.getString("events", "[]"));
+        for (int i = a.length() - 1; i >= 0; i--) {
+            JSONObject o = a.getJSONObject(i);
+            if ("c".equals(o.optString("k"))) {
+                if (!o.has("s")) {
+                    o.put("s", ssid);
+                    if (bssid != null) o.put("b", bssid);
+                    s.edit().putString("events", a.toString()).commit();
+                }
+                return;
             }
         }
     }

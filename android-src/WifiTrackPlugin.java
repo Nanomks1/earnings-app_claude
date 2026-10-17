@@ -20,6 +20,8 @@ public class WifiTrackPlugin extends Plugin {
         o.put("workSsid", s.getString("work_ssid", ""));
         o.put("workBssid", s.getString("work_bssid", ""));
         o.put("state", s.getString("state", "d"));
+        o.put("cbN", s.getInt("cb_n", 0));
+        o.put("cbT", (double) s.getLong("cb_t", 0));
         call.resolve(o);
     }
 
@@ -43,7 +45,7 @@ public class WifiTrackPlugin extends Plugin {
                     s.edit().putBoolean("root", root.booleanValue()).commit();
                 }
                 if (on != null) {
-                    s.edit().putBoolean("on", on.booleanValue()).putString("state", "d").putString("ssid", "").commit();
+                    s.edit().putBoolean("on", on.booleanValue()).putString("state", "d").putString("ssid", "").remove("net").commit();
                     WifiTracker.register(c);
                 }
                 call.resolve();
@@ -85,6 +87,7 @@ public class WifiTrackPlugin extends Plugin {
     @PluginMethod
     public void clearEvents(PluginCall call) {
         WifiTracker.prefs(getContext()).edit().remove("events").commit();
+        WifiTracker.reset(getContext());
         call.resolve();
     }
 }

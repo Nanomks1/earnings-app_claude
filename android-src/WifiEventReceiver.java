@@ -8,7 +8,7 @@ public class WifiEventReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         final PendingResult pr = goAsync();
-        WifiTracker.onChange(context, new Runnable() {
+        WifiTracker.onChange(context, intent, new Runnable() {
             @Override
             public void run() {
                 pr.finish();
