@@ -189,3 +189,27 @@ details.card .lines{margin-top:12px;border-top:1px dashed var(--bd);padding-top:
 .rb .chev{width:16px;height:16px;color:var(--mut)}
 
 .pg{display:none}.pg.on{display:block}
+
+.tabs button{gap:4px;min-width:0;padding:0 2px}
+.cal-h{display:flex;align-items:center;justify-content:space-between;margin:0 0 10px}
+.cal-h b{font-size:calc(17px*var(--fs,1))}
+.cal-h button{width:42px;height:42px;border:0;border-radius:12px;background:var(--card2);color:var(--text);font-size:24px}
+.cg{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cw{text-align:center;font-size:calc(11px*var(--fs,1));color:var(--mut);padding:2px 0}
+.cd{position:relative;min-height:54px;border:1px solid var(--bd);border-radius:10px;background:var(--card2);padding:5px 0 2px;text-align:center;font-size:calc(12px*var(--fs,1));color:var(--mut)}
+.cd b{display:block;font-size:calc(11px*var(--fs,1));font-weight:600;margin-top:3px;color:var(--text)}
+.cd.w{background:var(--pri);border-color:var(--pri);color:var(--onpri)}
+.cd.w b{color:var(--onpri)}
+.cd.r{background:var(--card);border:2px solid var(--pri);color:var(--pritx)}
+.cd.a{border-color:var(--neg);color:var(--neg)}
+.cd.e{background:none;border-style:dashed}
+.cd.td{outline:2px solid var(--text);outline-offset:-2px}
+.cd.o{visibility:hidden}
+.cd i{position:absolute;top:4px;inset-inline-start:4px;width:7px;height:7px;border-radius:50%}
+.cd i+i{inset-inline-start:15px}
+.cd i.r{background:var(--card);box-shadow:0 0 0 1.5px var(--pri)}
+.cd i.a{background:var(--neg)}
+.lg{display:flex;flex-wrap:wrap;gap:12px;margin:10px 0 0;font-size:calc(12px*var(--fs,1));color:var(--mut)}
+.cs{display:flex;gap:6px;margin:12px 0 0}
+.cs div{flex:1;background:var(--card2);border-radius:12px;padding:8px 4px;text-align:center;font-size:calc(11px*var(--fs,1));color:var(--mut)}
+.cs b{display:block;margin-top:2px;font-size:calc(14px*var(--fs,1));color:var(--text)}
