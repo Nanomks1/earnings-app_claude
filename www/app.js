@@ -1302,22 +1302,6 @@ showLock();
 checkBio().then(tryBio);
 pullWidget();
 
-// ---------- فحص الواي فاي (مؤقت) ----------
-(function () {
-  const out = t => { $('wfOut').textContent = t; };
-  const run = async (m, a) => {
-    const P = nplug('WifiProbe'); if (!P) return out('متاح في التطبيق فقط');
-    out('...');
-    try { const r = await P[m](a); out(m === 'rootProbe' ? 'root:\n' + (r.out || '(لا شيء)') : JSON.stringify(r, null, 1)); } catch (e) { out('خطأ: ' + ((e && e.message) || e)); }
-  };
-  $('rowWf').onclick = () => $('wfDlg').showModal();
-  $('wfRun').onclick = () => run('probe');
-  $('wfAsk').onclick = async () => { const P = nplug('WifiProbe'); if (!P) return out('متاح في التطبيق فقط'); try { await P.askNearby(); } catch (e) {} run('probe'); };
-  $('wfRoot').onclick = () => run('rootProbe');
-  $('wfCopy').onclick = async () => { try { await navigator.clipboard.writeText($('wfOut').textContent); toast('تم النسخ'); } catch (e) { toast('تعذر النسخ، حدّد النص وانسخه'); } };
-  $('wfClose').onclick = () => $('wfDlg').close();
-})();
-
 // ---------- تتبع الواي فاي ----------
 let wfOnSaved = null, wfReturn = false, wfAll = [], wfMerge = {};
 const WF_GAP = 10 * 60000;
@@ -1335,7 +1319,7 @@ async function wfCfgShow() {
   $('wfOn').checked = !!c.on; $('wfRootChk').checked = !!c.root;
   $('wfRootChk').disabled = !c.on; $('wfRootRow').style.opacity = c.on ? '' : '.5';
   const ws = (c.workSsid || '').trim();
-  $('wfInfo').innerHTML = 'شبكة العمل: ' + (ws ? esc(ws) : 'غير محدّدة') + (c.on && !c.root ? '<br>الروت مطفأ: لا يمكن معرفة اسم الشبكة، فتُسجَّل الأحداث بلا اسم.' : '') + (c.on && c.root && !ws ? '<br>اتصل بشبكة العمل ثم اضغط «اعتمد الشبكة الحالية».' : '') + (c.on ? '<br><small>آخر استدعاء من النظام: ' + (c.cbT ? wfHM(c.cbT) + ' (' + c.cbN + ')' : 'لا شيء') + '</small>' : '');
+  $('wfInfo').innerHTML = 'شبكة العمل: ' + (ws ? esc(ws) : 'غير محدّدة') + (c.on && !c.root ? '<br>الروت مطفأ: لا يمكن معرفة اسم الشبكة، فتُسجَّل الأحداث بلا اسم.' : '') + (c.on && c.root && !ws ? '<br>اتصل بشبكة العمل ثم اضغط «اعتمد الشبكة الحالية».' : '') + (c.on ? '<br><small>آخر حدث من النظام: ' + (c.cbT ? wfHM(c.cbT) + ' (' + c.cbN + ')' : 'لا شيء') + '</small>' : '');
 }
 $('wfOn').onchange = async () => {
   const W = nplug('WifiTrack'), v = $('wfOn').checked;
@@ -1354,6 +1338,11 @@ $('wfMark').onclick = async () => {
   try { const r = await W.markWork(); toast('اعتُمدت الشبكة: ' + String(r.ssid).trim()); }
   catch (e) { const m = (e && e.message) || e; toast(m === 'root-off' ? 'فعّل استعمال الروت أولًا' : m === 'no-wifi' ? 'لا يوجد اتصال واي فاي الآن' : 'تعذرت القراءة'); }
   wfCfgShow();
+};
+$('wfBat').onclick = async () => {
+  const W = nplug('WifiTrack'); if (!W) return toast('متاح في التطبيق فقط');
+  try { await W.batteryExempt(); toast('استُثني التطبيق من توفير البطارية'); }
+  catch (e) { const m = (e && e.message) || e; toast(m === 'root-off' ? 'فعّل استعمال الروت أولًا' : 'تعذر الاستثناء'); }
 };
 $('wfClear').onclick = async () => {
   const W = nplug('WifiTrack'); if (!W) return;

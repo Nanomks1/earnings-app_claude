@@ -173,7 +173,7 @@
     <div class="rb" id="wfRootRow" style="border-top:1px solid var(--bd)"><span class="bub"><svg class="ic"><use href="#i-lock"/></svg></span><span class="t">استعمال الروت<small>لمعرفة اسم الشبكة</small></span><input type="checkbox" id="wfRootChk"></div>
     <div class="info" id="wfInfo" style="color:var(--mut);font-size:calc(13px*var(--fs,1))"></div>
     <button class="rb" id="wfMark" type="button"><span class="bub"><svg class="ic"><use href="#i-home"/></svg></span><span class="t">اعتمد الشبكة الحالية كشبكة العمل<small>اتصل بالشبكة أولًا</small></span></button>
-    <button class="rb" id="rowWf" type="button"><span class="bub"><svg class="ic"><use href="#i-sliders"/></svg></span><span class="t">فحص الواي فاي<small>تشخيص ما يستطيع التطبيق قراءته</small></span></button>
+    <button class="rb" id="wfBat" type="button"><span class="bub"><svg class="ic"><use href="#i-sliders"/></svg></span><span class="t">استثناء من توفير البطارية<small>يتطلب الروت، ويحمي التتبع من الإيقاف</small></span></button>
     <button class="rb" id="wfClear" type="button"><span class="bub"><svg class="ic"><use href="#i-x"/></svg></span><span class="t">مسح سجل الأحداث</span></button>
   </div>
   </div>
@@ -280,14 +280,6 @@
   <div id="wfSugBody"></div>
   <div class="hint" style="margin-top:8px">وقت الخروج هو وقت انقطاع الواي فاي الفعلي. الانقطاعات الأقصر من 10 دقائق تُدمج في فترة واحدة. الإشارة ~ تعني وقتًا تقريبيًا.</div>
   <div class="acts" style="margin-top:8px"><button id="wfSugClose" type="button">إغلاق</button></div>
-</dialog>
-
-<dialog id="wfDlg">
-  <h2>فحص الواي فاي</h2>
-  <pre id="wfOut" dir="ltr" style="user-select:text;-webkit-user-select:text;white-space:pre-wrap;word-break:break-all;font-size:calc(12px*var(--fs,1));max-height:42vh;overflow:auto;margin:0">اضغط «فحص» وأنت متصل بواي فاي العمل.</pre>
-  <div class="acts" style="flex-wrap:wrap"><button id="wfRun" type="button" style="flex:1 1 45%">فحص</button><button id="wfAsk" type="button" style="flex:1 1 45%">إذن الأجهزة القريبة</button></div>
-  <div class="acts" style="margin-top:8px;flex-wrap:wrap"><button id="wfRoot" type="button" style="flex:1 1 45%">فحص بالروت</button><button id="wfCopy" type="button" style="flex:1 1 45%">نسخ</button></div>
-  <div class="acts" style="margin-top:8px"><button id="wfClose" type="button">إغلاق</button></div>
 </dialog>
 
 <dialog id="shDlg">
