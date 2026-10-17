@@ -756,6 +756,7 @@ $('fSave').onclick = () => {
   }
   state.items = editing ? state.items.map(i => i.id === editing.id ? rec : i) : [...state.items, rec];
   if (fromShift) { state.open = null; fromShift = false; }
+  if (wfOnSaved) wfOnSaved();
   $('form').close(); save();
 };
 $('fDel').onclick = () => {
@@ -931,12 +932,13 @@ function updBkWhere() {
   $('bkWhere').innerHTML = 'مكان النسخ: ' + esc(bk.tree ? (bk.name || 'المجلد المختار') : 'Documents/EarningsBackup (الافتراضي)') + st;
   $('bkReset').hidden = !bk.tree;
 }
-const MT = { work: 'العمل', look: 'المظهر', wg: 'الودجت', sec: 'الأمان', bk: 'النسخ الاحتياطي والتصدير' };
+const MT = { work: 'العمل', look: 'المظهر', wg: 'الودجت', sec: 'الأمان', bk: 'النسخ الاحتياطي والتصدير', wifi: 'الواي فاي' };
 let mPage = '';
 function mGo(p) {
   mPage = p; $('mHome').hidden = !!p;
   document.querySelectorAll('#menu .pg').forEach(x => x.classList.toggle('on', x.id === 'pg-' + p));
   $('menuTitle').textContent = p ? MT[p] : 'الإعدادات'; $('menuClose').textContent = p ? 'رجوع' : 'تم'; $('menu').scrollTop = 0;
+  if (p === 'wifi') wfCfgShow();
 }
 $('mHome').onclick = e => { const b = e.target.closest('[data-go]'); if (b) mGo(b.dataset.go); };
 $('menuBtn').onclick = () => {
@@ -1315,3 +1317,119 @@ pullWidget();
   $('wfCopy').onclick = async () => { try { await navigator.clipboard.writeText($('wfOut').textContent); toast('تم النسخ'); } catch (e) { toast('تعذر النسخ، حدّد النص وانسخه'); } };
   $('wfClose').onclick = () => $('wfDlg').close();
 })();
+
+// ---------- تتبع الواي فاي ----------
+let wfOnSaved = null, wfReturn = false, wfAll = [], wfMerge = {};
+const WF_GAP = 10 * 60000;
+const WF_DAYS = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+const wfHM = t => { const d = new Date(t); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); };
+const wfYMD = t => { const d = new Date(t); return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); };
+const wfDoneSet = () => { try { return new Set(JSON.parse(localStorage.getItem('earnings_wf_done')) || []); } catch (e) { return new Set(); } };
+const wfMarkDone = keys => { const s = wfDoneSet(); keys.forEach(k => s.add(k)); try { localStorage.setItem('earnings_wf_done', JSON.stringify([...s].slice(-400))); } catch (e) {} };
+const wfIsDone = (x, done) => x.keys.every(k => done.has(k));
+
+async function wfCfgShow() {
+  const W = nplug('WifiTrack');
+  if (!W) { $('wfInfo').textContent = 'متاح في التطبيق فقط'; return; }
+  let c; try { c = await W.getConfig(); } catch (e) { return; }
+  $('wfOn').checked = !!c.on; $('wfRootChk').checked = !!c.root;
+  $('wfRootChk').disabled = !c.on; $('wfRootRow').style.opacity = c.on ? '' : '.5';
+  const ws = (c.workSsid || '').trim();
+  $('wfInfo').innerHTML = 'شبكة العمل: ' + (ws ? esc(ws) : 'غير محدّدة') + (c.on && !c.root ? '<br>الروت مطفأ: لا يمكن معرفة اسم الشبكة، فتُسجَّل الأحداث بلا اسم.' : '') + (c.on && c.root && !ws ? '<br>اتصل بشبكة العمل ثم اضغط «اعتمد الشبكة الحالية».' : '');
+}
+$('wfOn').onchange = async () => {
+  const W = nplug('WifiTrack'), v = $('wfOn').checked;
+  if (!W) { $('wfOn').checked = false; return toast('متاح في التطبيق فقط'); }
+  try { await W.setConfig({ on: v }); } catch (e) { toast('تعذر الحفظ'); }
+  wfCfgShow();
+};
+$('wfRootChk').onchange = async () => {
+  const W = nplug('WifiTrack'), v = $('wfRootChk').checked;
+  if (!W) { $('wfRootChk').checked = false; return; }
+  try { await W.setConfig({ root: v }); if (v) toast('تم تفعيل الروت'); } catch (e) { toast('لم تُمنح صلاحية الروت'); }
+  wfCfgShow();
+};
+$('wfMark').onclick = async () => {
+  const W = nplug('WifiTrack'); if (!W) return toast('متاح في التطبيق فقط');
+  try { const r = await W.markWork(); toast('اعتُمدت الشبكة: ' + String(r.ssid).trim()); }
+  catch (e) { const m = (e && e.message) || e; toast(m === 'root-off' ? 'فعّل استعمال الروت أولًا' : m === 'no-wifi' ? 'لا يوجد اتصال واي فاي الآن' : 'تعذرت القراءة'); }
+  wfCfgShow();
+};
+$('wfClear').onclick = async () => {
+  const W = nplug('WifiTrack'); if (!W) return;
+  if (!confirm('مسح كل أحداث الواي فاي المسجّلة؟ سجلاتك لن تتأثر.')) return;
+  try { await W.clearEvents(); localStorage.removeItem('earnings_wf_done'); toast('تم المسح'); } catch (e) { toast('تعذر المسح'); }
+};
+
+function wfSessions(ev, now) {
+  const a = ev.slice().sort((x, y) => x.t - y.t), raw = []; let cur = null;
+  for (const e of a) {
+    if (e.k === 'c') { if (cur) raw.push({ ...cur, broken: true }); cur = { s: e.t, e: null, ssid: e.s || '', l: e.l === 1 }; }
+    else if (e.k === 'd' && cur) { raw.push({ ...cur, e: e.t, ea: e.l === 2 }); cur = null; }
+  }
+  if (cur) raw.push({ ...cur, open: true });
+  const out = [];
+  for (const x of raw) {
+    if (x.broken) continue;
+    const p = out[out.length - 1];
+    if (p && !p.open && p.e !== null && x.s - p.e < WF_GAP && p.ssid === x.ssid) { p.e = x.e; p.open = !!x.open; p.ea = x.ea; p.keys.push(x.s); p.parts++; }
+    else out.push({ ...x, keys: [x.s], parts: 1, open: !!x.open });
+  }
+  out.forEach(x => { x.pend = x.e !== null && !x.open && now - x.e < WF_GAP; });
+  return out;
+}
+function wfRow(x, done) {
+  const dn = wfIsDone(x, done);
+  const t = (x.l ? '~' : '') + wfHM(x.s) + ' – ' + (x.open ? '…' : (x.ea ? '~' : '') + wfHM(x.e));
+  let sub = x.open ? 'متصل الآن' : x.pend ? 'ينتظر تأكيد الخروج' : fmtDur((x.e - x.s) / 60000);
+  if (x.parts > 1) sub += ' • دُمجت ' + x.parts + ' فترات';
+  const btn = dn ? '<span style="color:var(--mut)">أُضيفت</span>' : (x.open || x.pend) ? '' : '<span class="acts" style="margin:0"><button class="ok" type="button" data-wfs="' + x.s + '">أضف</button></span>';
+  return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--bd)' + (dn ? ';opacity:.6' : '') + '"><div style="flex:1"><span dir="ltr" style="font-weight:700">' + t + '</span><div style="color:var(--mut);font-size:calc(13px*var(--fs,1))">' + esc(sub) + '</div></div>' + btn + '</div>';
+}
+function wfBlock(list, done) {
+  const by = {}; list.forEach(x => { const k = wfYMD(x.s); (by[k] = by[k] || []).push(x); });
+  return Object.keys(by).sort().reverse().slice(0, 14).map(day => {
+    const L = by[day], d = new Date(day + 'T00:00:00');
+    const dup = allItems().some(i => i.type === 'work' && i.date === day);
+    const ok = L.length >= 2 && L.every(x => !x.open && !x.pend && !wfIsDone(x, done));
+    let mg = '';
+    if (ok) {
+      let brk = 0; for (let i = 1; i < L.length; i++) brk += L[i].s - L[i - 1].e;
+      brk = Math.round(brk / 60000);
+      wfMerge[day] = { s: L[0].s, e: L[L.length - 1].e, brk, keys: L.flatMap(x => x.keys) };
+      mg = '<div class="acts" style="margin-top:6px"><button type="button" data-wfd="' + day + '">ادمج الفترات وأضف (استراحة ' + brk + ' د)</button></div>';
+    }
+    return '<div style="border:1px solid var(--bd);border-radius:14px;padding:10px 12px;margin:0 0 10px"><div style="font-weight:700;margin-bottom:2px">' + WF_DAYS[d.getDay()] + ' ' + d.getDate() + '/' + (d.getMonth() + 1) + (dup ? ' <small style="color:var(--mut);font-weight:400">• يوجد سجل بهذا اليوم</small>' : '') + '</div>' + L.map(x => wfRow(x, done)).join('') + mg + '</div>';
+  }).join('');
+}
+async function wfRender() {
+  const W = nplug('WifiTrack'), box = $('wfSugBody');
+  if (!W) { box.textContent = 'متاح في التطبيق فقط'; return; }
+  let cfg, ev;
+  try { cfg = await W.getConfig(); ev = JSON.parse((await W.getEvents()).json || '[]'); } catch (e) { box.textContent = 'تعذرت قراءة السجل'; return; }
+  const now = Date.now(), done = wfDoneSet(), ws = (cfg.workSsid || '').trim();
+  wfAll = wfSessions(ev, now); wfMerge = {};
+  const work = wfAll.filter(x => x.ssid && ws && x.ssid.trim() === ws), unk = wfAll.filter(x => !x.ssid);
+  let h = '';
+  if (!cfg.on) h += '<div class="info">التتبع مطفأ. فعّله من إعدادات الواي فاي.</div>';
+  else if (cfg.root && !ws) h += '<div class="info">لم تُعتمد شبكة العمل بعد. اتصل بها ثم اضغط «اعتمد الشبكة الحالية» في إعدادات الواي فاي.</div>';
+  const w = wfBlock(work, done);
+  h += w || (cfg.on && (ws || !cfg.root) && !unk.length ? '<div class="info">لا توجد فترات بعد.</div>' : '');
+  if (unk.length) h += '<details style="margin-top:6px"><summary>شبكات غير محدّدة (' + unk.length + ')</summary>' + wfBlock(unk, done) + '</details>';
+  box.innerHTML = h;
+}
+function wfOpen(day, s, e, brk, keys) {
+  $('wfSug').close();
+  openForm('work');
+  $('fDate').value = day; $('fStart').value = wfHM(s); $('fEnd').value = wfHM(e); $('fBrk').value = brk || '';
+  updDur();
+  wfOnSaved = () => wfMarkDone(keys); wfReturn = true;
+}
+$('wfSugBody').onclick = e => {
+  const a = e.target.closest('[data-wfs]'), m = e.target.closest('[data-wfd]');
+  if (a) { const x = wfAll.find(y => y.s === Number(a.dataset.wfs)); if (x) wfOpen(wfYMD(x.s), x.s, x.e, 0, x.keys); }
+  else if (m) { const g = wfMerge[m.dataset.wfd]; if (g) wfOpen(m.dataset.wfd, g.s, g.e, g.brk, g.keys); }
+};
+$('form').addEventListener('close', () => { wfOnSaved = null; if (wfReturn) { wfReturn = false; wfRender().then(() => $('wfSug').showModal()); } });
+$('wfSugOpen').onclick = async () => { await wfRender(); $('wfSug').showModal(); };
+$('wfSugClose').onclick = () => $('wfSug').close();
