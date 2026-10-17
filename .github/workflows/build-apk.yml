@@ -59,6 +59,7 @@ jobs:
           cp android-src/WorkWidgetProvider.java $P/
           cp android-src/WorkWidgetPlugin.java $P/
           cp android-src/MainActivity.java $P/
+          cp android-src/WifiProbePlugin.java $P/
           cp android-src/work_widget.xml $R/layout/
           cp android-src/work_widget_bg.xml $R/drawable/
           cp android-src/work_widget_bg_on.xml $R/drawable/
@@ -89,6 +90,8 @@ jobs:
           sed -i '/defaultConfig {/a\        ndk { abiFilters "arm64-v8a" }' android/app/build.gradle
           M=android/app/src/main/AndroidManifest.xml
           sed -i 's#<application#<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29"/>\n    <application#' $M
+          sed -i 's#<application#<uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>\n    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" android:usesPermissionFlags="neverForLocation"/>\n    <application#' $M
+          grep -q 'NEARBY_WIFI_DEVICES' $M || { echo "wifi permissions were not added to the manifest"; exit 1; }
           sed -i 's#<application#<application android:requestLegacyExternalStorage="true"#' $M
 
       - name: Version number (changes with every build)
