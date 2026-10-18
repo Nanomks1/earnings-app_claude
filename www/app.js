@@ -1325,7 +1325,7 @@ checkBio().then(tryBio);
 pullWidget();
 
 // ---------- تتبع الواي فاي ----------
-let wfOnSaved = null, wfReturn = false, wfAll = [], wfMerge = {};
+let wfOnSaved = null, wfReturn = false, wfAll = [], wfMerge = {}, wfWork = [];
 const WF_GAP = 10 * 60000;
 const WF_DAYS = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const wfHM = t => { const d = new Date(t); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); };
@@ -1333,6 +1333,9 @@ const wfYMD = t => { const d = new Date(t); return d.getFullYear() + '-' + pad2(
 const wfDoneSet = () => { try { return new Set(JSON.parse(localStorage.getItem('earnings_wf_done')) || []); } catch (e) { return new Set(); } };
 const wfMarkDone = keys => { const s = wfDoneSet(); keys.forEach(k => s.add(k)); try { localStorage.setItem('earnings_wf_done', JSON.stringify([...s].slice(-400))); } catch (e) {} };
 const wfIsDone = (x, done) => x.keys.every(k => done.has(k));
+const wfSkipSet = () => { try { return new Set(JSON.parse(localStorage.getItem('earnings_wf_skip')) || []); } catch (e) { return new Set(); } };
+const wfMarkSkip = keys => { const s = wfSkipSet(); keys.forEach(k => s.add(k)); try { localStorage.setItem('earnings_wf_skip', JSON.stringify([...s].slice(-400))); } catch (e) {} };
+const wfIsSkip = (x, sk) => { const s = sk || wfSkipSet(); return x.keys.every(k => s.has(k)); };
 
 async function wfCfgShow() {
   const W = nplug('WifiTrack');
@@ -1369,7 +1372,7 @@ $('wfBat').onclick = async () => {
 $('wfClear').onclick = async () => {
   const W = nplug('WifiTrack'); if (!W) return;
   if (!confirm('مسح كل أحداث الواي فاي المسجّلة؟ سجلاتك لن تتأثر.')) return;
-  try { await W.clearEvents(); localStorage.removeItem('earnings_wf_done'); toast('تم المسح'); wfBadge(); } catch (e) { toast('تعذر المسح'); }
+  try { await W.clearEvents(); localStorage.removeItem('earnings_wf_done'); localStorage.removeItem('earnings_wf_skip'); toast('تم المسح'); wfBadge(); } catch (e) { toast('تعذر المسح'); }
 };
 
 function wfSessions(ev, now) {
@@ -1390,19 +1393,19 @@ function wfSessions(ev, now) {
   return out;
 }
 function wfRow(x, done) {
-  const dn = wfIsDone(x, done);
+  const dn = wfIsDone(x, done), sk = !dn && wfIsSkip(x);
   const t = (x.l ? '~' : '') + wfHM(x.s) + ' – ' + (x.open ? '…' : (x.ea ? '~' : '') + wfHM(x.e));
   let sub = x.open ? 'متصل الآن' : x.pend ? 'ينتظر تأكيد الخروج' : fmtDur((x.e - x.s) / 60000);
   if (x.parts > 1) sub += ' • دُمجت ' + x.parts + ' فترات';
-  const btn = dn ? '<span style="color:var(--mut)">أُضيفت</span>' : (x.open || x.pend) ? '' : '<span class="acts" style="margin:0"><button class="ok" type="button" data-wfs="' + x.s + '">أضف</button></span>';
-  return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--bd)' + (dn ? ';opacity:.6' : '') + '"><div style="flex:1"><span dir="ltr" style="font-weight:700">' + t + '</span><div style="color:var(--mut);font-size:calc(13px*var(--fs,1))">' + esc(sub) + '</div></div>' + btn + '</div>';
+  const btn = dn ? '<span style="color:var(--mut)">أُضيفت</span>' : sk ? '<span style="color:var(--mut)">تُجوهلت</span>' : (x.open || x.pend) ? '' : '<span class="acts" style="margin:0"><button class="ok" type="button" data-wfs="' + x.s + '">أضف</button><button type="button" data-wfk="' + x.s + '" style="flex:none;padding:0 12px;height:40px;color:var(--mut);font-weight:500">تجاهل</button></span>';
+  return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--bd)' + (dn || sk ? ';opacity:.6' : '') + '"><div style="flex:1"><span dir="ltr" style="font-weight:700">' + t + '</span><div style="color:var(--mut);font-size:calc(13px*var(--fs,1))">' + esc(sub) + '</div></div>' + btn + '</div>';
 }
 function wfBlock(list, done) {
   const by = {}; list.forEach(x => { const k = wfYMD(x.s); (by[k] = by[k] || []).push(x); });
   return Object.keys(by).sort().reverse().slice(0, 14).map(day => {
     const L = by[day], d = new Date(day + 'T00:00:00');
     const dup = allItems().some(i => i.type === 'work' && i.date === day);
-    const ok = L.length >= 2 && L.every(x => !x.open && !x.pend && !wfIsDone(x, done));
+    const ok = L.length >= 2 && L.every(x => !x.open && !x.pend && !wfIsDone(x, done) && !wfIsSkip(x));
     let mg = '';
     if (ok) {
       let brk = 0; for (let i = 1; i < L.length; i++) brk += L[i].s - L[i - 1].e;
@@ -1412,6 +1415,10 @@ function wfBlock(list, done) {
     }
     return '<div style="border:1px solid var(--bd);border-radius:14px;padding:10px 12px;margin:0 0 10px"><div style="font-weight:700;margin-bottom:2px">' + WF_DAYS[d.getDay()] + ' ' + d.getDate() + '/' + (d.getMonth() + 1) + (dup ? ' <small style="color:var(--mut);font-weight:400">• يوجد سجل بهذا اليوم</small>' : '') + '</div>' + L.map(x => wfRow(x, done)).join('') + mg + '</div>';
   }).join('');
+}
+function wfIgnorable() {
+  const done = wfDoneSet(), sk = wfSkipSet(), now = Date.now();
+  return wfWork.filter(x => !x.open && !x.pend && now - x.s < 14 * 864e5 && !wfIsDone(x, done) && !wfIsSkip(x, sk));
 }
 async function wfRender() {
   const W = nplug('WifiTrack'), box = $('wfSugBody');
@@ -1424,8 +1431,11 @@ async function wfRender() {
   let h = '';
   if (!cfg.on) h += '<div class="info">التتبع مطفأ. فعّله من إعدادات الواي فاي.</div>';
   else if (cfg.root && !ws) h += '<div class="info">لم تُعتمد شبكة العمل بعد. اتصل بها ثم اضغط «اعتمد الشبكة الحالية» في إعدادات الواي فاي.</div>';
+  wfWork = work;
   const w = wfBlock(work, done);
   h += w || (cfg.on && (ws || !cfg.root) && !unk.length ? '<div class="info">لا توجد فترات بعد.</div>' : '');
+  const ign = wfIgnorable();
+  if (ign.length) h += '<button type="button" data-wfall="1" data-lbl="تجاهل الكل (' + ign.length + ')" style="width:100%;height:44px;border-radius:14px;border:1px solid var(--bd);background:var(--card2);color:var(--mut);margin:0 0 10px">تجاهل الكل (' + ign.length + ')</button>';
   if (unk.length) h += '<details style="margin-top:6px"><summary>شبكات غير محدّدة (' + unk.length + ')</summary>' + wfBlock(unk, done) + '</details>';
   box.innerHTML = h;
 }
@@ -1437,8 +1447,13 @@ function wfOpen(day, s, e, brk, keys) {
   wfOnSaved = () => wfMarkDone(keys); wfReturn = true;
 }
 $('wfSugBody').onclick = e => {
-  const a = e.target.closest('[data-wfs]'), m = e.target.closest('[data-wfd]');
-  if (a) { const x = wfAll.find(y => y.s === Number(a.dataset.wfs)); if (x) wfOpen(wfYMD(x.s), x.s, x.e, 0, x.keys); }
+  const a = e.target.closest('[data-wfs]'), m = e.target.closest('[data-wfd]'), k = e.target.closest('[data-wfk]'), all = e.target.closest('[data-wfall]');
+  if (k) { const x = wfAll.find(y => y.s === Number(k.dataset.wfk)); if (x) { wfMarkSkip(x.keys); wfRender(); wfBadge(); } }
+  else if (all) {
+    if (!all.dataset.arm) { all.dataset.arm = '1'; all.textContent = 'اضغط مرة أخرى للتأكيد'; setTimeout(() => { if (all.isConnected) { all.dataset.arm = ''; all.textContent = all.dataset.lbl; } }, 3500); return; }
+    const L = wfIgnorable(); L.forEach(x => wfMarkSkip(x.keys)); toast('تم تجاهل ' + L.length + ' فترات'); wfRender(); wfBadge();
+  }
+  else if (a) { const x = wfAll.find(y => y.s === Number(a.dataset.wfs)); if (x) wfOpen(wfYMD(x.s), x.s, x.e, 0, x.keys); }
   else if (m) { const g = wfMerge[m.dataset.wfd]; if (g) wfOpen(m.dataset.wfd, g.s, g.e, g.brk, g.keys); }
 };
 $('form').addEventListener('close', () => { wfOnSaved = null; if (wfReturn) { wfReturn = false; wfRender().then(() => $('wfSug').showModal()); } });
@@ -1452,8 +1467,8 @@ async function wfBadge() {
   try {
     const cfg = await W.getConfig(), ws = (cfg.workSsid || '').trim();
     if (!cfg.on || !ws) { el.hidden = true; return; }
-    const ev = JSON.parse((await W.getEvents()).json || '[]'), done = wfDoneSet(), now = Date.now();
-    const n = wfSessions(ev, now).filter(x => x.ssid && x.ssid.trim() === ws && !x.open && !x.pend && now - x.s < 14 * 864e5 && !wfIsDone(x, done)).length;
+    const ev = JSON.parse((await W.getEvents()).json || '[]'), done = wfDoneSet(), sk = wfSkipSet(), now = Date.now();
+    const n = wfSessions(ev, now).filter(x => x.ssid && x.ssid.trim() === ws && !x.open && !x.pend && now - x.s < 14 * 864e5 && !wfIsDone(x, done) && !wfIsSkip(x, sk)).length;
     el.hidden = !n;
     if (n) el.textContent = 'فترات واي فاي بانتظار المراجعة: ' + n + '. اضغط للمراجعة.';
   } catch (e) { el.hidden = true; }
