@@ -618,18 +618,18 @@ function monthCfg(key) {
 function reportPages(cfg) {
   const items = cfg.items;
   if (!items.length) return null;
-  const c = calc(items), W = 1240, H = 1754, M = 80, R = W - M, INK = '#1b1f24', GR = '#6b7280', pages = [];
+  const c = calc(items), W = 1240, H = 1754, M = 80, R = W - M, dk = isDark(), INK = dk ? '#e8eaed' : '#1b1f24', GR = dk ? '#9aa3ad' : '#6b7280', PG = dk ? '#14181d' : '#ffffff', HB = dk ? '#242a31' : '#eef1f4', LN = dk ? '#2e353d' : '#e5e8ec', RD = dk ? '#f87171' : '#b91c1c', pages = [];
   let cv, x, y;
   const T = (s, px, wt, dir, al, xx, yy, col) => { x.font = wt + ' ' + px + 'px sans-serif'; x.direction = dir; x.textAlign = al; x.fillStyle = col || INK; x.fillText(s, xx, yy); };
   const cols = [['date', 300], ['type', 130], ['from', 120], ['to', 120], ['brk', 130], ['hrs', 130], ['amt', 150]];
   let cum = 0; cols.forEach(k => { k.push(R - cum, R - cum - k[1] / 2); cum += k[1]; });
   const head = () => {
-    x.fillStyle = '#eef1f4'; x.fillRect(M, y - 38, W - 2 * M, 54);
+    x.fillStyle = HB; x.fillRect(M, y - 38, W - 2 * M, 54);
     const names = ['التاريخ', 'النوع', 'من', 'إلى', 'استراحة', 'الساعات', 'المبلغ' + (state.currency ? ' (' + state.currency + ')' : '')];
     cols.forEach((k, i) => i === 0 ? T(names[i], 26, '700', 'rtl', 'right', k[2] - 12, y, INK) : T(names[i], 26, '700', 'rtl', 'center', k[3], y, INK));
     y += 56;
   };
-  const newPage = first => { cv = document.createElement('canvas'); cv.width = W; cv.height = H; x = cv.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, W, H); pages.push(cv); y = 120; if (!first) head(); };
+  const newPage = first => { cv = document.createElement('canvas'); cv.width = W; cv.height = H; x = cv.getContext('2d'); x.fillStyle = PG; x.fillRect(0, 0, W, H); pages.push(cv); y = 120; if (!first) head(); };
   newPage(true);
   T(cfg.title, 54, '700', 'rtl', 'right', R, y, INK); y += 64;
   if (cfg.sub) { T(cfg.sub, 30, '400', 'rtl', 'right', R, y, GR); y += 54; }
@@ -644,8 +644,8 @@ function reportPages(cfg) {
     if (y > H - 130) newPage(false);
     const wk = i.type === 'work' && !i.remote, d = dt(i.date).toLocaleDateString('ar-u-nu-latn', { weekday: 'long', day: 'numeric', month: 'long' });
     const v = [d, i.type === 'adv' ? 'كريدي' : i.remote ? 'عن بعد' : 'عمل', wk && i.start || '—', wk && i.end || '—', wk && i.brk ? i.brk + ' د' : '—', wk ? fmtHM(i.mins) : '—', (i.type === 'adv' ? '−' : '') + num(i.amount)];
-    cols.forEach((k, j) => j === 0 ? T(v[j], 27, '400', 'rtl', 'right', k[2] - 12, y, INK) : T(v[j], 27, '400', j === 1 ? 'rtl' : 'ltr', 'center', k[3], y, i.type === 'adv' && j === 6 ? '#b91c1c' : INK));
-    x.fillStyle = '#e5e8ec'; x.fillRect(M, y + 16, W - 2 * M, 2); y += 54;
+    cols.forEach((k, j) => j === 0 ? T(v[j], 27, '400', 'rtl', 'right', k[2] - 12, y, INK) : T(v[j], 27, '400', j === 1 ? 'rtl' : 'ltr', 'center', k[3], y, i.type === 'adv' && j === 6 ? RD : INK));
+    x.fillStyle = LN; x.fillRect(M, y + 16, W - 2 * M, 2); y += 54;
   });
   pages.forEach((p, k) => { x = p.getContext('2d'); T('صفحة ' + (k + 1) + ' من ' + pages.length, 22, '400', 'rtl', 'center', W / 2, H - 50, GR); });
   return pages.map(p => { const s = atob(p.toDataURL('image/jpeg', 0.92).split(',')[1]), b = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i); return { w: W, h: H, b }; });
@@ -1068,6 +1068,18 @@ async function rotateSnap() {
   }
   localStorage.setItem('earnings_snapday', day);
 }
+// نسخ أمان (5): تدور فقط عندما يُنقِص التغيير بيانات (حذف سجل، ضياع دخول جارٍ، نقص أرشيف)، فتُحفظ النسخة السابقة قبل الكتابة فوقها
+const SAFES = ['earnings-safe-1.json', 'earnings-safe-2.json', 'earnings-safe-3.json', 'earnings-safe-4.json', 'earnings-safe-5.json'];
+const bkSum = s => ({ n: s.items.length, a: s.archive.length, o: s.open ? 1 : 0 });
+const bkLoss = (p, c) => !!p && (c.n < p.n || c.a < p.a || (p.o && !c.o && c.n <= p.n));
+async function rotateSafe() {
+  const cur = await readBack(AUTO_NAME);
+  if (!validBackup(cur)) return;
+  const old = [];
+  for (let i = 0; i < SAFES.length - 1; i++) old.push(await readBack(SAFES[i]));
+  for (let i = SAFES.length - 1; i >= 1; i--) if (validBackup(old[i - 1])) await putFile(SAFES[i], old[i - 1]);
+  await putFile(SAFES[0], cur);
+}
 // ---------- التشفير (AES-256-GCM + PBKDF2) ----------
 const b64 = u8 => { let t = ''; u8.forEach(c => t += String.fromCharCode(c)); return btoa(t); };
 const unb64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
@@ -1125,10 +1137,13 @@ $('encOff').onclick = () => {
 async function autoBackup() {
   if (!isNative() || isEmpty(state)) return; // لا نكتب بيانات فارغة فوق نسخة سليمة
   try {
-    const text = await backupText();
+    const text = await backupText(), sum = bkSum(state);
+    let prev = null; try { prev = JSON.parse(localStorage.getItem('earnings_bksum')); } catch (e) {}
     try { await rotateSnap(); } catch (e) {}
+    if (bkLoss(prev, sum)) { try { await rotateSafe(); } catch (e) {} }
     const r = await putFile(AUTO_NAME, text);
     if (await readFrom(r.via, r.name) !== text) throw new Error('verify');
+    try { localStorage.setItem('earnings_bksum', JSON.stringify(sum)); } catch (e) {}
     markBk(true);
   } catch (e) { markBk(false); }
 }
@@ -1188,6 +1203,7 @@ $('bkRestore').onclick = async () => {
 };
 const bkLabel = n => /^earnings-backup\.json$/.test(n) ? 'النسخة التلقائية'
   : /^earnings-snap-(\d)/.test(n) ? 'نسخة تلقائية سابقة ' + n.match(/snap-(\d)/)[1]
+  : /^earnings-safe-(\d)/.test(n) ? 'نسخة أمان قبل نقص بيانات ' + n.match(/safe-(\d)/)[1]
   : /^earnings-before-restore/.test(n) ? 'قبل آخر استعادة' : 'نسخة يدوية';
 async function listBackups() {
   const S = saf();
@@ -1231,14 +1247,17 @@ async function pullWidget() { // يستلم ما سجّله الودجت وهو 
   const W = nplug('WorkWidget');
   if (!W) { widgetReady = true; foregroundChecks(); return; }
   widgetReady = false;
+  let evs = [];
   try {
     const r = await W.takeEvents(); let changed = false, msg = '', n = 0;
-    (r.events || []).forEach(ev => {
+    evs = r.events || [];
+    evs.forEach(ev => {
       if (ev.t === 'in') { if (!state.open) { state.open = { date: ev.date, start: ev.start }; changed = true; } }
       else if (ev.t === 'out') {
         const mins = Math.round((ev.endTs - ev.startTs) / 60000);
         changed = true;
-        if (!(mins > 0)) { state.open = null; msg = 'تجاهلتُ خروجًا من الودجت: المدة أقل من دقيقة'; }
+        if (state.items.some(i => i.type === 'work' && i.date === ev.date && i.start === ev.start && i.end === ev.end)) state.open = null; // أُضيف سابقًا
+        else if (!(mins > 0)) { state.open = null; msg = 'تجاهلتُ خروجًا من الودجت: المدة أقل من دقيقة'; }
         else if (mins > OPEN_WARN) { state.open = { date: ev.date, start: ev.start }; msg = 'الخروج من الودجت جاء بعد وقت طويل. سجّل الخروج يدويًا'; }
         else {
           state.items.push({ id: Date.now() + (n++), type: 'work', date: ev.date, note: '', remote: false, start: ev.start, end: ev.end, brk: 0, mins, rate: state.rate, amount: mins / 60 * state.rate });
@@ -1248,7 +1267,10 @@ async function pullWidget() { // يستلم ما سجّله الودجت وهو 
     });
     if (changed) save();
     if (msg) toast(msg);
-  } catch (e) {}
+  } catch (e) { evs = []; }
+  // لا يمسح الودجت أحداثه إلا بعد مهلة من الحفظ؛ لو توقف التطبيق قبلها أُعيدت المعالجة (آمنة التكرار)
+  const keys = evs.map(ev => ev.t + ':' + (ev.t === 'out' ? ev.endTs : ev.startTs));
+  if (keys.length) setTimeout(() => { try { const p = W.ackEvents({ keys }); if (p && p.catch) p.catch(() => {}); } catch (e) {} }, 8000);
   widgetReady = true; syncWidget(); foregroundChecks();
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) pullWidget(); });
@@ -1277,7 +1299,7 @@ function checkForgot() {
     if (state.open && confirm('أنت مسجّل دخول منذ ' + Math.floor(m / 60) + ' ساعة (من ' + o.start + '). هل نسيت تسجيل الخروج؟\n\nموافق = تسجيل الخروج الآن')) { const b = $('clockOut'); if (b) b.click(); }
   }, 300);
 }
-function foregroundChecks() { try { checkBkStale(); checkForgot(); } catch (e) {} }
+function foregroundChecks() { try { checkBkStale(); checkForgot(); wfBadge(); } catch (e) {} }
 
 // ---------- زر الرجوع ----------
 let lastBack = 0;
@@ -1330,7 +1352,7 @@ $('wfOn').onchange = async () => {
 $('wfRootChk').onchange = async () => {
   const W = nplug('WifiTrack'), v = $('wfRootChk').checked;
   if (!W) { $('wfRootChk').checked = false; return; }
-  try { await W.setConfig({ root: v }); if (v) toast('تم تفعيل الروت'); } catch (e) { toast('لم تُمنح صلاحية الروت'); }
+  try { await W.setConfig({ root: v }); if (v) toast('تم تفعيل الروت'); } catch (e) { toast('امنح الروت للتطبيق من مدير الروت ثم أعد المحاولة'); }
   wfCfgShow();
 };
 $('wfMark').onclick = async () => {
@@ -1347,7 +1369,7 @@ $('wfBat').onclick = async () => {
 $('wfClear').onclick = async () => {
   const W = nplug('WifiTrack'); if (!W) return;
   if (!confirm('مسح كل أحداث الواي فاي المسجّلة؟ سجلاتك لن تتأثر.')) return;
-  try { await W.clearEvents(); localStorage.removeItem('earnings_wf_done'); toast('تم المسح'); } catch (e) { toast('تعذر المسح'); }
+  try { await W.clearEvents(); localStorage.removeItem('earnings_wf_done'); toast('تم المسح'); wfBadge(); } catch (e) { toast('تعذر المسح'); }
 };
 
 function wfSessions(ev, now) {
@@ -1422,3 +1444,18 @@ $('wfSugBody').onclick = e => {
 $('form').addEventListener('close', () => { wfOnSaved = null; if (wfReturn) { wfReturn = false; wfRender().then(() => $('wfSug').showModal()); } });
 $('wfSugOpen').onclick = async () => { await wfRender(); $('wfSug').showModal(); };
 $('wfSugClose').onclick = () => $('wfSug').close();
+$('wfSug').addEventListener('close', wfBadge);
+// بطاقة الشاشة الرئيسية: فترات شبكة العمل غير المضافة (آخر 14 يومًا)
+async function wfBadge() {
+  const el = $('wfCard'); if (!el) return;
+  const W = nplug('WifiTrack'); if (!W) { el.hidden = true; return; }
+  try {
+    const cfg = await W.getConfig(), ws = (cfg.workSsid || '').trim();
+    if (!cfg.on || !ws) { el.hidden = true; return; }
+    const ev = JSON.parse((await W.getEvents()).json || '[]'), done = wfDoneSet(), now = Date.now();
+    const n = wfSessions(ev, now).filter(x => x.ssid && x.ssid.trim() === ws && !x.open && !x.pend && now - x.s < 14 * 864e5 && !wfIsDone(x, done)).length;
+    el.hidden = !n;
+    if (n) el.textContent = 'فترات واي فاي بانتظار المراجعة: ' + n + '. اضغط للمراجعة.';
+  } catch (e) { el.hidden = true; }
+}
+$('wfCard').onclick = () => $('wfSugOpen').onclick();
