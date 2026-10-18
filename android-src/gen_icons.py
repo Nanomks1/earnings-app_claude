@@ -195,7 +195,32 @@ os.makedirs(f'{res}/mipmap-anydpi-v26', exist_ok=True)
 os.makedirs(f'{res}/mipmap-xxxhdpi', exist_ok=True)
 os.makedirs(f'{res}/values', exist_ok=True)
 colors = ['<?xml version="1.0" encoding="utf-8"?>', '<resources>']
-adaptive = '<?xml version="1.0" encoding="utf-8"?>\n<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n    <background android:drawable="@color/work_ic_bg_%s"/>\n    <foreground android:drawable="@drawable/ic_%s_fg"/>\n</adaptive-icon>\n'
+adaptive = '<?xml version="1.0" encoding="utf-8"?>\n<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n    <background android:drawable="@color/work_ic_bg_%s"/>\n    <foreground android:drawable="@drawable/ic_%s_fg"/>\n    <monochrome android:drawable=\"@drawable/ic_mono\"/>\n</adaptive-icon>\n'
+# themed-icon layer: single-shape silhouette (the system tints it), same for every colour
+def mono_mask(S, B):
+    c = S / 2
+    px, py, pw, ph = c - B * 0.05, c - B * 0.01, B * 0.50, B * 0.84
+    body = lm(S, lambda d: d.rounded_rectangle([px - pw / 2, py - ph / 2, px + pw / 2, py + ph / 2], radius=B * 0.09, fill=255))
+    wm = rot(wrench_mask(S, B * 1.05), S, 45)
+    whalo = wm.filter(ImageFilter.MaxFilter(int(B * 0.06) // 2 * 2 + 1))
+    cx, cy, r = c + B * 0.22, c + B * 0.24, B * 0.20
+    ring = lm(S, lambda d: d.ellipse([cx - r - B * 0.03, cy - r - B * 0.03, cx + r + B * 0.03, cy + r + B * 0.03], fill=255))
+    coin = lm(S, lambda d: d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=255))
+    m = ImageChops.subtract(body, ImageChops.lighter(whalo, ring))
+    d = ImageDraw.Draw(m)
+    d.rounded_rectangle([px - B * 0.06, py - ph / 2 + B * 0.035, px + B * 0.06, py - ph / 2 + B * 0.06], radius=B * 0.012, fill=0)
+    m = ImageChops.lighter(ImageChops.lighter(m, wm), coin)
+    dh(ImageDraw.Draw(m), cx, cy, B * 0.14, 0, B * 0.03)
+    return m
+
+MS = 720
+mm = mono_mask(MS, MS * 0.62).resize((331, 331), Image.LANCZOS)
+mono_a = Image.new('L', (432, 432), 0)
+mono_a.paste(mm, (50, 50))
+mono = Image.new('RGBA', (432, 432), (255, 255, 255, 0))
+mono.putalpha(mono_a)
+mono.save(f'{res}/drawable-nodpi/ic_mono.png')
+
 mask = Image.new('L', (192 * 4, 192 * 4), 0)
 ImageDraw.Draw(mask).ellipse([0, 0, 192 * 4 - 1, 192 * 4 - 1], fill=255)
 mask = mask.resize((192, 192), Image.LANCZOS)

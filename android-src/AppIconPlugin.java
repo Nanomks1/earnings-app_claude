@@ -2,6 +2,7 @@ package com.pd.earnings;
 
 import android.content.ComponentName;
 import android.content.pm.PackageManager;
+import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
@@ -32,6 +33,23 @@ public class AppIconPlugin extends Plugin {
                 }
             }
             call.resolve();
+        } catch (Exception e) {
+            call.reject(String.valueOf(e.getMessage()));
+        }
+    }
+
+    // لون التمييز من ألوان النظام (Material You)، أندرويد 12 فما فوق
+    @PluginMethod
+    public void sysColor(PluginCall call) {
+        try {
+            JSObject o = new JSObject();
+            String hex = "";
+            if (android.os.Build.VERSION.SDK_INT >= 31) {
+                int c = getContext().getResources().getColor(android.R.color.system_accent1_600, getContext().getTheme());
+                hex = String.format("#%06x", c & 0xFFFFFF);
+            }
+            o.put("hex", hex);
+            call.resolve(o);
         } catch (Exception e) {
             call.reject(String.valueOf(e.getMessage()));
         }
