@@ -372,7 +372,7 @@ const netKey = list => { const c = calc(list); return '✅ ' + bold('الصاف�
 function summaryText(withDetail) {
   const list = inRange().sort(byDate), from = $('sFrom').value, to = $('sTo').value;
   const head = from && to ? `من ${fmtShort(from)}\nإلى ${fmtShort(to)}` : from ? `من ${fmtShort(from)}` : to ? `حتى ${fmtShort(to)}` : 'كل الفترات';
-  return periodText('ملخص العمل', ['🗓 ' + head], list, withDetail === undefined ? $('sDetail').checked : withDetail, null, netKey(list), true);
+  return periodText('ملخص العمل', ['🗓 ' + head], list, withDetail === undefined ? true : withDetail, null, netKey(list), true);
 }
 function currentText(d) {
   const list = [...state.items].sort(byDate), extra = [];
@@ -421,6 +421,15 @@ function archiveCfg(a, d) {
   if (rem) extra.push([rem > 0 ? 'بقي لك (رُحِّل)' : 'زيادة (خُصمت لاحقًا)', money(Math.abs(rem))]);
   return { title: 'كشف دفعة', sub: 'الاستلام: ' + fmtShort(a.paidAt) + ' • الفترة: ' + rangeOf(list), items: list, detail: d, extra };
 }
+function summaryCfg(d) {
+  const list = [...inRange()].sort(byDate), from = $('sFrom').value, to = $('sTo').value;
+  const sub = from && to ? 'من ' + fmtShort(from) + ' إلى ' + fmtShort(to) : from ? 'من ' + fmtShort(from) : to ? 'حتى ' + fmtShort(to) : 'كل الفترات';
+  return { title: 'ملخص العمل', sub, items: list, detail: d };
+}
+function archivesCfg(d) {
+  const arc = [...state.archive], items = arc.flatMap(a => a.items).sort(byDate), rec = arc.reduce((t, a) => t + a.received, 0);
+  return { title: 'كشف الدفعات', sub: 'عدد الدفعات: ' + arc.length, items, detail: d, extra: [['مجموع المستلم', money(round2(rec)), true]] };
+}
 async function doShare(text) {
   const S = plugin('Share');
   try {
@@ -432,7 +441,7 @@ async function doShare(text) {
 let pendingShare = null, pendingPdf = null;
 function askShare(title, build, pdf) {
   pendingShare = build; pendingPdf = pdf || null;
-  $('shPdfRow').style.display = pdf ? '' : 'none';
+  $('shPdf').style.display = pdf ? '' : 'none';
   $('shTitle').textContent = title;
   $('shDetail').checked = localStorage.getItem('earnings_sd') !== '0';
   $('shDlg').showModal();
@@ -549,7 +558,7 @@ function setMode(m) {
 }
 $('sSeg').onclick = e => { const b = e.target.closest('button'); if (b) setMode(b.dataset.m); };
 $('sFrom').onchange = $('sTo').onchange = () => { sumMode = 'custom'; [...document.querySelectorAll('#sSeg button')].forEach(b => b.classList.remove('on')); renderSummary(); };
-$('sShare').onclick = () => doShare(summaryText());
+$('sShare').onclick = () => askShare('مشاركة الملخص', d => summaryText(d), d => ({ cfg: summaryCfg(d), name: 'work-summary-' + today() + '.pdf' }));
 
 function setView(v) {
   view = v;
@@ -615,39 +624,81 @@ $('dayClose').onclick = () => $('dayDlg').close();
 function monthCfg(key) {
   return { title: 'تقرير ' + monthLabel(key), items: allItems().filter(i => i.date.slice(0, 7) === key).sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id), detail: true };
 }
+const hmAr = m => { m = Math.round(m); const h = Math.floor(m / 60), r = m % 60; return h ? h + ' س' + (r ? ' ' + r + ' د' : '') : r + ' د'; };
 function reportPages(cfg) {
   const items = cfg.items;
   if (!items.length) return null;
-  const c = calc(items), W = 1240, H = 1754, M = 80, R = W - M, dk = isDark(), INK = dk ? '#e8eaed' : '#1b1f24', GR = dk ? '#9aa3ad' : '#6b7280', PG = dk ? '#14181d' : '#ffffff', HB = dk ? '#242a31' : '#eef1f4', LN = dk ? '#2e353d' : '#e5e8ec', RD = dk ? '#f87171' : '#b91c1c', pages = [];
+  const c = calc(items), W = 1240, H = 1754, M = 70, R = W - M, dk = isDark();
+  const P = dk
+    ? { INK: '#e8eaed', GR: '#9aa3ad', PG: '#14181d', HB: '#2b3340', CARD: '#1e252d', ZB: '#1a2027', GD: '#3a434d', ACC: '#c9a64a', GO: '#e0bf63', GN: '#4ade80', BL: '#60a5fa', RD: '#f87171', CG: '#14352a', CB: '#16304a', CR: '#3a1a1a' }
+    : { INK: '#1b1f24', GR: '#6b7280', PG: '#ffffff', HB: '#e9edf2', CARD: '#f3f5f7', ZB: '#f8fafb', GD: '#cfd6dd', ACC: '#b8942f', GO: '#8a6d1f', GN: '#15803d', BL: '#1d4ed8', RD: '#b91c1c', CG: '#dcfce7', CB: '#dbeafe', CR: '#fee2e2' };
+  const pages = [];
   let cv, x, y;
-  const T = (s, px, wt, dir, al, xx, yy, col) => { x.font = wt + ' ' + px + 'px sans-serif'; x.direction = dir; x.textAlign = al; x.fillStyle = col || INK; x.fillText(s, xx, yy); };
-  const cols = [['date', 300], ['type', 130], ['from', 120], ['to', 120], ['brk', 130], ['hrs', 130], ['amt', 150]];
-  let cum = 0; cols.forEach(k => { k.push(R - cum, R - cum - k[1] / 2); cum += k[1]; });
-  const head = () => {
-    x.fillStyle = HB; x.fillRect(M, y - 38, W - 2 * M, 54);
-    const names = ['التاريخ', 'النوع', 'من', 'إلى', 'استراحة', 'الساعات', 'المبلغ' + (state.currency ? ' (' + state.currency + ')' : '')];
-    cols.forEach((k, i) => i === 0 ? T(names[i], 26, '700', 'rtl', 'right', k[2] - 12, y, INK) : T(names[i], 26, '700', 'rtl', 'center', k[3], y, INK));
-    y += 56;
+  const T = (s, px, wt, dir, al, xx, yy, col) => { x.font = wt + ' ' + px + 'px sans-serif'; x.direction = dir; x.textAlign = al; x.fillStyle = col || P.INK; x.fillText(s, xx, yy); };
+  const rr = (xx, yy, w, h, r, fill, stroke) => {
+    x.beginPath(); x.moveTo(xx + r, yy); x.arcTo(xx + w, yy, xx + w, yy + h, r); x.arcTo(xx + w, yy + h, xx, yy + h, r); x.arcTo(xx, yy + h, xx, yy, r); x.arcTo(xx, yy, xx + w, yy, r); x.closePath();
+    if (fill) { x.fillStyle = fill; x.fill(); }
+    if (stroke) { x.strokeStyle = stroke; x.lineWidth = 3; x.stroke(); }
   };
-  const newPage = first => { cv = document.createElement('canvas'); cv.width = W; cv.height = H; x = cv.getContext('2d'); x.fillStyle = PG; x.fillRect(0, 0, W, H); pages.push(cv); y = 120; if (!first) head(); };
+  const cw = [300, 130, 110, 110, 110, 160, 180], cols = []; let cum = 0;
+  cw.forEach(w => { cols.push({ r: R - cum, l: R - cum - w, c: R - cum - w / 2 }); cum += w; });
+  const RH = 68, HH = 64;
+  const vlines = (y0, h) => { x.fillStyle = P.GD; cols.forEach(k => x.fillRect(k.l - 1, y0, 2, h)); x.fillRect(R - 1, y0, 2, h); };
+  const head = () => {
+    x.fillStyle = P.HB; x.fillRect(M, y, W - 2 * M, HH);
+    const names = ['التاريخ', 'النوع', 'من', 'إلى', 'استراحة', 'الساعات', 'المبلغ' + (state.currency ? ' (' + state.currency + ')' : '')];
+    names.forEach((n, i) => i === 0 ? T(n, 28, '700', 'rtl', 'right', cols[i].r - 16, y + 43, P.GO) : T(n, 28, '700', 'rtl', 'center', cols[i].c, y + 43, P.GO));
+    vlines(y, HH); y += HH;
+  };
+  const newPage = first => {
+    cv = document.createElement('canvas'); cv.width = W; cv.height = H; x = cv.getContext('2d');
+    x.fillStyle = P.PG; x.fillRect(0, 0, W, H); x.fillStyle = P.ACC; x.fillRect(0, 0, W, 14);
+    pages.push(cv); y = first ? 130 : 90; if (!first) head();
+  };
   newPage(true);
-  T(cfg.title, 54, '700', 'rtl', 'right', R, y, INK); y += 64;
-  if (cfg.sub) { T(cfg.sub, 30, '400', 'rtl', 'right', R, y, GR); y += 54; }
-  const sum = [['عدد الأيام', ltr(String(c.days))], ['ساعات العمل', ltr(fmtHM(c.mins))], ['أجر العمل بالساعات', money(c.work - c.ramt)]];
-  if (c.ramt) sum.push(['أجر العمل عن بعد', money(c.ramt)]);
-  if (c.adv) sum.push(['الكريدي', '−' + money(c.adv)]);
-  sum.push(['الصافي', money(c.work - c.adv), true]);
-  (cfg.extra || []).forEach(r => sum.push(r));
-  sum.forEach(([k, v, b]) => { T(k + ': ' + v, 32, b ? '700' : '400', 'rtl', 'right', R, y, INK); y += 46; });
-  if (cfg.detail) { y += 40; head(); }
-  (cfg.detail ? items : []).forEach(i => {
-    if (y > H - 130) newPage(false);
-    const wk = i.type === 'work' && !i.remote, d = dt(i.date).toLocaleDateString('ar-u-nu-latn', { weekday: 'long', day: 'numeric', month: 'long' });
-    const v = [d, i.type === 'adv' ? 'كريدي' : i.remote ? 'عن بعد' : 'عمل', wk && i.start || '—', wk && i.end || '—', wk && i.brk ? i.brk + ' د' : '—', wk ? fmtHM(i.mins) : '—', (i.type === 'adv' ? '−' : '') + num(i.amount)];
-    cols.forEach((k, j) => j === 0 ? T(v[j], 27, '400', 'rtl', 'right', k[2] - 12, y, INK) : T(v[j], 27, '400', j === 1 ? 'rtl' : 'ltr', 'center', k[3], y, i.type === 'adv' && j === 6 ? RD : INK));
-    x.fillStyle = LN; x.fillRect(M, y + 16, W - 2 * M, 2); y += 54;
+  T(cfg.title, 72, '700', 'rtl', 'right', R, y, P.INK); y += 60;
+  if (cfg.sub) { T(cfg.sub, 36, '400', 'rtl', 'right', R, y, P.GR); y += 40; }
+  y += 24;
+  const net = c.work - c.adv, cards = [['عدد الأيام', String(c.days), P.INK, 'rtl'], ['ساعات العمل', hmAr(c.mins), P.GO, 'rtl'], ['أجر العمل بالساعات', money(c.work - c.ramt), P.GN, 'ltr']];
+  if (c.ramt) cards.push(['أجر العمل عن بعد', money(c.ramt), P.BL, 'ltr']);
+  if (c.adv) cards.push(['الكريدي', '−' + money(c.adv), P.RD, 'ltr']);
+  cards.push(['الصافي', money(net), net < 0 ? P.RD : P.GN, 'ltr', net < 0 ? P.RD : P.GN]);
+  (cfg.extra || []).forEach(r => cards.push([r[0], r[1], P.INK, 'ltr', r[2] ? P.GO : null]));
+  const CWD = (W - 2 * M - 24) / 2, CH = 124;
+  cards.forEach((k, n) => {
+    const col = n % 2, row = Math.floor(n / 2), cx = col ? M : R - CWD, cy = y + row * (CH + 24);
+    rr(cx, cy, CWD, CH, 18, P.CARD, k[4]);
+    T(k[0], 28, '400', 'rtl', 'right', cx + CWD - 24, cy + 44, P.GR);
+    T(k[1], 46, '700', k[3], 'right', cx + CWD - 24, cy + 98, k[2]);
   });
-  pages.forEach((p, k) => { x = p.getContext('2d'); T('صفحة ' + (k + 1) + ' من ' + pages.length, 22, '400', 'rtl', 'center', W / 2, H - 50, GR); });
+  y += Math.ceil(cards.length / 2) * (CH + 24) + 16;
+  if (cfg.detail) {
+    if (y + HH + RH * 2 > H - 100) newPage(false); else head();
+    items.forEach((i, k) => {
+      if (y + RH > H - 100) newPage(false);
+      const wk = i.type === 'work' && !i.remote, d = dt(i.date).toLocaleDateString('ar-u-nu-latn', { weekday: 'long', day: 'numeric', month: 'long' });
+      if (k % 2) { x.fillStyle = P.ZB; x.fillRect(M, y, W - 2 * M, RH); }
+      const by = y + 44, kind = i.type === 'adv' ? 'adv' : i.remote ? 'rem' : 'wrk';
+      const col = kind === 'adv' ? P.RD : kind === 'rem' ? P.BL : P.GN, chipBg = kind === 'adv' ? P.CR : kind === 'rem' ? P.CB : P.CG;
+      T(d, 28, '400', 'rtl', 'right', cols[0].r - 16, by, P.INK);
+      rr(cols[1].c - 52, y + 11, 104, 46, 23, chipBg);
+      T(kind === 'adv' ? 'كريدي' : kind === 'rem' ? 'عن بعد' : 'عمل', 26, '700', 'rtl', 'center', cols[1].c, by - 1, col);
+      T(wk && i.start || '—', 28, '400', 'ltr', 'center', cols[2].c, by, wk ? P.INK : P.GR);
+      T(wk && i.end || '—', 28, '400', 'ltr', 'center', cols[3].c, by, wk ? P.INK : P.GR);
+      T(wk && i.brk ? i.brk + ' د' : '—', 28, '400', 'rtl', 'center', cols[4].c, by, wk && i.brk ? P.INK : P.GR);
+      T(wk ? hmAr(i.mins) : '—', 28, '400', 'rtl', 'center', cols[5].c, by, wk ? P.INK : P.GR);
+      T((i.type === 'adv' ? '−' : '') + num(i.amount), 28, '700', 'ltr', 'center', cols[6].c, by, col);
+      x.fillStyle = P.GD; x.fillRect(M, y + RH - 2, W - 2 * M, 2); vlines(y, RH); y += RH;
+    });
+    if (y + RH > H - 100) newPage(false);
+    x.fillStyle = P.HB; x.fillRect(M, y, W - 2 * M, RH);
+    T('المجموع', 30, '700', 'rtl', 'right', cols[0].r - 16, y + 44, P.INK);
+    T(hmAr(c.mins), 28, '700', 'rtl', 'center', cols[5].c, y + 44, P.GO);
+    T((net < 0 ? '−' : '') + num(Math.abs(net)), 28, '700', 'ltr', 'center', cols[6].c, y + 44, net < 0 ? P.RD : P.GN);
+    x.fillStyle = P.GD; x.fillRect(M, y + RH - 2, W - 2 * M, 2); vlines(y, RH); y += RH;
+  }
+  const stamp = new Date().toLocaleDateString('ar-u-nu-latn', { day: 'numeric', month: 'long', year: 'numeric' });
+  pages.forEach((p, k) => { x = p.getContext('2d'); T('صفحة ' + (k + 1) + ' من ' + pages.length + ' • أُنشئ في ' + stamp, 24, '400', 'rtl', 'center', W / 2, H - 50, P.GR); });
   return pages.map(p => { const s = atob(p.toDataURL('image/jpeg', 0.92).split(',')[1]), b = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i); return { w: W, h: H, b }; });
 }
 function pdfBytes(pg) {
@@ -795,7 +846,7 @@ $('pOk').onclick = () => {
   $('payDlg').close(); save(); setView('arc'); toast('تم الاستلام ونُقلت الفترة إلى الأرشيف');
 };
 $('arch').onclick = e => {
-  if (e.target.closest('#shareAll')) { askShare('مشاركة كل الدفعات', d => archivesText(d)); return; }
+  if (e.target.closest('#shareAll')) { askShare('مشاركة كل الدفعات', d => archivesText(d), d => ({ cfg: archivesCfg(d), name: 'work-batches-' + today() + '.pdf' })); return; }
   const ed = e.target.closest('.ed1');
   if (ed) { const a = state.archive.find(x => x.id == ed.dataset.id); if (a) openAp(a); return; }
   const s1 = e.target.closest('.sh1');
@@ -993,7 +1044,7 @@ $('icFollow').onchange = () => { icPref.follow = $('icFollow').checked; icSave()
 
 // ---------- مظهر الودجت ----------
 const WG_KEY = 'earnings_wg2';
-const wgPref = { bg: 0, fg: 0, ic: 0, label: true };
+const wgPref = { bg: 0, fg: 0, ic: 0, label: true, on: true };
 try { Object.assign(wgPref, JSON.parse(localStorage.getItem(WG_KEY)) || {}); } catch (e) {}
 function wgApply() {
   try { localStorage.setItem(WG_KEY, JSON.stringify(wgPref)); } catch (e) {}
@@ -1002,12 +1053,16 @@ function wgApply() {
 function updWg() {
   $('wgBox').hidden = !isNative(); $('rowWg').hidden = !isNative();
   [['wgBg', 'bg'], ['wgFg', 'fg'], ['wgIc', 'ic']].forEach(([id, k]) => [...$(id).children].forEach(b => b.classList.toggle('on', +b.dataset.v === wgPref[k])));
-  $('wgLabel').checked = wgPref.label;
+  $('wgLabel').checked = wgPref.label; $('wgOn').checked = wgPref.on !== false;
 }
 [['wgBg', 'bg'], ['wgFg', 'fg'], ['wgIc', 'ic']].forEach(([id, k]) => {
   $(id).onclick = e => { const b = e.target.closest('button'); if (!b) return; wgPref[k] = +b.dataset.v; wgApply(); updWg(); };
 });
 $('wgLabel').onchange = () => { wgPref.label = $('wgLabel').checked; wgApply(); };
+$('wgOn').onchange = () => {
+  wgPref.on = $('wgOn').checked; wgApply();
+  if (!wgPref.on && state.open) toast('الودجت معطّل. دخولك الجاري محفوظ، اخرج من التطبيق.');
+};
 
 // ---------- النسخ الاحتياطي ----------
 const stamp = () => { const d = new Date(); return d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()) + '-' + pad2(d.getHours()) + pad2(d.getMinutes()) + pad2(d.getSeconds()); };

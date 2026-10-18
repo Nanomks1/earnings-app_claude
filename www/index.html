@@ -54,7 +54,6 @@
       <div><label for="sTo" style="margin-top:0">إلى</label><input type="date" id="sTo"></div>
     </div>
     <div class="stats" id="sumOut"></div>
-    <div class="tg"><span>تضمين تفاصيل الأيام في الرسالة</span><input type="checkbox" id="sDetail" checked></div>
     <div class="acts"><button class="ok" id="sShare" type="button"><svg class="ic"><use href="#i-share"/></svg>مشاركة الملخص</button></div>
   </div>
   <div class="card chart" id="chartMonths"></div>
@@ -191,6 +190,7 @@
   <div class="pg" id="pg-wg">
   <div id="wgBox">
   <div class="grp">
+      <div class="rb"><span class="t">تفعيل الودجت<small>عند الإطفاء يظهر «معطّل» ولا يسجّل</small></span><input type="checkbox" id="wgOn" checked></div>
       <div class="fld"><label>خلفية الودجت</label><div class="seg" id="wgBg"><button data-v="0" type="button">حسب الوضع</button><button data-v="1" type="button">شفافة</button><button data-v="2" type="button">بلا خلفية</button><button data-v="3" type="button">داكنة</button></div></div>
       <div class="fld"><label>لون الأيقونة والنص</label><div class="seg" id="wgFg"><button data-v="0" type="button">تلقائي</button><button data-v="1" type="button">أبيض</button><button data-v="2" type="button">أسود</button></div></div>
       <div class="hint">«تلقائي» و«حسب الوضع» يتبعان الوضع الليلي/النهاري للهاتف</div>
@@ -287,11 +287,13 @@
   <h2 id="shTitle">مشاركة</h2>
   <div class="tg"><span>تضمين تفاصيل الأيام</span><input type="checkbox" id="shDetail" checked></div>
   <div class="acts">
-    <button id="shCancel" type="button">إلغاء</button>
-    <button id="shCopy" type="button">نسخ</button>
     <button class="ok" id="shGo" type="button"><svg class="ic"><use href="#i-share"/></svg>مشاركة نص</button>
+    <button id="shPdf" type="button"><svg class="ic"><use href="#i-file"/></svg>مشاركة PDF</button>
   </div>
-  <div class="acts" id="shPdfRow" style="margin-top:8px"><button id="shPdf" type="button"><svg class="ic"><use href="#i-file"/></svg>مشاركة كملف PDF</button></div>
+  <div class="acts" style="margin-top:8px">
+    <button id="shCopy" type="button">نسخ النص</button>
+    <button id="shCancel" type="button">إلغاء</button>
+  </div>
 </dialog>
 
 <div id="lock" hidden>
