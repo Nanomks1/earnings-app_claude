@@ -3,7 +3,7 @@ const BK_DIR = 'EarningsBackup';
 const AUTO_NAME = 'earnings-backup.json';
 const DEF_RATE = 10;
 const DEF_COLOR = '#2c6e69';
-const PALETTE = ['#2c6e69', '#3d6a8f', '#4a7c59', '#6b5b95', '#a0623a', '#a14d63', '#4b5563', '#7a6a3a'];
+const PALETTE = ['#2c6e69', '#3d6a8f', '#4a7c59', '#6b5b95', '#a0623a', '#a14d63', '#4b5563', '#7a6a3a', '#ff5a5f', '#29a9e8', '#8bc34a', '#5c6bc0'];
 let sysCol = ''; try { sysCol = localStorage.getItem('earnings_syscol') || ''; } catch (e) {}
 const WD = ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
 
