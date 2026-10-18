@@ -15,7 +15,7 @@ public class AppIconPlugin extends Plugin {
     public void set(PluginCall call) {
         try {
             String id = call.getString("id");
-            if (id == null || !id.matches("[ab][0-7]")) {
+            if (id == null || !id.matches("[abc]([0-9]|1[01])")) {
                 call.reject("bad id");
                 return;
             }
@@ -23,9 +23,9 @@ public class AppIconPlugin extends Plugin {
             String pkg = getContext().getPackageName();
             pm.setComponentEnabledSetting(new ComponentName(pkg, "com.pd.earnings.Ic_" + id),
                     PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP);
-            String[] styles = {"a", "b"};
+            String[] styles = {"a", "b", "c"};
             for (String s : styles) {
-                for (int i = 0; i < 8; i++) {
+                for (int i = 0; i < 12; i++) {
                     String o = s + i;
                     if (o.equals(id)) continue;
                     pm.setComponentEnabledSetting(new ComponentName(pkg, "com.pd.earnings.Ic_" + o),
