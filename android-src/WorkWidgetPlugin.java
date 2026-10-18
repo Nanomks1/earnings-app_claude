@@ -65,6 +65,7 @@ public class WorkWidgetPlugin extends Plugin {
         e.putInt("wFg2", call.getInt("fg", 0));
         e.putInt("wIc", call.getInt("ic", 0));
         e.putBoolean("wLabel", Boolean.TRUE.equals(call.getBoolean("label", true)));
+        e.putBoolean("wOn", !Boolean.FALSE.equals(call.getBoolean("on", true)));
         e.commit();
         WorkWidgetProvider.refreshAll(getContext());
         call.resolve();

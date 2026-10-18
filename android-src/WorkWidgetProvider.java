@@ -77,6 +77,20 @@ public class WorkWidgetProvider extends AppWidgetProvider {
         long armed = p.getLong("armedAt", 0);
         boolean arm = armed > 0 && System.currentTimeMillis() - armed <= ARM_MS;
         RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.work_widget);
+        if (!p.getBoolean("wOn", true)) {
+            // الودجت معطّل: رمادي بلا استجابة للمس؛ الدخول الجاري يبقى محفوظًا
+            int[] oi = {R.id.work_w_icon_a, R.id.work_w_icon_w, R.id.work_w_icon_k};
+            int[] ot = {R.id.work_w_title_a, R.id.work_w_title_w, R.id.work_w_title_k};
+            for (int k = 0; k < 3; k++) {
+                v.setViewVisibility(oi[k], View.GONE);
+                v.setViewVisibility(ot[k], k == 0 ? View.VISIBLE : View.GONE);
+            }
+            v.setTextViewText(ot[0], "معطّل");
+            v.setTextColor(ot[0], 0xFF9E9E9E);
+            v.setInt(R.id.work_w_root, "setBackgroundResource", R.drawable.work_widget_bg_dark);
+            m.updateAppWidget(id, v);
+            return;
+        }
         int bg = p.getInt("wBg2", 0);
         int fg = arm ? 1 : p.getInt("wFg2", 0);
         int set = p.getInt("wIc", 0);
@@ -134,6 +148,10 @@ public class WorkWidgetProvider extends AppWidgetProvider {
         }
         if (!ACT.equals(i.getAction())) return;
         SharedPreferences p = prefs(c);
+        if (!p.getBoolean("wOn", true)) {
+            refreshAll(c);
+            return;
+        }
         final long now = System.currentTimeMillis();
         long armed = p.getLong("armedAt", 0);
         if (armed > 0 && now - armed <= ARM_MS) {
