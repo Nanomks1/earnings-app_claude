@@ -4,6 +4,7 @@ const AUTO_NAME = 'earnings-backup.json';
 const DEF_RATE = 10;
 const DEF_COLOR = '#2c6e69';
 const PALETTE = ['#2c6e69', '#3d6a8f', '#4a7c59', '#6b5b95', '#a0623a', '#a14d63', '#4b5563', '#7a6a3a'];
+let sysCol = ''; try { sysCol = localStorage.getItem('earnings_syscol') || ''; } catch (e) {}
 const WD = ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
 
 function norm(d) {
@@ -18,6 +19,7 @@ function norm(d) {
   s.carry = Number(d.carry) || 0;
   s.forgetH = d.forgetH === undefined ? 12 : Math.max(0, Math.min(48, Math.round(Number(d.forgetH)) || 0));
   s.fs = [0, 1, 2].includes(Number(d.fs)) ? Number(d.fs) : 0;
+  s.sys = d.sys === true;
   if (/^#[0-9a-f]{6}$/i.test(d.color || '')) s.color = d.color;
   if (d.open && d.open.date && d.open.start) s.open = { date: d.open.date, start: d.open.start };
   const fix = i => {
@@ -128,8 +130,9 @@ const rgb2hex = a => '#' + a.map(v => Math.round(v).toString(16).padStart(2, '0'
 const mix = (a, b, t) => { const x = hex2rgb(a), y = hex2rgb(b); return rgb2hex(x.map((v, i) => v * (1 - t) + y[i] * t)); };
 const lum = h => { const [r, g, b] = hex2rgb(h).map(v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }); return .2126 * r + .7152 * g + .0722 * b; };
 const isDark = () => !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+const effColor = () => (state.sys && /^#[0-9a-f]{6}$/i.test(sysCol)) ? sysCol : (state.color || DEF_COLOR);
 function applyTheme() {
-  const base = state.color || DEF_COLOR, dark = isDark(), [r, g, b] = hex2rgb(base);
+  const base = effColor(), dark = isDark(), [r, g, b] = hex2rgb(base);
   const pri = dark ? mix(base, '#000000', .3) : base;
   const root = document.documentElement.style, set = (k, v) => root.setProperty(k, v);
   set('--pri', pri);
@@ -145,18 +148,29 @@ function applyTheme() {
 }
 if (window.matchMedia) { try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme); } catch (e) {} }
 function buildSwatches() {
-  $('sw').innerHTML = PALETTE.map(c => `<button data-c="${c}" style="background:${c}" class="${c.toLowerCase() === state.color.toLowerCase() ? 'sel' : ''}" aria-label="لون"></button>`).join('')
-    + `<input type="color" id="colCustom" value="${state.color}" aria-label="لون مخصص">`;
+  const sysB = sysCol ? `<button data-sys="1" style="background:linear-gradient(135deg,${sysCol} 55%,${mix(sysCol, '#ffffff', .6)} 55%)" class="${state.sys ? 'sel' : ''}" aria-label="ألوان النظام"></button>` : '';
+  $('sw').innerHTML = sysB + PALETTE.map(c => `<button data-c="${c}" style="background:${c}" class="${!state.sys && c.toLowerCase() === state.color.toLowerCase() ? 'sel' : ''}" aria-label="لون"></button>`).join('')
+    + `<input type="color" id="colCustom" value="${state.color}" aria-label="لون مخصص">`
+    + (sysCol ? `<div class="hint" style="width:100%;margin:8px 0 0">الدائرة الأولى: ألوان النظام (تتبع الخلفية)${state.sys ? ' — مفعّلة' : ''}</div>` : '');
 }
 $('sw').onclick = e => {
   const b = e.target.closest('button'); if (!b) return;
-  state.color = b.dataset.c; applyTheme(); buildSwatches(); localStorage.setItem(KEY, JSON.stringify(state));
+  if (b.dataset.sys) state.sys = true; else { state.sys = false; state.color = b.dataset.c; }
+  applyTheme(); buildSwatches(); localStorage.setItem(KEY, JSON.stringify(state));
 };
 $('sw').addEventListener('input', e => {
   if (e.target.id !== 'colCustom') return;
-  state.color = e.target.value; applyTheme(); localStorage.setItem(KEY, JSON.stringify(state));
+  state.sys = false; state.color = e.target.value; applyTheme(); localStorage.setItem(KEY, JSON.stringify(state));
   [...document.querySelectorAll('#sw button')].forEach(b => b.classList.remove('sel'));
 });
+async function refreshSysColor() {
+  const P = nplug('AppIcon'); if (!P || !P.sysColor) return;
+  try {
+    const h = String((await P.sysColor()).hex || '').toLowerCase();
+    const ok = /^#[0-9a-f]{6}$/.test(h) ? h : '';
+    if (ok !== sysCol) { sysCol = ok; try { localStorage.setItem('earnings_syscol', ok); } catch (e) {} buildSwatches(); if (state.sys) applyTheme(); }
+  } catch (e) {}
+}
 
 // ---------- العرض ----------
 const monday = s => { const d = dt(s); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return iso(d); };
@@ -1026,7 +1040,7 @@ function nearestColor(hex) {
 let icTimer;
 function iconSync() {
   if (!isNative()) return;
-  if (icPref.follow) icPref.idx = nearestColor(state.color || DEF_COLOR);
+  if (icPref.follow) icPref.idx = nearestColor(effColor());
   const id = icPref.style + icPref.idx;
   if (icPref.applied === id) return;
   clearTimeout(icTimer);
@@ -1328,7 +1342,7 @@ async function pullWidget() { // يستلم ما سجّله الودجت وهو 
   if (keys.length) setTimeout(() => { try { const p = W.ackEvents({ keys }); if (p && p.catch) p.catch(() => {}); } catch (e) {} }, 8000);
   widgetReady = true; syncWidget(); foregroundChecks();
 }
-document.addEventListener('visibilitychange', () => { if (!document.hidden) pullWidget(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { pullWidget(); refreshSysColor(); } });
 (function () { const A = plugin('App'); if (A && A.addListener) A.addListener('appStateChange', st => { if (st && st.isActive) pullWidget(); }); })();
 
 // ---------- تنبيهات: نسخة احتياطية قديمة + نسيان الخروج ----------
@@ -1378,6 +1392,7 @@ render();
 showLock();
 checkBio().then(tryBio);
 pullWidget();
+refreshSysColor();
 
 // ---------- تتبع الواي فاي ----------
 let wfOnSaved = null, wfReturn = false, wfAll = [], wfMerge = {}, wfWork = [];
