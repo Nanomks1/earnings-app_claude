@@ -1459,3 +1459,4 @@ async function wfBadge() {
   } catch (e) { el.hidden = true; }
 }
 $('wfCard').onclick = () => $('wfSugOpen').onclick();
+setInterval(() => { if (!document.hidden) wfBadge(); }, 60000); // تحديث البطاقة والتطبيق مفتوح
