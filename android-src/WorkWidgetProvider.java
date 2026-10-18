@@ -27,6 +27,17 @@ public class WorkWidgetProvider extends AppWidgetProvider {
         return c.getSharedPreferences("work_widget", Context.MODE_PRIVATE);
     }
 
+    // رمز سرّي ثابت يُرفق بنيّة الضغط، فلا يستطيع تطبيق آخر قلب الدخول/الخروج
+    static String tok(Context c) {
+        SharedPreferences p = prefs(c);
+        String t = p.getString("tok", "");
+        if (t.isEmpty()) {
+            t = java.util.UUID.randomUUID().toString();
+            p.edit().putString("tok", t).commit();
+        }
+        return t;
+    }
+
     static String fmt(String pattern, long t) {
         return new SimpleDateFormat(pattern, Locale.US).format(new Date(t));
     }
@@ -117,6 +128,7 @@ public class WorkWidgetProvider extends AppWidgetProvider {
         v.setInt(R.id.work_w_root, "setBackgroundResource", bgRes);
         Intent i = new Intent(c, WorkWidgetProvider.class);
         i.setAction(ACT);
+        i.putExtra("tok", tok(c));
         PendingIntent pi = PendingIntent.getBroadcast(c, 0, i, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         v.setOnClickPendingIntent(R.id.work_w_root, pi);
         m.updateAppWidget(id, v);
@@ -147,6 +159,10 @@ public class WorkWidgetProvider extends AppWidgetProvider {
             return;
         }
         if (!ACT.equals(i.getAction())) return;
+        if (!tok(c).equals(i.getStringExtra("tok"))) {
+            refreshAll(c);
+            return;
+        }
         SharedPreferences p = prefs(c);
         if (!p.getBoolean("wOn", true)) {
             refreshAll(c);
