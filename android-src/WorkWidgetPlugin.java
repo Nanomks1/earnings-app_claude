@@ -7,11 +7,15 @@ import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import java.util.HashSet;
+import org.json.JSONArray;
 import org.json.JSONException;
+import org.json.JSONObject;
 
 @CapacitorPlugin(name = "WorkWidget")
 public class WorkWidgetPlugin extends Plugin {
 
+    // يُرجع الأحداث دون مسحها؛ يمسحها التطبيق لاحقًا بـ ackEvents بعد التأكد من حفظها
     @PluginMethod
     public void takeEvents(PluginCall call) {
         synchronized (WorkWidgetProvider.class) {
@@ -22,11 +26,36 @@ public class WorkWidgetPlugin extends Plugin {
             } catch (JSONException e) {
                 arr = new JSArray();
             }
-            p.edit().putString("events", "[]").commit();
             JSObject o = new JSObject();
             o.put("events", arr);
             call.resolve(o);
         }
+    }
+
+    @PluginMethod
+    public void ackEvents(PluginCall call) {
+        synchronized (WorkWidgetProvider.class) {
+            SharedPreferences p = WorkWidgetProvider.prefs(getContext());
+            HashSet<String> ks = new HashSet<String>();
+            JSArray ka = call.getArray("keys");
+            if (ka != null) {
+                for (int i = 0; i < ka.length(); i++) ks.add(ka.optString(i));
+            }
+            try {
+                JSONArray cur = new JSONArray(p.getString("events", "[]"));
+                JSONArray keep = new JSONArray();
+                for (int i = 0; i < cur.length(); i++) {
+                    JSONObject o = cur.getJSONObject(i);
+                    String t = o.optString("t");
+                    String k = t + ":" + ("out".equals(t) ? o.optLong("endTs") : o.optLong("startTs"));
+                    if (!ks.contains(k)) keep.put(o);
+                }
+                p.edit().putString("events", keep.toString()).commit();
+            } catch (JSONException e) {
+                // لا شيء
+            }
+        }
+        call.resolve();
     }
 
     @PluginMethod
