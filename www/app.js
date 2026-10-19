@@ -1405,6 +1405,7 @@ const wfMarkDone = keys => { const s = wfDoneSet(); keys.forEach(k => s.add(k));
 const wfIsDone = (x, done) => x.keys.every(k => done.has(k));
 const wfSkipSet = () => { try { return new Set(JSON.parse(localStorage.getItem('earnings_wf_skip')) || []); } catch (e) { return new Set(); } };
 const wfMarkSkip = keys => { const s = wfSkipSet(); keys.forEach(k => s.add(k)); try { localStorage.setItem('earnings_wf_skip', JSON.stringify([...s].slice(-400))); } catch (e) {} };
+const wfSet = c => { let l = []; try { l = JSON.parse(c.workList || '[]'); } catch (e) {} if (!l.length && (c.workSsid || '').trim()) l = [c.workSsid]; return new Set(l.map(v => String(v).trim()).filter(Boolean)); };
 const wfIsSkip = (x, sk) => { const s = sk || wfSkipSet(); return x.keys.every(k => s.has(k)); };
 
 async function wfCfgShow() {
@@ -1413,8 +1414,8 @@ async function wfCfgShow() {
   let c; try { c = await W.getConfig(); } catch (e) { return; }
   $('wfOn').checked = !!c.on; $('wfRootChk').checked = !!c.root;
   $('wfRootChk').disabled = !c.on; $('wfRootRow').style.opacity = c.on ? '' : '.5';
-  const ws = (c.workSsid || '').trim();
-  $('wfInfo').innerHTML = 'شبكة العمل: ' + (ws ? esc(ws) : 'غير محدّدة') + (c.on && !c.root ? '<br>الروت مطفأ: لا يمكن معرفة اسم الشبكة، فتُسجَّل الأحداث بلا اسم.' : '') + (c.on && c.root && !ws ? '<br>اتصل بشبكة العمل ثم اضغط «اعتمد الشبكة الحالية».' : '') + (c.on ? '<br><small>آخر حدث من النظام: ' + (c.cbT ? wfHM(c.cbT) + ' (' + c.cbN + ')' : 'لا شيء') + '</small>' : '');
+  const wl = [...wfSet(c)], ws = wl.length;
+  $('wfInfo').innerHTML = 'شبكات العمل: ' + (ws ? wl.map(n => '<span style="display:inline-flex;align-items:center;gap:6px;border:1px solid var(--bd);border-radius:14px;padding:2px 10px;margin:2px">' + esc(n) + '<button type="button" class="wfx" data-ws="' + esc(n) + '" aria-label="حذف" style="background:none;border:0;color:inherit;padding:0 2px;font-size:14px">✕</button></span>').join(' ') : 'غير محدّدة') + (c.on && !c.root ? '<br>الروت مطفأ: لا يمكن معرفة اسم الشبكة، فتُسجَّل الأحداث بلا اسم.' : '') + (c.on && c.root && !ws ? '<br>اتصل بشبكة العمل ثم اضغط «أضف الشبكة الحالية».' : '') + (c.on ? '<br><small>آخر حدث من النظام: ' + (c.cbT ? wfHM(c.cbT) + ' (' + c.cbN + ')' : 'لا شيء') + '</small>' : '');
 }
 $('wfOn').onchange = async () => {
   const W = nplug('WifiTrack'), v = $('wfOn').checked;
@@ -1430,10 +1431,16 @@ $('wfRootChk').onchange = async () => {
 };
 $('wfMark').onclick = async () => {
   const W = nplug('WifiTrack'); if (!W) return toast('متاح في التطبيق فقط');
-  try { const r = await W.markWork(); toast('اعتُمدت الشبكة: ' + String(r.ssid).trim()); }
-  catch (e) { const m = (e && e.message) || e; toast(m === 'root-off' ? 'فعّل استعمال الروت أولًا' : m === 'no-wifi' ? 'لا يوجد اتصال واي فاي الآن' : 'تعذرت القراءة'); }
+  try { const r = await W.markWork(); toast('أُضيفت الشبكة: ' + String(r.ssid).trim()); }
+  catch (e) { const m = (e && e.message) || e; toast(m === 'root-off' ? 'فعّل استعمال الروت أولًا' : m === 'no-wifi' ? 'لا يوجد اتصال واي فاي الآن' : m === 'full' ? 'الحد الأقصى 6 شبكات' : 'تعذرت القراءة'); }
   wfCfgShow();
 };
+$('wfInfo').addEventListener('click', async e => {
+  const b = e.target.closest('.wfx'); if (!b) return;
+  const W = nplug('WifiTrack'); if (!W) return;
+  try { await W.removeWork({ ssid: b.dataset.ws }); toast('حُذفت الشبكة'); } catch (x) { toast('تعذر الحذف'); }
+  wfCfgShow();
+});
 $('wfBat').onclick = async () => {
   const W = nplug('WifiTrack'); if (!W) return toast('متاح في التطبيق فقط');
   try { await W.batteryExempt(); toast('استُثني التطبيق من توفير البطارية'); }
@@ -1445,7 +1452,7 @@ $('wfClear').onclick = async () => {
   try { await W.clearEvents(); localStorage.removeItem('earnings_wf_done'); localStorage.removeItem('earnings_wf_skip'); toast('تم المسح'); wfBadge(); } catch (e) { toast('تعذر المسح'); }
 };
 
-function wfSessions(ev, now) {
+function wfSessions(ev, now, ws) {
   const a = ev.slice().sort((x, y) => x.t - y.t), raw = []; let cur = null;
   for (const e of a) {
     if (e.k === 'c') { if (cur) raw.push({ ...cur, broken: true }); cur = { s: e.t, e: null, ssid: e.s || '', l: e.l === 1 }; }
@@ -1456,7 +1463,7 @@ function wfSessions(ev, now) {
   for (const x of raw) {
     if (x.broken) continue;
     const p = out[out.length - 1];
-    if (p && !p.open && p.e !== null && x.s - p.e < WF_GAP && p.ssid === x.ssid) { p.e = x.e; p.open = !!x.open; p.ea = x.ea; p.keys.push(x.s); p.parts++; }
+    if (p && !p.open && p.e !== null && x.s - p.e < WF_GAP && (p.ssid === x.ssid || (ws && ws.has(p.ssid.trim()) && ws.has(x.ssid.trim())))) { p.e = x.e; p.open = !!x.open; p.ea = x.ea; p.keys.push(x.s); p.parts++; }
     else out.push({ ...x, keys: [x.s], parts: 1, open: !!x.open });
   }
   out.forEach(x => { x.pend = x.e !== null && !x.open && now - x.e < WF_GAP; });
@@ -1495,15 +1502,15 @@ async function wfRender() {
   if (!W) { box.textContent = 'متاح في التطبيق فقط'; return; }
   let cfg, ev;
   try { cfg = await W.getConfig(); ev = JSON.parse((await W.getEvents()).json || '[]'); } catch (e) { box.textContent = 'تعذرت قراءة السجل'; return; }
-  const now = Date.now(), done = wfDoneSet(), ws = (cfg.workSsid || '').trim();
-  wfAll = wfSessions(ev, now); wfMerge = {};
-  const work = wfAll.filter(x => x.ssid && ws && x.ssid.trim() === ws), unk = wfAll.filter(x => !x.ssid);
+  const now = Date.now(), done = wfDoneSet(), ws = wfSet(cfg);
+  wfAll = wfSessions(ev, now, ws); wfMerge = {};
+  const work = wfAll.filter(x => x.ssid && ws.has(x.ssid.trim())), unk = wfAll.filter(x => !x.ssid);
   let h = '';
   if (!cfg.on) h += '<div class="info">التتبع مطفأ. فعّله من إعدادات الواي فاي.</div>';
-  else if (cfg.root && !ws) h += '<div class="info">لم تُعتمد شبكة العمل بعد. اتصل بها ثم اضغط «اعتمد الشبكة الحالية» في إعدادات الواي فاي.</div>';
+  else if (cfg.root && !ws.size) h += '<div class="info">لم تُضَف شبكة عمل بعد. اتصل بها ثم اضغط «أضف الشبكة الحالية» في إعدادات الواي فاي.</div>';
   wfWork = work;
   const w = wfBlock(work, done);
-  h += w || (cfg.on && (ws || !cfg.root) && !unk.length ? '<div class="info">لا توجد فترات بعد.</div>' : '');
+  h += w || (cfg.on && (ws.size || !cfg.root) && !unk.length ? '<div class="info">لا توجد فترات بعد.</div>' : '');
   const ign = wfIgnorable();
   if (ign.length) h += '<button type="button" data-wfall="1" data-lbl="تجاهل الكل (' + ign.length + ')" style="width:100%;height:44px;border-radius:14px;border:1px solid var(--bd);background:var(--card2);color:var(--mut);margin:0 0 10px">تجاهل الكل (' + ign.length + ')</button>';
   if (unk.length) h += '<details style="margin-top:6px"><summary>شبكات غير محدّدة (' + unk.length + ')</summary>' + wfBlock(unk, done) + '</details>';
@@ -1535,10 +1542,10 @@ async function wfBadge() {
   const el = $('wfCard'); if (!el) return;
   const W = nplug('WifiTrack'); if (!W) { el.hidden = true; return; }
   try {
-    const cfg = await W.getConfig(), ws = (cfg.workSsid || '').trim();
-    if (!cfg.on || !ws) { el.hidden = true; return; }
+    const cfg = await W.getConfig(), ws = wfSet(cfg);
+    if (!cfg.on || !ws.size) { el.hidden = true; return; }
     const ev = JSON.parse((await W.getEvents()).json || '[]'), done = wfDoneSet(), sk = wfSkipSet(), now = Date.now();
-    const n = wfSessions(ev, now).filter(x => x.ssid && x.ssid.trim() === ws && !x.open && !x.pend && now - x.s < 14 * 864e5 && !wfIsDone(x, done) && !wfIsSkip(x, sk)).length;
+    const n = wfSessions(ev, now, ws).filter(x => x.ssid && ws.has(x.ssid.trim()) && !x.open && !x.pend && now - x.s < 14 * 864e5 && !wfIsDone(x, done) && !wfIsSkip(x, sk)).length;
     el.hidden = !n;
     if (n) el.textContent = 'فترات واي فاي بانتظار المراجعة: ' + n + '. اضغط للمراجعة.';
   } catch (e) { el.hidden = true; }
