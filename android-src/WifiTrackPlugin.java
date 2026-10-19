@@ -13,6 +13,28 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 @CapacitorPlugin(name = "WifiTrack")
 public class WifiTrackPlugin extends Plugin {
 
+    // قائمة شبكات العمل (حتى 6)؛ الشبكة المعتمدة قديمًا تنتقل تلقائيًا إلى القائمة
+    static java.util.ArrayList<String> workList(SharedPreferences s) {
+        java.util.ArrayList<String> l = new java.util.ArrayList<String>();
+        try {
+            org.json.JSONArray a = new org.json.JSONArray(s.getString("work_list", "[]"));
+            for (int i = 0; i < a.length(); i++) {
+                String v = a.optString(i, "").trim();
+                if (!v.isEmpty() && !l.contains(v)) l.add(v);
+            }
+        } catch (Exception e) {
+        }
+        if (l.isEmpty()) {
+            String w = s.getString("work_ssid", "").trim();
+            if (!w.isEmpty()) l.add(w);
+        }
+        return l;
+    }
+
+    static String listJson(java.util.ArrayList<String> l) {
+        return new org.json.JSONArray(l).toString();
+    }
+
     @PluginMethod
     public void getConfig(PluginCall call) {
         SharedPreferences s = WifiTracker.prefs(getContext());
@@ -21,6 +43,7 @@ public class WifiTrackPlugin extends Plugin {
         o.put("root", s.getBoolean("root", false));
         o.put("workSsid", s.getString("work_ssid", ""));
         o.put("workBssid", s.getString("work_bssid", ""));
+        o.put("workList", listJson(workList(s)));
         o.put("state", s.getString("state", "d"));
         o.put("cbN", s.getInt("cb_n", 0));
         o.put("cbT", (double) s.getLong("cb_t", 0));
@@ -110,13 +133,43 @@ public class WifiTrackPlugin extends Plugin {
                     call.reject("no-wifi");
                     return;
                 }
-                WifiTracker.prefs(c).edit().putString("work_ssid", r[0]).putString("work_bssid", r[1]).commit();
+                String name = r[0] == null ? "" : r[0].trim();
+                if (name.isEmpty()) {
+                    call.reject("no-wifi");
+                    return;
+                }
+                SharedPreferences ws = WifiTracker.prefs(c);
+                java.util.ArrayList<String> wl = workList(ws);
+                if (!wl.contains(name)) {
+                    if (wl.size() >= 6) {
+                        call.reject("full");
+                        return;
+                    }
+                    wl.add(name);
+                }
+                ws.edit().putString("work_list", listJson(wl)).putString("work_ssid", name).putString("work_bssid", r[1]).commit();
                 JSObject o = new JSObject();
                 o.put("ssid", r[0]);
                 o.put("bssid", r[1]);
                 call.resolve(o);
             }
         }).start();
+    }
+
+    @PluginMethod
+    public void removeWork(PluginCall call) {
+        String ssid = call.getString("ssid");
+        if (ssid == null) {
+            call.reject("bad");
+            return;
+        }
+        SharedPreferences ws = WifiTracker.prefs(getContext());
+        java.util.ArrayList<String> wl = workList(ws);
+        wl.remove(ssid.trim());
+        SharedPreferences.Editor ed = ws.edit().putString("work_list", listJson(wl));
+        if (wl.isEmpty()) ed.putString("work_ssid", "").putString("work_bssid", "");
+        ed.commit();
+        call.resolve();
     }
 
     @PluginMethod
