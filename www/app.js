@@ -161,7 +161,7 @@ function applyTheme() {
   const pri = dark ? mix(base, '#000000', .3) : base;
   const root = document.documentElement.style, set = (k, v) => root.setProperty(k, v);
   set('--pri', pri);
-  set('--fs', [1, 1.1, 1.2][state.fs || 0]);
+  set('--fs', [1, 1.1, 1.15][state.fs || 0]);
   set('--pri2', dark ? mix(base, '#000000', .55) : mix(base, '#ffffff', .22));
   set('--onpri', lum(pri) > .5 ? '#10201f' : '#ffffff');
   set('--pritx', dark ? mix(base, '#ffffff', .45) : base);
@@ -1029,7 +1029,7 @@ $('pad').onclick = async e => {
 };
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) hiddenAt = Date.now();
-  else if (state.pin && hiddenAt && Date.now() - hiddenAt > 30000) showLock();
+  else if (state.pin && hiddenAt && Date.now() - hiddenAt > 60000) showLock();
 });
 
 function openPin() {
@@ -1566,8 +1566,8 @@ function wfSessions(ev, now, ws) {
   for (const x of raw) {
     if (x.broken) continue;
     const p = out[out.length - 1];
-    if (p && !p.open && p.e !== null && x.s - p.e < WF_GAP && (p.ssid === x.ssid || (ws && ws.has(p.ssid.trim()) && ws.has(x.ssid.trim())))) { p.e = x.e; p.open = !!x.open; p.ea = x.ea; p.keys.push(x.s); p.parts++; }
-    else out.push({ ...x, keys: [x.s], parts: 1, open: !!x.open });
+    if (p && !p.open && p.e !== null && x.s - p.e < WF_GAP && (p.ssid === x.ssid || (ws && ws.has(p.ssid.trim()) && ws.has(x.ssid.trim())))) { p.e = x.e; p.open = !!x.open; p.ea = x.ea; p.keys.push(x.s); p.parts++; p.ps.push({ s: x.s, e: x.e }); }
+    else out.push({ ...x, keys: [x.s], parts: 1, ps: [{ s: x.s, e: x.e }], open: !!x.open });
   }
   out.forEach(x => { x.pend = x.e !== null && !x.open && now - x.e < WF_GAP; });
   return out;
@@ -1577,8 +1577,9 @@ function wfRow(x, done) {
   const t = (x.l ? '~' : '') + wfHM(x.s) + ' – ' + (x.open ? '…' : (x.ea ? '~' : '') + wfHM(x.e));
   let sub = x.open ? 'متصل الآن' : x.pend ? 'ينتظر تأكيد الخروج' : fmtDur((x.e - x.s) / 60000);
   if (x.parts > 1) sub += ' • دُمجت ' + x.parts + ' فترات';
+  const pd = x.parts > 1 && x.ps ? '<details style="margin-top:4px;color:var(--mut);font-size:calc(13px*var(--fs,1))"><summary>تفاصيل الفترات</summary>' + x.ps.map((q, i) => '<div style="padding:2px 0">' + (i + 1) + '. <span dir="ltr">' + wfHM(q.s) + ' – ' + (q.e == null ? '…' : wfHM(q.e)) + '</span>' + (q.e == null ? '' : ' • ' + esc(fmtDur((q.e - q.s) / 60000))) + '</div>').join('') + '</details>' : '';
   const btn = dn ? '<span style="color:var(--mut)">أُضيفت</span>' : sk ? '<span style="color:var(--mut)">تُجوهلت</span>' : (x.open || x.pend) ? '' : '<span class="acts" style="margin:0"><button class="ok" type="button" data-wfs="' + x.s + '">أضف</button><button type="button" data-wfk="' + x.s + '" style="flex:none;padding:0 12px;height:40px;color:var(--mut);font-weight:500">تجاهل</button></span>';
-  return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--bd)' + (dn || sk ? ';opacity:.6' : '') + '"><div style="flex:1"><span dir="ltr" style="font-weight:700">' + t + '</span><div style="color:var(--mut);font-size:calc(13px*var(--fs,1))">' + esc(sub) + '</div></div>' + btn + '</div>';
+  return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--bd)' + (dn || sk ? ';opacity:.6' : '') + '"><div style="flex:1"><span dir="ltr" style="font-weight:700">' + t + '</span><div style="color:var(--mut);font-size:calc(13px*var(--fs,1))">' + esc(sub) + '</div>' + pd + '</div>' + btn + '</div>';
 }
 function wfBlock(list, done) {
   const by = {}; list.forEach(x => { const k = wfYMD(x.s); (by[k] = by[k] || []).push(x); });
