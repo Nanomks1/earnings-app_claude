@@ -7,20 +7,36 @@ const PALETTE = ['#2c6e69', '#3d6a8f', '#4a7c59', '#6b5b95', '#a0623a', '#a14d63
 let sysCol = ''; try { sysCol = localStorage.getItem('earnings_syscol') || ''; } catch (e) {}
 const WD = ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
 
+// مخطط الإعدادات: مكان واحد لكل إعداد (القيمة الافتراضية + التحقق). أي إعداد جديد يُضاف هنا فقط.
+const SETTINGS = {
+  currency: { def: 'DH', fix: v => typeof v === 'string' ? v : 'DH' },
+  rate: { def: DEF_RATE, fix: v => Number(v) > 0 ? Number(v) : DEF_RATE },
+  auto: { def: true, fix: v => v !== false },
+  pin: { def: '', fix: v => typeof v === 'string' ? v : '' },
+  bio: { def: false, fix: v => v === true },
+  search: { def: true, fix: v => v !== false },
+  color: { def: DEF_COLOR, fix: v => /^#[0-9a-f]{6}$/i.test(v || '') ? v : DEF_COLOR },
+  forgetH: { def: 12, fix: v => v === undefined ? 12 : Math.max(0, Math.min(48, Math.round(Number(v)) || 0)) },
+  fs: { def: 0, fix: v => [0, 1, 2].includes(Number(v)) ? Number(v) : 0 },
+  sys: { def: false, fix: v => v === true }
+};
+// تفضيلات الجهاز التي تدخل النسخة الاحتياطية (مظهر الودجت، شكل الأيقونة، خيار التفصيل في المشاركة)
+const PREFS_DEF = () => ({ wg: { bg: 0, fg: 0, ic: 0, label: true, on: true }, ic: { style: 'a', follow: true }, sd: true });
+const inSet = (v, a) => a.includes(Number(v)) ? Number(v) : 0;
+function normPrefs(p) {
+  const o = PREFS_DEF(); if (!p || typeof p !== 'object') return o;
+  const w = p.wg && typeof p.wg === 'object' ? p.wg : {}, c = p.ic && typeof p.ic === 'object' ? p.ic : {};
+  o.wg = { bg: inSet(w.bg, [0, 1, 2, 3]), fg: inSet(w.fg, [0, 1, 2]), ic: inSet(w.ic, [0, 1, 2]), label: w.label !== false, on: w.on !== false };
+  o.ic = { style: ['a', 'b', 'c'].includes(c.style) ? c.style : 'a', follow: c.follow !== false };
+  o.sd = p.sd !== false;
+  return o;
+}
 function norm(d) {
-  const s = { v: 5, items: [], archive: [], carry: 0, currency: 'DH', rate: DEF_RATE, auto: true, pin: '', bio: false, search: true, color: DEF_COLOR, open: null, forgetH: 12, fs: 0 };
+  const s = { v: 5, items: [], archive: [], carry: 0, open: null, prefs: normPrefs(d && d.prefs) };
+  for (const k in SETTINGS) s[k] = SETTINGS[k].def;
   if (!d || typeof d !== 'object') return s;
-  if (typeof d.currency === 'string') s.currency = d.currency;
-  if (Number(d.rate) > 0) s.rate = Number(d.rate);
-  s.auto = d.auto !== false;
-  s.pin = typeof d.pin === 'string' ? d.pin : '';
-  s.bio = d.bio === true;
-  s.search = d.search !== false;
+  for (const k in SETTINGS) s[k] = SETTINGS[k].fix(d[k]);
   s.carry = Number(d.carry) || 0;
-  s.forgetH = d.forgetH === undefined ? 12 : Math.max(0, Math.min(48, Math.round(Number(d.forgetH)) || 0));
-  s.fs = [0, 1, 2].includes(Number(d.fs)) ? Number(d.fs) : 0;
-  s.sys = d.sys === true;
-  if (/^#[0-9a-f]{6}$/i.test(d.color || '')) s.color = d.color;
   if (d.open && d.open.date && d.open.start) s.open = { date: d.open.date, start: d.open.start };
   const fix = i => {
     const o = { ...i };
@@ -45,7 +61,12 @@ function norm(d) {
   return s;
 }
 let state;
-try { state = norm(JSON.parse(localStorage.getItem(KEY))); } catch (e) { state = norm(null); }
+function legacyPrefs() { // ترحيل لمرة واحدة من المفاتيح القديمة المنفصلة
+  const rd = k => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
+  const ic = rd('earnings_icon') || {};
+  return normPrefs({ wg: rd('earnings_wg2'), ic: { style: ic.style, follow: ic.follow }, sd: localStorage.getItem('earnings_sd') !== '0' });
+}
+try { const raw = JSON.parse(localStorage.getItem(KEY)); state = norm(raw); if (!raw || !raw.prefs) state.prefs = legacyPrefs(); } catch (e) { state = norm(null); }
 let bk = {};
 try { bk = JSON.parse(localStorage.getItem('earnings_bk')) || {}; } catch (e) {}
 const saveBk = () => localStorage.setItem('earnings_bk', JSON.stringify(bk));
@@ -118,6 +139,10 @@ function undoBar(msg, fn) {
 }
 $('undoBtn').onclick = () => { const f = $('undoBar')._fn; hideUndo(); if (f) f(); };
 
+function savePrefs() { // حفظ التفضيلات مع الحالة (فتدخل النسخة الاحتياطية)
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+  if (state.auto) { clearTimeout(bkTimer); bkTimer = setTimeout(autoBackup, 800); }
+}
 function save(noBackup) {
   localStorage.setItem(KEY, JSON.stringify(state));
   render(); syncWidget();
@@ -453,24 +478,25 @@ async function doShare(text) {
   } catch (e) {}
 }
 let pendingShare = null, pendingPdf = null;
+const setSd = d => { if (state.prefs.sd !== d) { state.prefs.sd = d; savePrefs(); } };
 function askShare(title, build, pdf) {
   pendingShare = build; pendingPdf = pdf || null;
   $('shPdf').style.display = pdf ? '' : 'none';
   $('shTitle').textContent = title;
-  $('shDetail').checked = localStorage.getItem('earnings_sd') !== '0';
+  $('shDetail').checked = state.prefs.sd !== false;
   $('shDlg').showModal();
 }
 $('shCancel').onclick = () => $('shDlg').close();
 $('shGo').onclick = async () => {
-  const d = $('shDetail').checked; localStorage.setItem('earnings_sd', d ? '1' : '0');
+  const d = $('shDetail').checked; setSd(d);
   const text = pendingShare(d); $('shDlg').close(); await doShare(text);
 };
 $('shPdf').onclick = async () => {
-  const d = $('shDetail').checked; localStorage.setItem('earnings_sd', d ? '1' : '0');
+  const d = $('shDetail').checked; setSd(d);
   const p = pendingPdf(d); $('shDlg').close(); await sharePdf(p.cfg, p.name);
 };
 $('shCopy').onclick = async () => {
-  const d = $('shDetail').checked; localStorage.setItem('earnings_sd', d ? '1' : '0');
+  const d = $('shDetail').checked; setSd(d);
   const text = pendingShare(d); $('shDlg').close();
   try { await navigator.clipboard.writeText(text); toast('تم نسخ النص'); } catch (e) { toast('تعذر النسخ'); }
 };
@@ -1071,7 +1097,12 @@ $('fsSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return
 const IC_KEY = 'earnings_icon';
 const icPref = { style: 'a', follow: true, idx: 0, applied: 'a0' };
 try { Object.assign(icPref, JSON.parse(localStorage.getItem(IC_KEY)) || {}); } catch (e) {}
-const icSave = () => { try { localStorage.setItem(IC_KEY, JSON.stringify(icPref)); } catch (e) {} };
+Object.assign(icPref, state.prefs.ic);
+const icSave = () => { // idx/applied خاصان بهذا الجهاز؛ النمط والتتبّع فقط يدخلان النسخة الاحتياطية
+  try { localStorage.setItem(IC_KEY, JSON.stringify(icPref)); } catch (e) {}
+  const p = state.prefs.ic;
+  if (p.style !== icPref.style || p.follow !== icPref.follow) { state.prefs.ic = { style: icPref.style, follow: icPref.follow }; savePrefs(); }
+};
 function nearestColor(hex) {
   const t = hex2rgb(hex); let bi = 0, bd = 1e9;
   PALETTE.forEach((p, i) => { const r = hex2rgb(p), d = (r[0] - t[0]) ** 2 + (r[1] - t[1]) ** 2 + (r[2] - t[2]) ** 2; if (d < bd) { bd = d; bi = i; } });
@@ -1097,13 +1128,9 @@ $('icSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return
 $('icFollow').onchange = () => { icPref.follow = $('icFollow').checked; icSave(); iconSync(); };
 
 // ---------- مظهر الودجت ----------
-const WG_KEY = 'earnings_wg2';
-const wgPref = { bg: 0, fg: 0, ic: 0, label: true, on: true };
-try { Object.assign(wgPref, JSON.parse(localStorage.getItem(WG_KEY)) || {}); } catch (e) {}
-function wgApply() {
-  try { localStorage.setItem(WG_KEY, JSON.stringify(wgPref)); } catch (e) {}
-  const W = nplug('WorkWidget'); if (W && W.setStyle) { try { W.setStyle(wgPref); } catch (e) {} }
-}
+const wgPref = state.prefs.wg;
+function wgPush() { const W = nplug('WorkWidget'); if (W && W.setStyle) { try { W.setStyle(wgPref); } catch (e) {} } }
+function wgApply() { savePrefs(); wgPush(); }
 function updWg() {
   $('wgBox').hidden = !isNative(); $('rowWg').hidden = !isNative();
   [['wgBg', 'bg'], ['wgFg', 'fg'], ['wgIc', 'ic']].forEach(([id, k]) => [...$(id).children].forEach(b => b.classList.toggle('on', +b.dataset.v === wgPref[k])));
@@ -1273,6 +1300,11 @@ async function manualBackup() {
   } catch (e) { toast('تعذر الحفظ: تحقق من صلاحية التخزين'); }
 }
 
+function adoptPrefs() { // بعد الاستعادة: طبّق تفضيلات النسخة على الودجت والأيقونة والواجهة
+  Object.assign(wgPref, state.prefs.wg); state.prefs.wg = wgPref;
+  Object.assign(icPref, state.prefs.ic);
+  wgPush(); try { updWg(); updIc(); iconSync(); } catch (e) {}
+}
 async function applyBackup(text) {
   try {
     const d = await readBackup(text);
@@ -1284,10 +1316,10 @@ async function applyBackup(text) {
       catch (e) { if (!confirm('تعذر حفظ نسخة من بياناتك الحالية قبل الاستعادة. متابعة رغم ذلك؟')) return; }
     }
     clearTimeout(bkTimer);
-    const keepPin = state.pin, keepBio = state.bio;
-    state = norm(d); state.bio = keepBio;
+    const keepPin = state.pin, keepBio = state.bio, keepPrefs = state.prefs;
+    state = norm(d); state.bio = keepBio; if (!d.prefs) state.prefs = keepPrefs; // نسخة قديمة بلا تفضيلات: تبقى تفضيلاتك الحالية
     state.pin = keepPin || (typeof d.pin === 'string' ? d.pin : ''); // رمزك الحالي يبقى؛ رمز النسخ القديمة يُؤخذ فقط إن لم يكن عندك رمز
-    applyTheme(); save(true); $('menu').close(); $('filesDlg').close(); toast('تمت الاستعادة');
+    applyTheme(); save(true); adoptPrefs(); $('menu').close(); $('filesDlg').close(); toast('تمت الاستعادة');
   } catch (e) { toast('ملف النسخة غير صالح'); }
 }
 $('bkNow').onclick = manualBackup;
