@@ -213,3 +213,24 @@ details.card .lines{margin-top:12px;border-top:1px dashed var(--bd);padding-top:
 .cs{display:flex;gap:6px;margin:12px 0 0}
 .cs div{flex:1;background:var(--card2);border-radius:12px;padding:8px 4px;text-align:center;font-size:calc(11px*var(--fs,1));color:var(--mut)}
 .cs b{display:block;margin-top:2px;font-size:calc(14px*var(--fs,1));color:var(--text)}
+
+/* منتقي اللون المخصص */
+.cp-prev{height:84px;border-radius:18px;border:1px solid var(--bd);margin:4px 0 6px}
+.cp-r{-webkit-appearance:none;appearance:none;display:block;width:100%;height:30px;margin:0;padding:0;border-radius:15px;border:1px solid var(--bd);direction:ltr;outline:none}
+.cp-r::-webkit-slider-runnable-track{height:28px;background:none;border-radius:14px}
+.cp-r::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;border-radius:50%;background:var(--card);border:4px solid var(--text);box-sizing:border-box}
+#cpH{background:linear-gradient(90deg,#f00,#ff0 17%,#0f0 33%,#0ff 50%,#00f 67%,#f0f 83%,#f00)}
+.cp-hex{display:flex;align-items:center;gap:8px;direction:ltr}
+.cp-hex span{font-size:20px;color:var(--mut)}
+.cp-hex input{flex:1;letter-spacing:2px;text-align:left}
+.sw button.cust{background:conic-gradient(#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)}
+
+/* حركات خفيفة (CSS فقط) */
+#toast{transform:translateY(10px);transition:opacity .25s,transform .25s}
+#toast.on{transform:none}
+#undoBar.on{animation:up .25s ease-out}
+dialog{transition:opacity .18s ease-in,transform .18s ease-in,display .18s allow-discrete,overlay .18s allow-discrete}
+dialog:not([open]){opacity:0;transform:translateY(24px)}
+dialog::backdrop{transition:opacity .18s,display .18s allow-discrete,overlay .18s allow-discrete}
+dialog:not([open])::backdrop{opacity:0}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}

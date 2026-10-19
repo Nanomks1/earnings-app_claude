@@ -175,19 +175,49 @@ if (window.matchMedia) { try { matchMedia('(prefers-color-scheme: dark)').addEve
 function buildSwatches() {
   const sysB = sysCol ? `<button data-sys="1" style="background:linear-gradient(135deg,${sysCol} 55%,${mix(sysCol, '#ffffff', .6)} 55%)" class="${state.sys ? 'sel' : ''}" aria-label="ألوان النظام"></button>` : '';
   $('sw').innerHTML = sysB + PALETTE.map(c => `<button data-c="${c}" style="background:${c}" class="${!state.sys && c.toLowerCase() === state.color.toLowerCase() ? 'sel' : ''}" aria-label="لون"></button>`).join('')
-    + `<input type="color" id="colCustom" value="${state.color}" aria-label="لون مخصص">`
+    + `<button data-custom="1" class="cust ${!state.sys && !PALETTE.some(c => c.toLowerCase() === state.color.toLowerCase()) ? 'sel' : ''}" aria-label="لون مخصص"></button>`
     + (sysCol ? `<div class="hint" style="width:100%;margin:8px 0 0">الدائرة الأولى: ألوان النظام (تتبع الخلفية)${state.sys ? ' — مفعّلة' : ''}</div>` : '');
 }
 $('sw').onclick = e => {
   const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.custom) return openCp();
   if (b.dataset.sys) state.sys = true; else { state.sys = false; state.color = b.dataset.c; }
   applyTheme(); buildSwatches(); localStorage.setItem(KEY, JSON.stringify(state));
 };
-$('sw').addEventListener('input', e => {
-  if (e.target.id !== 'colCustom') return;
-  state.sys = false; state.color = e.target.value; applyTheme(); localStorage.setItem(KEY, JSON.stringify(state));
-  [...document.querySelectorAll('#sw button')].forEach(b => b.classList.remove('sel'));
-});
+// ---------- منتقي اللون المخصص (درجة اللون / التشبّع / السطوع + HEX) ----------
+function hsv2hex(h, s, v) {
+  s /= 100; v /= 100;
+  const f = n => { const k = (n + h / 60) % 6; return v - v * s * Math.max(0, Math.min(k, 4 - k, 1)); };
+  return rgb2hex([f(5) * 255, f(3) * 255, f(1) * 255]);
+}
+function hex2hsv(hex) {
+  const [r, g, b] = hex2rgb(hex).map(x => x / 255), mx = Math.max(r, g, b), d = mx - Math.min(r, g, b);
+  let h = 0; if (d) h = mx === r ? ((g - b) / d + 6) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [Math.round(h * 60) % 360, mx ? Math.round(d / mx * 100) : 0, Math.round(mx * 100)];
+}
+function cpRender(fromHex) {
+  const h = +$('cpH').value, s = +$('cpS').value, v = +$('cpV').value, hex = hsv2hex(h, s, v);
+  $('cpPrev').style.background = hex;
+  $('cpS').style.background = `linear-gradient(90deg,${hsv2hex(h, 0, v)},${hsv2hex(h, 100, v)})`;
+  $('cpV').style.background = `linear-gradient(90deg,${hsv2hex(h, s, 0)},${hsv2hex(h, s, 100)})`;
+  if (!fromHex) $('cpHex').value = hex.slice(1).toUpperCase();
+}
+function openCp() {
+  const c = effColor(), [h, s, v] = hex2hsv(/^#[0-9a-f]{6}$/i.test(c) ? c : DEF_COLOR);
+  $('cpH').value = h; $('cpS').value = s; $('cpV').value = v; cpRender();
+  $('colDlg').showModal();
+}
+['cpH', 'cpS', 'cpV'].forEach(id => { $(id).oninput = () => cpRender(); });
+$('cpHex').oninput = () => {
+  const t = $('cpHex').value.replace(/[^0-9a-f]/gi, '').slice(0, 6); $('cpHex').value = t.toUpperCase();
+  if (t.length === 6) { const [h, s, v] = hex2hsv('#' + t); $('cpH').value = h; $('cpS').value = s; $('cpV').value = v; cpRender(true); }
+};
+$('cpCancel').onclick = () => $('colDlg').close();
+$('cpOk').onclick = () => {
+  const t = $('cpHex').value;
+  state.sys = false; state.color = /^[0-9a-f]{6}$/i.test(t) ? '#' + t.toLowerCase() : hsv2hex(+$('cpH').value, +$('cpS').value, +$('cpV').value);
+  applyTheme(); buildSwatches(); localStorage.setItem(KEY, JSON.stringify(state)); $('colDlg').close();
+};
 async function refreshSysColor() {
   const P = nplug('AppIcon'); if (!P || !P.sysColor) return;
   try {

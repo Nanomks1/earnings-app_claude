@@ -310,6 +310,20 @@
   <div class="acts"><button id="dayWork" type="button">+ يوم عمل</button><button id="dayRemote" type="button">+ عن بعد</button><button id="dayAdv" type="button">+ كريدي</button></div>
   <div class="acts"><button class="ok" id="dayClose" type="button">إغلاق</button></div>
 </dialog>
+<dialog id="colDlg">
+  <h2>لون مخصص</h2>
+  <div id="cpPrev" class="cp-prev"></div>
+  <label>درجة اللون</label><input type="range" id="cpH" class="cp-r" min="0" max="360" step="1">
+  <label>التشبّع</label><input type="range" id="cpS" class="cp-r" min="0" max="100" step="1">
+  <label>السطوع</label><input type="range" id="cpV" class="cp-r" min="0" max="100" step="1">
+  <label>HEX</label>
+  <div class="cp-hex"><span>#</span><input type="text" id="cpHex" maxlength="6" autocomplete="off" spellcheck="false" autocapitalize="characters"></div>
+  <div class="acts">
+    <button id="cpCancel" type="button">إلغاء</button>
+    <button class="ok" id="cpOk" type="button">تطبيق</button>
+  </div>
+</dialog>
+
 <div id="toast" popover="manual"></div>
 <div id="undoBar" popover="manual"><span id="undoMsg"></span><button id="undoBtn" type="button">تراجع</button></div>
 
