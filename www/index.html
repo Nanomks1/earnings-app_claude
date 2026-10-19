@@ -237,8 +237,10 @@
 
 <dialog id="pinDlg">
   <h2>رمز القفل</h2>
-  <div id="pinOldWrap"><label for="pinOld">الرمز الحالي</label><input type="password" id="pinOld" inputmode="numeric" maxlength="4"></div>
-  <label for="pinNew">رمز جديد (4 أرقام)</label>
+  <div id="pinOldWrap"><label for="pinOld">الرمز الحالي</label><input type="password" id="pinOld" inputmode="numeric" maxlength="6"></div>
+  <label>طول الرمز الجديد</label>
+  <div class="seg" id="pinLenSeg"><button data-v="4" type="button" class="on">4 أرقام</button><button data-v="6" type="button">6 أرقام</button></div>
+  <label for="pinNew">رمز جديد</label>
   <input type="password" id="pinNew" inputmode="numeric" maxlength="4">
   <label for="pinNew2">تأكيد الرمز الجديد</label>
   <input type="password" id="pinNew2" inputmode="numeric" maxlength="4">

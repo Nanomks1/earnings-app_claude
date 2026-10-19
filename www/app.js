@@ -907,13 +907,38 @@ $('aOk').onclick = () => {
 };
 
 // ---------- القفل ----------
-async function hashPin(p) {
+// صيغة الرمز المخزّن: p2$طول$ملح$بصمة (PBKDF2 بملح عشوائي). الصيغة القديمة (SHA-256 بملح ثابت) تُقبل وتُرقّى عند أول فتح ناجح.
+const PIN_ITER = 100000;
+const hex = u8 => [...u8].map(x => x.toString(16).padStart(2, '0')).join('');
+const unhex = h => new Uint8Array((h.match(/../g) || []).map(x => parseInt(x, 16)));
+async function pbkdf2Pin(p, salt) {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode('work|' + p), 'PBKDF2', false, ['deriveBits']);
+  return hex(new Uint8Array(await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: PIN_ITER, hash: 'SHA-256' }, base, 256)));
+}
+async function makePin(p) {
   if (window.crypto && crypto.subtle) {
-    const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('work|' + p));
-    return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    return 'p2$' + p.length + '$' + hex(salt) + '$' + await pbkdf2Pin(p, salt);
   }
   return 'x' + p;
 }
+async function legacyHash(p) {
+  if (window.crypto && crypto.subtle) {
+    const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('work|' + p));
+    return hex(new Uint8Array(b));
+  }
+  return 'x' + p;
+}
+async function verifyPin(p, stored) {
+  if (!stored) return false;
+  if (stored.startsWith('p2$')) {
+    const a = stored.split('$');
+    if (a.length !== 4 || !window.crypto || !crypto.subtle) return false;
+    return (await pbkdf2Pin(p, unhex(a[2]))) === a[3];
+  }
+  return (await legacyHash(p)) === stored;
+}
+const pinLen = () => { const m = /^p2\$(\d+)\$/.exec(state.pin || ''); return m ? Math.min(6, Math.max(4, +m[1])) : 4; };
 let entered = '', hiddenAt = 0, pinFail = {};
 try { pinFail = JSON.parse(localStorage.getItem('earnings_pinfail')) || {}; } catch (e) {}
 const savePinFail = () => { try { localStorage.setItem('earnings_pinfail', JSON.stringify(pinFail)); } catch (e) {} };
@@ -921,17 +946,24 @@ const savePinFail = () => { try { localStorage.setItem('earnings_pinfail', JSON.
   const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'];
   $('pad').innerHTML = keys.map((k, n) => k ? `<button data-k="${k}">${k}</button>` : n === 9 ? `<button data-k="bio" id="bioKey" aria-label="بصمة" style="visibility:hidden">${ic('finger')}</button>` : '<span></span>').join('');
 })();
-function drawDots() { [...document.querySelectorAll('#lock .dots span')].forEach((s, i) => s.classList.toggle('on', i < entered.length)); }
+function drawDots() {
+  const box = document.querySelector('#lock .dots'), n = pinLen();
+  if (box.children.length !== n) box.innerHTML = '<span></span>'.repeat(n);
+  [...box.children].forEach((s, i) => s.classList.toggle('on', i < entered.length));
+}
 function showLock() { if (!state.pin) return; entered = ''; drawDots(); bioKeyShow(); $('lock').hidden = false; tryBio(); }
 $('pad').onclick = async e => {
   const b = e.target.closest('button'); if (!b) return;
   const k = b.dataset.k;
   if (k === 'bio') return tryBio();
   if (Date.now() < (pinFail.until || 0)) return toast('محاولات كثيرة. انتظر ' + Math.ceil((pinFail.until - Date.now()) / 1000) + ' ثانية');
-  if (k === '⌫') entered = entered.slice(0, -1); else if (entered.length < 4) entered += k;
+  if (k === '⌫') entered = entered.slice(0, -1); else if (entered.length < pinLen()) entered += k;
   drawDots();
-  if (entered.length === 4) {
-    if (await hashPin(entered) === state.pin) { $('lock').hidden = true; setTimeout(checkForgot, 400); entered = ''; pinFail = {}; savePinFail(); }
+  if (entered.length === pinLen()) {
+    const tried = entered;
+    if (await verifyPin(tried, state.pin)) {
+      if (!state.pin.startsWith('p2$') && window.crypto && crypto.subtle) { try { state.pin = await makePin(tried); save(); } catch (e) {} }
+      $('lock').hidden = true; setTimeout(checkForgot, 400); entered = ''; pinFail = {}; savePinFail(); }
     else {
       pinFail.n = (pinFail.n || 0) + 1;
       if (pinFail.n % 5 === 0) { const sec = Math.min(30 * (pinFail.n / 5), 600); pinFail.until = Date.now() + sec * 1000; toast('5 محاولات خاطئة. انتظر ' + sec + ' ثانية'); }
@@ -947,17 +979,25 @@ document.addEventListener('visibilitychange', () => {
 function openPin() {
   ['pinOld', 'pinNew', 'pinNew2'].forEach(i => $(i).value = '');
   $('pinOldWrap').hidden = !state.pin; $('pinRemove').hidden = !state.pin;
+  $('pinOld').maxLength = 6; setNewLen(state.pin ? pinLen() : 4);
   $('pinDlg').showModal();
 }
 $('pinBtn').onclick = openPin;
 $('pinCancel').onclick = () => $('pinDlg').close();
-async function pinOldOk() { return !state.pin || (await hashPin($('pinOld').value)) === state.pin; }
+async function pinOldOk() { return !state.pin || await verifyPin($('pinOld').value, state.pin); }
+let newLen = 4;
+function setNewLen(n) {
+  newLen = n;
+  [...$('pinLenSeg').children].forEach(b => b.classList.toggle('on', +b.dataset.v === n));
+  ['pinNew', 'pinNew2'].forEach(i => { $(i).maxLength = n; $(i).value = ''; });
+}
+$('pinLenSeg').onclick = e => { const b = e.target.closest('button'); if (b) setNewLen(+b.dataset.v); };
 $('pinSave').onclick = async () => {
   if (!(await pinOldOk())) return toast('الرمز الحالي غير صحيح');
   const a = $('pinNew').value;
-  if (!/^\d{4}$/.test(a)) return toast('الرمز يجب أن يكون 4 أرقام');
+  if (!new RegExp('^\\d{' + newLen + '}$').test(a)) return toast('الرمز يجب أن يكون ' + newLen + ' أرقام');
   if (a !== $('pinNew2').value) return toast('التأكيد غير مطابق');
-  state.pin = await hashPin(a); $('pinDlg').close(); save(); updPinLabel(); toast('تم حفظ الرمز');
+  state.pin = await makePin(a); $('pinDlg').close(); save(); updPinLabel(); toast('تم حفظ الرمز');
 };
 $('pinRemove').onclick = async () => {
   if (!(await pinOldOk())) return toast('الرمز الحالي غير صحيح');
@@ -1080,7 +1120,8 @@ $('wgOn').onchange = () => {
 
 // ---------- النسخ الاحتياطي ----------
 const stamp = () => { const d = new Date(); return d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()) + '-' + pad2(d.getHours()) + pad2(d.getMinutes()) + pad2(d.getSeconds()); };
-const payload = () => JSON.stringify({ app: 'earnings', version: 5, savedAt: new Date().toISOString(), ...state }, null, 1);
+// الرمز والبصمة لا يدخلان ملفات النسخ الاحتياطي أبدًا
+const payload = () => { const { pin, bio, ...rest } = state; return JSON.stringify({ app: 'earnings', version: 5, savedAt: new Date().toISOString(), ...rest }, null, 1); };
 const fsWrite = (FS, path, data) => FS.writeFile({ path, data, directory: 'DOCUMENTS', encoding: 'utf8', recursive: true });
 const docsAlt = {};
 let warned = false, warnedAuto = false;
@@ -1245,7 +1286,7 @@ async function applyBackup(text) {
     clearTimeout(bkTimer);
     const keepPin = state.pin, keepBio = state.bio;
     state = norm(d); state.bio = keepBio;
-    if (typeof d.pin !== 'string') state.pin = keepPin;
+    state.pin = keepPin || (typeof d.pin === 'string' ? d.pin : ''); // رمزك الحالي يبقى؛ رمز النسخ القديمة يُؤخذ فقط إن لم يكن عندك رمز
     applyTheme(); save(true); $('menu').close(); $('filesDlg').close(); toast('تمت الاستعادة');
   } catch (e) { toast('ملف النسخة غير صالح'); }
 }
