@@ -150,6 +150,7 @@
     <button class="rb" data-go="wg" id="rowWg"><span class="bub"><svg class="ic"><use href="#i-home"/></svg></span><span class="t">الودجت<small>الشكل والألوان</small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
     <button class="rb" data-go="sec"><span class="bub"><svg class="ic"><use href="#i-lock"/></svg></span><span class="t">الأمان<small>رمز القفل والبصمة وتشفير النسخ</small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
     <button class="rb" data-go="bk"><span class="bub"><svg class="ic"><use href="#i-save"/></svg></span><span class="t">النسخ الاحتياطي والتصدير<small>النسخ التلقائي والاستعادة وCSV</small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
+    <button class="rb" data-go="sync"><span class="bub"><svg class="ic"><use href="#i-restore"/></svg></span><span class="t">المزامنة<small id="sySt">غير مفعّلة</small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
     <button class="rb" data-go="wifi"><span class="bub"><svg class="ic"><use href="#i-wifi"/></svg></span><span class="t">الواي فاي<small>تتبع الحضور وتأكيد الدخول والخروج</small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
   </div>
   <div class="note" id="appVer" style="text-align:center" hidden></div>
@@ -206,6 +207,15 @@
     <div class="rb" id="bioRow" hidden><span class="bub"><svg class="ic"><use href="#i-finger"/></svg></span><span class="t">فتح بالبصمة</span><input type="checkbox" id="bioChk"></div>
     <button class="rb" id="encBtn"><span class="bub"><svg class="ic"><use href="#i-lock"/></svg></span><span class="t">تشفير النسخ الاحتياطي<small id="encSt"></small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
   </div>
+  </div>
+  <div class="pg" id="pg-sync">
+  <div class="grp">
+    <div class="info" id="syWhere" style="color:var(--mut)"></div>
+    <button class="rb" id="syLink"><span class="bub"><svg class="ic"><use href="#i-restore"/></svg></span><span class="t">ربط Dropbox<small>نسخة مشفرة تتزامن بين هواتفك</small></span></button>
+    <button class="rb" id="syNow"><span class="bub"><svg class="ic"><use href="#i-restore"/></svg></span><span class="t">مزامنة الآن</span></button>
+    <button class="rb" id="syOff"><span class="bub"><svg class="ic"><use href="#i-x"/></svg></span><span class="t">فصل المزامنة عن هذا الهاتف</span></button>
+  </div>
+  <div class="note" style="margin-top:8px">تُرفع بياناتك وإعداداتك إلى Dropbox مشفرة بكلمة سر لا يعرفها Dropbox. لا يُدمج شيء تلقائيًا: إن تغيّرت البيانات على هاتفين معًا فستختار أي نسخة تبقى. لا تُزامَن الوردية الجارية ولا رمز القفل ولا إعدادات الواي فاي.</div>
   </div>
   <div class="pg" id="pg-bk">
   <div class="shd">النسخ الاحتياطي</div>
@@ -264,6 +274,48 @@
     <button class="del" id="encOff" type="button">إيقاف</button>
     <button id="encCancel" type="button">إلغاء</button>
     <button class="ok" id="encSave" type="button">حفظ</button>
+  </div>
+</dialog>
+
+<dialog id="syDlg">
+  <h2 id="syTitle">ربط Dropbox</h2>
+  <div id="syA">
+    <div class="note" style="margin-top:0">1) اضغط «فتح Dropbox» وسجّل الدخول ووافق. 2) انسخ الرمز الذي سيظهر لك. 3) عد إلى هنا والصقه. إن لم يفتح المتصفح فاضغط «نسخ الرابط» والصقه فيه.</div>
+    <div class="acts">
+      <button id="syCopy" type="button">نسخ الرابط</button>
+      <button class="ok" id="syOpen" type="button">فتح Dropbox</button>
+    </div>
+    <label for="syCode">الرمز الذي ظهر في Dropbox</label>
+    <input type="text" id="syCode" autocomplete="off" autocapitalize="off" spellcheck="false">
+  </div>
+  <div id="syB" hidden>
+    <div class="note" style="margin-top:0">اختر كلمة سر تُشفَّر بها بياناتك قبل رفعها. ستدخلها مرة واحدة على كل هاتف.</div>
+    <label for="syPw">كلمة السر (8 أحرف فأكثر)</label>
+    <input type="password" id="syPw" autocomplete="new-password">
+    <label for="syPw2">تأكيد كلمة السر</label>
+    <input type="password" id="syPw2" autocomplete="new-password">
+    <div class="note warn">إن نسيت كلمة السر ولم يعد عندك هاتف مرتبط، فلا يمكن استرجاع بيانات السحابة بأي طريقة.</div>
+  </div>
+  <div id="syC" hidden>
+    <div class="note" style="margin-top:0">يوجد ملف مزامنة في حساب Dropbox هذا. أدخل كلمة السر التي اخترتها على الهاتف الأول.</div>
+    <label for="syPwOld">كلمة سر المزامنة</label>
+    <input type="password" id="syPwOld" autocomplete="off">
+  </div>
+  <div class="acts">
+    <button id="syCancel" type="button">إلغاء</button>
+    <button class="ok" id="syNext" type="button">متابعة</button>
+  </div>
+</dialog>
+
+<dialog id="syConf">
+  <h2>تعارض بين النسختين</h2>
+  <div class="note" style="margin-top:0">بيانات هذا الهاتف تختلف عن النسخة في السحابة. لن يُحذف شيء قبل اختيارك.</div>
+  <div class="info" id="syConfInfo"></div>
+  <div class="note">إن أخذت نسخة السحابة تُحفظ أولًا نسخة أمان من بيانات هذا الهاتف. وإن أبقيت نسخة الهاتف تُستبدل نسخة السحابة.</div>
+  <div class="acts">
+    <button id="syLater" type="button">لاحقًا</button>
+    <button id="syTakeCloud" type="button">أخذ نسخة السحابة</button>
+    <button class="ok" id="syKeepLocal" type="button">إبقاء نسخة هذا الهاتف</button>
   </div>
 </dialog>
 
@@ -328,5 +380,6 @@
 <div id="undoBar" popover="manual"><span id="undoMsg"></span><button id="undoBtn" type="button">تراجع</button></div>
 
 <script src="app.js"></script>
+<script src="sync.js"></script>
 </body>
 </html>
