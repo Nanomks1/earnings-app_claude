@@ -13,6 +13,8 @@ public class WifiBootReceiver extends BroadcastReceiver {
             WifiTracker.start(context);
         } else if (Intent.ACTION_MY_PACKAGE_REPLACED.equals(a)) {
             WifiTracker.start(context);
+        } else if (WifiTracker.ACTION_WAKE.equals(a)) {
+            WifiTracker.onWake(context);
         }
     }
 }

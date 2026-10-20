@@ -1,8 +1,13 @@
 package com.pd.earnings;
 
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkRequest;
 import android.os.Build;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -13,6 +18,7 @@ import org.json.JSONObject;
 
 // تتبع اتصال/انقطاع الواي فاي في خانة منفصلة عن السجل. الأحداث تُخزَّن في SharedPreferences.
 final class WifiTracker {
+    static final String ACTION_WAKE = "com.pd.earnings.WIFI_WAKE";
     private static final String PREFS = "wifi_track";
     private static final int MAX_EVENTS = 400;
     private static final Pattern INFO = Pattern.compile("SSID: \"(.*?)\", BSSID: ([0-9a-fA-F:]{17})");
@@ -33,9 +39,22 @@ final class WifiTracker {
         return prefs(c).getBoolean("root", false);
     }
 
-    // تشغيل خدمة المراقبة (تُستدعى من التطبيق وعند الإقلاع)
-    static void start(Context c) {
+    // تشغيل التتبع: تسجيل استيقاظ النظام عند اتصال الواي فاي (يبقى حتى لو أُغلقت الخدمة)، وبدء الخدمة إن كان الواي فاي متصلًا الآن
+    static void start(final Context c) {
         if (!isOn(c)) return;
+        registerWake(c);
+        if (useRoot(c)) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    exemptBattery(c);
+                }
+            }).start();
+        }
+        if (wifiUp(c)) startSvc(c);
+    }
+
+    private static void startSvc(Context c) {
         try {
             Context a = c.getApplicationContext();
             Intent i = new Intent(a, WifiWatchService.class);
@@ -47,9 +66,90 @@ final class WifiTracker {
     }
 
     static void stop(Context c) {
+        unregisterWake(c);
         try {
             Context a = c.getApplicationContext();
             a.stopService(new Intent(a, WifiWatchService.class));
+        } catch (Exception e) {
+            // تجاهل
+        }
+    }
+
+    private static int mut() {
+        return Build.VERSION.SDK_INT >= 31 ? PendingIntent.FLAG_MUTABLE : 0;
+    }
+
+    private static PendingIntent wakePi(Context a, int flags) {
+        Intent i = new Intent(a, WifiBootReceiver.class);
+        i.setAction(ACTION_WAKE);
+        return PendingIntent.getBroadcast(a, 11, i, flags);
+    }
+
+    // يطلب من النظام إيقاظ التطبيق عند ظهور شبكة واي فاي (يبقى التسجيل عند النظام ما دام الجهاز يعمل)
+    private static void registerWake(Context c) {
+        if (Build.VERSION.SDK_INT < 26) return;
+        try {
+            Context a = c.getApplicationContext();
+            ConnectivityManager cm = (ConnectivityManager) a.getSystemService(Context.CONNECTIVITY_SERVICE);
+            PendingIntent pi = wakePi(a, PendingIntent.FLAG_UPDATE_CURRENT | mut());
+            try {
+                cm.unregisterNetworkCallback(pi);
+            } catch (Exception e) {
+                // لم يكن مسجَّلًا
+            }
+            NetworkRequest rq = new NetworkRequest.Builder().addTransportType(NetworkCapabilities.TRANSPORT_WIFI).build();
+            cm.registerNetworkCallback(rq, pi);
+        } catch (Exception e) {
+            // تجاهل
+        }
+    }
+
+    private static void unregisterWake(Context c) {
+        if (Build.VERSION.SDK_INT < 26) return;
+        try {
+            Context a = c.getApplicationContext();
+            ConnectivityManager cm = (ConnectivityManager) a.getSystemService(Context.CONNECTIVITY_SERVICE);
+            PendingIntent pi = wakePi(a, PendingIntent.FLAG_NO_CREATE | mut());
+            if (pi != null) cm.unregisterNetworkCallback(pi);
+        } catch (Exception e) {
+            // تجاهل
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    static boolean wifiUp(Context c) {
+        try {
+            ConnectivityManager cm = (ConnectivityManager) c.getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+            for (Network n : cm.getAllNetworks()) {
+                NetworkCapabilities nc = cm.getNetworkCapabilities(n);
+                if (nc != null && nc.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) return true;
+            }
+        } catch (Exception e) {
+            // تجاهل
+        }
+        return false;
+    }
+
+    // يوقظنا النظام عند حدث واي فاي: إن كان متصلًا ولا توجد خدمة تعمل نسجّل الوقت ونبدأ الخدمة
+    static void onWake(Context c) {
+        if (!isOn(c)) return;
+        long t = System.currentTimeMillis();
+        count(c, t);
+        if (WifiWatchService.running || !wifiUp(c)) return;
+        prefs(c).edit().putLong("pend_t", t).commit();
+        startSvc(c);
+    }
+
+    // استثناء التطبيق من توفير البطارية بالروت (أوامر ثابتة)، مرة كل 12 ساعة كحد أقصى
+    static void exemptBattery(Context c) {
+        try {
+            SharedPreferences p = prefs(c);
+            long now = System.currentTimeMillis();
+            if (now - p.getLong("bat_t", 0) < 12L * 3600 * 1000) return;
+            String pkg = c.getPackageName();
+            String a = su("dumpsys deviceidle whitelist +" + pkg, 8000);
+            su("cmd appops set " + pkg + " RUN_ANY_IN_BACKGROUND allow", 8000);
+            if (a != null && a.contains(pkg)) p.edit().putLong("bat_t", now).commit();
         } catch (Exception e) {
             // تجاهل
         }
