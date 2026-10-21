@@ -1,5 +1,7 @@
 package com.pd.earnings;
 
+import android.os.Build;
+import android.view.WindowManager;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.biometric.BiometricManager;
 import androidx.biometric.BiometricPrompt;
@@ -14,6 +16,32 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 public class BioPlugin extends Plugin {
     private static final int AUTH = BiometricManager.Authenticators.BIOMETRIC_STRONG
             | BiometricManager.Authenticators.BIOMETRIC_WEAK;
+
+    @PluginMethod
+    public void setSecure(final PluginCall call) {
+        final boolean on = Boolean.TRUE.equals(call.getBoolean("on", false));
+        final AppCompatActivity a = getActivity();
+        if (a == null) {
+            call.resolve();
+            return;
+        }
+        a.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    if (Build.VERSION.SDK_INT >= 33) {
+                        a.setRecentsScreenshotEnabled(!on);
+                    } else if (on) {
+                        a.getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
+                    } else {
+                        a.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
+                    }
+                } catch (Exception e) {
+                }
+                call.resolve();
+            }
+        });
+    }
 
     @PluginMethod
     public void available(PluginCall call) {
