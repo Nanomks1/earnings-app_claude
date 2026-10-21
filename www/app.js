@@ -18,7 +18,9 @@ const SETTINGS = {
   color: { def: DEF_COLOR, fix: v => /^#[0-9a-f]{6}$/i.test(v || '') ? v : DEF_COLOR },
   forgetH: { def: 12, fix: v => v === undefined ? 12 : Math.max(0, Math.min(48, Math.round(Number(v)) || 0)) },
   fs: { def: 0, fix: v => [0, 1, 2].includes(Number(v)) ? Number(v) : 0 },
-  sys: { def: false, fix: v => v === true }
+  sys: { def: false, fix: v => v === true },
+  font: { def: 0, fix: v => Number(v) === 1 ? 1 : 0 },
+  secure: { def: false, fix: v => v === true }
 };
 // تفضيلات الجهاز التي تدخل النسخة الاحتياطية (مظهر الودجت، شكل الأيقونة، خيار التفصيل في المشاركة)
 const PREFS_DEF = () => ({ wg: { bg: 0, fg: 0, ic: 0, label: true, on: true }, ic: { style: 'a', follow: true }, sd: true });
@@ -32,7 +34,7 @@ function normPrefs(p) {
   return o;
 }
 function norm(d) {
-  const s = { v: 5, items: [], archive: [], carry: 0, open: null, prefs: normPrefs(d && d.prefs) };
+  const s = { v: 5, items: [], archive: [], trash: [], carry: 0, open: null, prefs: normPrefs(d && d.prefs) };
   for (const k in SETTINGS) s[k] = SETTINGS[k].def;
   if (!d || typeof d !== 'object') return s;
   for (const k in SETTINGS) s[k] = SETTINGS[k].fix(d[k]);
@@ -58,6 +60,7 @@ function norm(d) {
   };
   s.items = (Array.isArray(d.items) ? d.items : []).map(fix);
   s.archive = (Array.isArray(d.archive) ? d.archive : []).map(a => ({ ...a, items: (a.items || []).map(fix) }));
+  s.trash = (Array.isArray(d.trash) ? d.trash : []).filter(t => t && t.id).map(t => { const o = fix(t); o.delAt = Number(t.delAt) || 0; return o; });
   return s;
 }
 let state;
@@ -162,6 +165,8 @@ function applyTheme() {
   const root = document.documentElement.style, set = (k, v) => root.setProperty(k, v);
   set('--pri', pri);
   set('--fs', [1, 1.13, 1.16][state.fs || 0]);
+  set('--ff', state.font === 1 ? 'sans-serif' : '');
+  try { applySecure(); } catch (e) {}
   set('--pri2', dark ? mix(base, '#000000', .55) : mix(base, '#ffffff', .22));
   set('--onpri', lum(pri) > .5 ? '#10201f' : '#ffffff');
   set('--pritx', dark ? mix(base, '#ffffff', .45) : base);
@@ -327,7 +332,7 @@ function renderShift() {
   const o = state.open;
   $('shift').innerHTML = !o
     ? `<button class="clock" id="clockIn"><span class="bub">${ic('play')}</span><span><b>تسجيل دخول العمل</b><small>اضغط عند وصولك للعمل</small></span></button>`
-    : `<div class="open"><div class="top"><span class="pulse"></span><div style="flex:1"><b>أنت الآن في العمل</b><br><small>دخلت <span dir="ltr">${o.start}</span></small></div><div class="el num" id="elapsed">${fmtHM(elapsedMins())}</div></div>
+    : `<div class="open"><div class="top"><span class="pulse"></span><div style="flex:1"><b>أنت الآن في العمل</b><br><small>دخلت <button type="button" class="edst" id="editIn" aria-label="تعديل وقت الدخول"><span dir="ltr">${o.start}</span>${ic('edit')}</button></small></div><div class="el num" id="elapsed">${fmtHM(elapsedMins())}</div></div>
        ${elapsedMins() > OPEN_WARN ? '<div class="note warn" id="openWarn">مضى وقت طويل على الدخول. تأكد من وقت الخروج.</div>' : ''}
        <div class="btns"><button id="clockOut">${ic('stop')}تسجيل الخروج</button><button id="clockCancel" aria-label="إلغاء">${ic('x')}</button></div></div>`;
 }
@@ -345,6 +350,7 @@ $('shift').onclick = e => {
     if (long) $('fDur').textContent = 'مضى أكثر من 24 ساعة على الدخول. أدخل وقت الخروج الصحيح.';
     else if (elapsedMins() > OPEN_WARN) $('fDur').textContent += ' — مدة طويلة، راجع وقت الخروج.';
   }
+  else if (id === 'editIn') { $('iDate').value = state.open.date; $('iTime').value = state.open.start; $('inDlg').showModal(); }
   else if (id === 'clockCancel') { if (confirm('إلغاء تسجيل الدخول الحالي؟')) { state.open = null; save(); } }
 };
 $('iCancel').onclick = () => $('inDlg').close();
@@ -851,6 +857,18 @@ $('list').onclick = e => {
   const it = state.items.find(i => i.id == b.dataset.id);
   if (it) openForm(modeOf(it), it);
 };
+function findOverlap(date, s, e, skipId) {
+  const t0 = new Date(date + 'T' + s).getTime(); let t1 = new Date(date + 'T' + e).getTime();
+  if (isNaN(t0) || isNaN(t1)) return null;
+  if (t1 <= t0) t1 += 864e5;
+  return state.items.find(i => {
+    if (i.id === skipId || i.type !== 'work' || i.remote || !i.start || !i.end) return false;
+    const a = new Date(i.date + 'T' + i.start).getTime(); let b = new Date(i.date + 'T' + i.end).getTime();
+    if (isNaN(a) || isNaN(b)) return false;
+    if (b <= a) b += 864e5;
+    return t0 < b && a < t1;
+  }) || null;
+}
 $('fSave').onclick = () => {
   const date = $('fDate').value;
   if (!date) return toast('أدخل التاريخ');
@@ -866,6 +884,8 @@ $('fSave').onclick = () => {
         Object.assign(rec, { mins: editing.mins, rate: editing.rate, remote: false });
       } else return toast('أدخل البداية والنهاية (والاستراحة أقل من المدة)');
     } else {
+      const ov = findOverlap(date, $('fStart').value, $('fEnd').value, editing ? editing.id : null);
+      if (ov && !confirm('يتداخل هذا الوقت مع سجل آخر: ' + fmtDay(ov.date) + ' ' + ltr(ov.start + ' – ' + ov.end) + '. هل تريد الحفظ رغم ذلك؟')) return;
       const same = $('fStart').value === $('fEnd').value;
       if (same ? !confirm('البداية تساوي النهاية، وستُحسب المدة 24 ساعة. متابعة؟') : m > LONG_MIN && !confirm('مدة الوردية ' + fmtDur(m) + '، وهي طويلة. هل هي صحيحة؟')) return;
       Object.assign(rec, { remote: false, start: $('fStart').value, end: $('fEnd').value, brk: parseInt($('fBrk').value) || 0, mins: m, rate: editing && editing.rate ? editing.rate : state.rate });
@@ -880,11 +900,35 @@ $('fSave').onclick = () => {
   if (wfOnSaved) wfOnSaved();
   $('form').close(); save();
 };
+function restoreItem(t) {
+  const { delAt, ...it } = t;
+  state.trash = (state.trash || []).filter(x => x.id !== it.id);
+  if (!state.items.some(i => i.id === it.id)) state.items = [...state.items, it];
+  save(); toast('تمت استعادة السجل');
+}
 $('fDel').onclick = () => {
   const it = editing;
   state.items = state.items.filter(i => i.id !== it.id);
+  state.trash = [{ ...it, delAt: Date.now() }, ...(state.trash || [])];
   $('form').close(); save();
-  undoBar('تم حذف السجل', () => { if (!state.items.some(i => i.id === it.id)) { state.items = [...state.items, it]; save(); toast('تمت استعادة السجل'); } });
+  undoBar('تم حذف السجل (في سلة المحذوفات)', () => restoreItem(it));
+};
+function updTrashLabel() { const n = (state.trash || []).length; $('trashSt').textContent = n ? unit(n, 'سجل', 'سجلان', 'سجلات') : 'فارغة'; }
+function renderTrash() {
+  const t = (state.trash || []).slice().sort((a, b) => (b.delAt || 0) - (a.delAt || 0));
+  $('trashBody').innerHTML = t.length ? t.map(itemRow).join('') : emptyBox('archive', 'السلة فارغة.');
+  $('trashEmpty').hidden = !t.length;
+}
+$('trashOpen').onclick = () => { renderTrash(); $('trashDlg').showModal(); };
+$('trashClose').onclick = () => $('trashDlg').close();
+$('trashBody').onclick = e => {
+  const b = e.target.closest('.item'); if (!b) return;
+  const t = (state.trash || []).find(x => x.id == b.dataset.id);
+  if (t && confirm('استعادة هذا السجل إلى الفترة الحالية؟')) { restoreItem(t); renderTrash(); updTrashLabel(); }
+};
+$('trashEmpty').onclick = () => {
+  if (!(state.trash || []).length || !confirm('إفراغ السلة نهائيًا؟ لا يمكن استرجاع السجلات بعدها.')) return;
+  state.trash = []; save(); renderTrash(); updTrashLabel(); toast('تم إفراغ السلة');
 };
 
 // ---------- استلام الدفعة والأرشيف ----------
@@ -1105,7 +1149,7 @@ $('mHome').onclick = e => { const b = e.target.closest('[data-go]'); if (b) mGo(
 $('menuBtn').onclick = () => {
   mGo('');
   $('srchChk').checked = state.search !== false; $('cur').value = state.currency; $('rate').value = state.rate; $('auto').checked = state.auto; $('forgetH').value = state.forgetH;
-  updFs(); updIc(); updWg(); updPinLabel(); $('bioRow').hidden = !bioOk; $('bioChk').checked = !!state.bio; updBkWhere(); updEnc(); buildSwatches(); showVer(); $('menu').showModal();
+  updFs(); updFont(); $('secChk').checked = !!state.secure; updTrashLabel(); updIc(); updWg(); updPinLabel(); $('bioRow').hidden = !bioOk; $('bioChk').checked = !!state.bio; updBkWhere(); updEnc(); buildSwatches(); showVer(); $('menu').showModal();
 };
 async function showVer() { // رقم النسخة من التطبيق نفسه (يتغير مع كل بناء)
   const A = plugin('App'); if (!A || !A.getInfo) return;
@@ -1120,6 +1164,13 @@ $('menuClose').onclick = () => {
   $('menu').close(); save(); checkForgot();
 };
 
+function updFont() { [...$('ffSeg').children].forEach(b => b.classList.toggle('on', +b.dataset.v === (state.font || 0))); }
+$('ffSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; state.font = +b.dataset.v; applyTheme(); updFont(); savePrefs(); };
+function applySecure() {
+  const B = nplug('Bio'); if (!B || !B.setSecure) return;
+  Promise.resolve(B.setSecure({ on: !!state.secure })).catch(() => {});
+}
+$('secChk').onchange = () => { state.secure = $('secChk').checked; applySecure(); savePrefs(); };
 function updFs() { [...$('fsSeg').children].forEach(b => b.classList.toggle('on', +b.dataset.v === (state.fs || 0))); }
 $('fsSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; state.fs = +b.dataset.v; applyTheme(); updFs(); localStorage.setItem(KEY, JSON.stringify(state)); };
 

@@ -149,6 +149,7 @@
     <button class="rb" data-go="look"><span class="bub"><svg class="ic"><use href="#i-sliders"/></svg></span><span class="t">المظهر<small>اللون وحجم الخط وأيقونة التطبيق</small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
     <button class="rb" data-go="wg" id="rowWg"><span class="bub"><svg class="ic"><use href="#i-home"/></svg></span><span class="t">الودجت<small>الشكل والألوان</small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
     <button class="rb" data-go="sec"><span class="bub"><svg class="ic"><use href="#i-lock"/></svg></span><span class="t">الأمان<small>رمز القفل والبصمة وتشفير النسخ</small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
+    <button class="rb" id="trashOpen" type="button"><span class="bub"><svg class="ic"><use href="#i-archive"/></svg></span><span class="t">سلة المحذوفات<small id="trashSt"></small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
     <button class="rb" data-go="bk"><span class="bub"><svg class="ic"><use href="#i-save"/></svg></span><span class="t">النسخ الاحتياطي والتصدير<small>النسخ التلقائي والاستعادة وCSV</small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
     <button class="rb" data-go="sync"><span class="bub"><svg class="ic"><use href="#i-restore"/></svg></span><span class="t">المزامنة<small id="sySt">غير مفعّلة</small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
     <button class="rb" data-go="wifi"><span class="bub"><svg class="ic"><use href="#i-wifi"/></svg></span><span class="t">الواي فاي<small>تتبع الحضور وتأكيد الدخول والخروج</small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
@@ -181,6 +182,7 @@
   <div class="pg" id="pg-look">
   <div class="grp">
     <div class="fld"><label>لون التطبيق</label><div class="sw" id="sw"></div></div>
+      <div class="fld" style="border-top:1px solid var(--bd);padding-top:10px"><label>الخط</label><div class="seg" id="ffSeg"><button data-v="0" type="button">الحالي</button><button data-v="1" type="button">خط النظام</button></div></div>
       <div class="fld" style="border-top:1px solid var(--bd);padding-top:10px"><label>حجم الخط</label><div class="seg" id="fsSeg"><button data-v="0" type="button">عادي</button><button data-v="1" type="button">كبير</button><button data-v="2" type="button">أكبر</button></div></div>
     <div id="icBox">
       <div class="fld" style="border-top:1px solid var(--bd);padding-top:10px"><label>شكل أيقونة التطبيق</label><div class="seg" id="icSeg"><button data-s="a" type="button">أفق</button><button data-s="b" type="button">وهج</button><button data-s="c" type="button">شرائح</button></div></div>
@@ -205,6 +207,7 @@
   <div class="grp">
     <button class="rb" id="pinBtn"><span class="bub"><svg class="ic"><use href="#i-lock"/></svg></span><span class="t">رمز القفل<small id="pinSt"></small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
     <div class="rb" id="bioRow" hidden><span class="bub"><svg class="ic"><use href="#i-finger"/></svg></span><span class="t">فتح بالبصمة</span><input type="checkbox" id="bioChk"></div>
+    <div class="rb"><span class="bub"><svg class="ic"><use href="#i-lock"/></svg></span><span class="t">إخفاء المحتوى في التطبيقات الأخيرة<small>تظهر شاشة فارغة بدل الأرقام</small></span><input type="checkbox" id="secChk"></div>
     <button class="rb" id="encBtn"><span class="bub"><svg class="ic"><use href="#i-lock"/></svg></span><span class="t">تشفير النسخ الاحتياطي<small id="encSt"></small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
   </div>
   </div>
@@ -328,6 +331,13 @@
     <button id="pwCancel" type="button">إلغاء</button>
     <button class="ok" id="pwOk" type="button">استعادة</button>
   </div>
+</dialog>
+
+<dialog id="trashDlg">
+  <h2>سلة المحذوفات</h2>
+  <div id="trashBody"></div>
+  <div class="hint" style="margin-top:8px">اضغط على سجل لاستعادته إلى الفترة الحالية.</div>
+  <div class="acts" style="margin-top:8px"><button id="trashEmpty" type="button">إفراغ السلة</button><button id="trashClose" type="button">إغلاق</button></div>
 </dialog>
 
 <dialog id="wfSug">

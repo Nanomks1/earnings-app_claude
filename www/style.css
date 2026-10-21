@@ -2,7 +2,7 @@
 @media (prefers-color-scheme:dark){:root{--bg:#0e1113;--card:#171b1f;--card2:#1d2227;--text:#eceff2;--mut:#9aa3ad;--pos:#6fc79a;--neg:#e58f8f;--ntint:rgba(229,143,143,.14);--bd:#2a3036;--sh:none}}
 [hidden]{display:none!important}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,"Noto Sans Arabic","Segoe UI",Tahoma,sans-serif}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--ff,system-ui,"Noto Sans Arabic","Segoe UI",Tahoma,sans-serif)}
 body{padding:env(safe-area-inset-top) 0 calc(104px + env(safe-area-inset-bottom))}
 button{font:inherit;color:inherit;cursor:pointer;transition:transform .12s,background .2s,opacity .2s}
 button:active{transform:scale(.97)}
@@ -234,3 +234,6 @@ dialog:not([open]){opacity:0;transform:translateY(24px)}
 dialog::backdrop{transition:opacity .18s,display .18s allow-discrete,overlay .18s allow-discrete}
 dialog:not([open])::backdrop{opacity:0}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+.open .edst{background:none;border:0;color:inherit;font:inherit;padding:0 2px;display:inline-flex;align-items:center;gap:4px;text-decoration:underline dotted;height:auto;min-height:0}
+.open .edst .ic{width:13px;height:13px}
