@@ -79,10 +79,10 @@ public class WorkWidgetPlugin extends Plugin {
             e.putBoolean("open", open);
             e.putLong("armedAt", 0);
             if (open) {
-                Double ts = call.getDouble("ts");
+                long ts = call.getData().optLong("ts", 0L); // getDouble يُرجع null للأرقام الكبيرة (Long)
                 e.putString("date", call.getString("date", ""));
                 e.putString("start", call.getString("start", ""));
-                e.putLong("startTs", ts == null ? System.currentTimeMillis() : ts.longValue());
+                e.putLong("startTs", ts > 0 ? ts : System.currentTimeMillis());
             }
             e.commit();
         }
