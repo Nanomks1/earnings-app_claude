@@ -161,7 +161,7 @@ function applyTheme() {
   const pri = dark ? mix(base, '#000000', .3) : base;
   const root = document.documentElement.style, set = (k, v) => root.setProperty(k, v);
   set('--pri', pri);
-  set('--fs', [1, 1.1, 1.15][state.fs || 0]);
+  set('--fs', [1, 1.13, 1.16][state.fs || 0]);
   set('--pri2', dark ? mix(base, '#000000', .55) : mix(base, '#ffffff', .22));
   set('--onpri', lum(pri) > .5 ? '#10201f' : '#ffffff');
   set('--pritx', dark ? mix(base, '#ffffff', .45) : base);
