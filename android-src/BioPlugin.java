@@ -44,6 +44,29 @@ public class BioPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void setTextZoom(final PluginCall call) {
+        final boolean sys = Boolean.TRUE.equals(call.getBoolean("system", false));
+        final AppCompatActivity a = getActivity();
+        if (a == null) {
+            call.resolve();
+            return;
+        }
+        a.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    int z = sys ? Math.round(a.getResources().getConfiguration().fontScale * 100f) : 100;
+                    if (z < 50) z = 50;
+                    if (z > 300) z = 300;
+                    getBridge().getWebView().getSettings().setTextZoom(z);
+                } catch (Exception e) {
+                }
+                call.resolve();
+            }
+        });
+    }
+
+    @PluginMethod
     public void available(PluginCall call) {
         int r = BiometricManager.from(getContext()).canAuthenticate(AUTH);
         JSObject o = new JSObject();
