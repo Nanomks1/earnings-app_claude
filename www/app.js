@@ -18,7 +18,6 @@ const SETTINGS = {
   color: { def: DEF_COLOR, fix: v => /^#[0-9a-f]{6}$/i.test(v || '') ? v : DEF_COLOR },
   forgetH: { def: 12, fix: v => v === undefined ? 12 : Math.max(0, Math.min(48, Math.round(Number(v)) || 0)) },
   fsv: { def: 100, fix: v => Math.max(85, Math.min(140, Math.round(Number(v)) || 100)) },
-  fsys: { def: false, fix: v => v === true },
   sys: { def: false, fix: v => v === true },
   font: { def: 0, fix: v => Number(v) === 1 ? 1 : 0 },
   secure: { def: false, fix: v => v === true }
@@ -166,8 +165,7 @@ function applyTheme() {
   const pri = dark ? mix(base, '#000000', .3) : base;
   const root = document.documentElement.style, set = (k, v) => root.setProperty(k, v);
   set('--pri', pri);
-  set('--fs', state.fsys ? 1 : (state.fsv || 100) / 100);
-  try { applyTextZoom(); } catch (e) {}
+  set('--fs', (state.fsv || 100) / 100);
   set('--ff', state.font === 1 ? 'sans-serif' : '');
   try { applySecure(); } catch (e) {}
   set('--pri2', dark ? mix(base, '#000000', .55) : mix(base, '#ffffff', .22));
@@ -1174,13 +1172,9 @@ function applySecure() {
   Promise.resolve(B.setSecure({ on: !!state.secure })).catch(() => {});
 }
 $('secChk').onchange = () => { state.secure = $('secChk').checked; applySecure(); savePrefs(); };
-function applyTextZoom() { // «حسب النظام»: يطبّق حجم خط النظام؛ غير ذلك يثبّت 100% فيصبح المنزلق دقيقًا
-  const B = nplug('Bio'); if (!B || !B.setTextZoom) return;
-  Promise.resolve(B.setTextZoom({ system: !!state.fsys })).catch(() => {});
-}
 function updFs() {
-  $('fsRange').value = state.fsv; $('fsRange').disabled = !!state.fsys; $('fsSys').checked = !!state.fsys;
-  $('fsVal').textContent = state.fsys ? 'حسب النظام' : ltr(state.fsv + '%');
+  $('fsRange').value = state.fsv;
+  $('fsVal').textContent = ltr(state.fsv + '%');
   $('fsPrev').innerHTML = itemRow({ id: 0, type: 'work', date: today(), start: '09:00', end: '17:00', mins: 480, amount: 80, note: 'مثال' });
 }
 $('fsRange').oninput = () => {
@@ -1190,7 +1184,6 @@ $('fsRange').oninput = () => {
 };
 $('fsRange').onchange = () => savePrefs();
 $('fsReset').onclick = () => { state.fsv = 100; applyTheme(); updFs(); savePrefs(); };
-$('fsSys').onchange = () => { state.fsys = $('fsSys').checked; applyTheme(); updFs(); savePrefs(); };
 
 // ---------- أيقونة التطبيق (شكلان × ثمانية ألوان) ----------
 const IC_KEY = 'earnings_icon';
@@ -1495,7 +1488,9 @@ async function pullWidget() { // يستلم ما سجّله الودجت وهو 
     evs.forEach(ev => {
       if (ev.t === 'in') { if (!state.open) { state.open = { date: ev.date, start: ev.start }; changed = true; } }
       else if (ev.t === 'out') {
-        const mins = Math.round((ev.endTs - ev.startTs) / 60000);
+        const d0 = new Date(ev.date + 'T' + ev.start).getTime(), d1 = new Date(ev.date + 'T' + ev.end).getTime();
+        let mins = Math.round(((d1 - d0) < 0 ? d1 - d0 + 864e5 : d1 - d0) / 60000); // من نصّي البداية والنهاية كما في النموذج
+        if (isNaN(mins)) mins = Math.round((ev.endTs - ev.startTs) / 60000);
         changed = true;
         if (state.items.some(i => i.type === 'work' && i.date === ev.date && i.start === ev.start && i.end === ev.end)) state.open = null; // أُضيف سابقًا
         else if (!(mins > 0)) { state.open = null; msg = 'تجاهلتُ خروجًا من الودجت: المدة أقل من دقيقة'; }
