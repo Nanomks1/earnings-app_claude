@@ -17,7 +17,8 @@ const SETTINGS = {
   search: { def: true, fix: v => v !== false },
   color: { def: DEF_COLOR, fix: v => /^#[0-9a-f]{6}$/i.test(v || '') ? v : DEF_COLOR },
   forgetH: { def: 12, fix: v => v === undefined ? 12 : Math.max(0, Math.min(48, Math.round(Number(v)) || 0)) },
-  fs: { def: 0, fix: v => [0, 1, 2].includes(Number(v)) ? Number(v) : 0 },
+  fsv: { def: 100, fix: v => Math.max(85, Math.min(140, Math.round(Number(v)) || 100)) },
+  fsys: { def: false, fix: v => v === true },
   sys: { def: false, fix: v => v === true },
   font: { def: 0, fix: v => Number(v) === 1 ? 1 : 0 },
   secure: { def: false, fix: v => v === true }
@@ -38,6 +39,7 @@ function norm(d) {
   for (const k in SETTINGS) s[k] = SETTINGS[k].def;
   if (!d || typeof d !== 'object') return s;
   for (const k in SETTINGS) s[k] = SETTINGS[k].fix(d[k]);
+  if (d.fsv === undefined && [1, 2].includes(Number(d.fs))) s.fsv = Number(d.fs) === 1 ? 113 : 116; // ترحيل من الخطوات القديمة
   s.carry = Number(d.carry) || 0;
   if (d.open && d.open.date && d.open.start) s.open = { date: d.open.date, start: d.open.start };
   const fix = i => {
@@ -164,7 +166,8 @@ function applyTheme() {
   const pri = dark ? mix(base, '#000000', .3) : base;
   const root = document.documentElement.style, set = (k, v) => root.setProperty(k, v);
   set('--pri', pri);
-  set('--fs', [1, 1.13, 1.16][state.fs || 0]);
+  set('--fs', state.fsys ? 1 : (state.fsv || 100) / 100);
+  try { applyTextZoom(); } catch (e) {}
   set('--ff', state.font === 1 ? 'sans-serif' : '');
   try { applySecure(); } catch (e) {}
   set('--pri2', dark ? mix(base, '#000000', .55) : mix(base, '#ffffff', .22));
@@ -1171,8 +1174,23 @@ function applySecure() {
   Promise.resolve(B.setSecure({ on: !!state.secure })).catch(() => {});
 }
 $('secChk').onchange = () => { state.secure = $('secChk').checked; applySecure(); savePrefs(); };
-function updFs() { [...$('fsSeg').children].forEach(b => b.classList.toggle('on', +b.dataset.v === (state.fs || 0))); }
-$('fsSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; state.fs = +b.dataset.v; applyTheme(); updFs(); localStorage.setItem(KEY, JSON.stringify(state)); };
+function applyTextZoom() { // «حسب النظام»: يطبّق حجم خط النظام؛ غير ذلك يثبّت 100% فيصبح المنزلق دقيقًا
+  const B = nplug('Bio'); if (!B || !B.setTextZoom) return;
+  Promise.resolve(B.setTextZoom({ system: !!state.fsys })).catch(() => {});
+}
+function updFs() {
+  $('fsRange').value = state.fsv; $('fsRange').disabled = !!state.fsys; $('fsSys').checked = !!state.fsys;
+  $('fsVal').textContent = state.fsys ? 'حسب النظام' : ltr(state.fsv + '%');
+  $('fsPrev').innerHTML = itemRow({ id: 0, type: 'work', date: today(), start: '09:00', end: '17:00', mins: 480, amount: 80, note: 'مثال' });
+}
+$('fsRange').oninput = () => {
+  state.fsv = +$('fsRange').value;
+  document.documentElement.style.setProperty('--fs', state.fsv / 100);
+  $('fsVal').textContent = ltr(state.fsv + '%');
+};
+$('fsRange').onchange = () => savePrefs();
+$('fsReset').onclick = () => { state.fsv = 100; applyTheme(); updFs(); savePrefs(); };
+$('fsSys').onchange = () => { state.fsys = $('fsSys').checked; applyTheme(); updFs(); savePrefs(); };
 
 // ---------- أيقونة التطبيق (شكلان × ثمانية ألوان) ----------
 const IC_KEY = 'earnings_icon';

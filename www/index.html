@@ -183,7 +183,13 @@
   <div class="grp">
     <div class="fld"><label>لون التطبيق</label><div class="sw" id="sw"></div></div>
       <div class="fld" style="border-top:1px solid var(--bd);padding-top:10px"><label>الخط</label><div class="seg" id="ffSeg"><button data-v="0" type="button">الحالي</button><button data-v="1" type="button">خط النظام</button></div></div>
-      <div class="fld" style="border-top:1px solid var(--bd);padding-top:10px"><label>حجم الخط</label><div class="seg" id="fsSeg"><button data-v="0" type="button">عادي</button><button data-v="1" type="button">كبير</button><button data-v="2" type="button">أكبر</button></div></div>
+      <div class="fld" style="border-top:1px solid var(--bd);padding-top:10px"><label>حجم الخط: <b id="fsVal"></b></label>
+        <div id="fsPrev" style="pointer-events:none;margin:6px 0"></div>
+        <input type="range" id="fsRange" min="85" max="140" step="1" style="width:100%">
+        <div class="hint">اسحب لتجد الحجم المناسب؛ التغيير يظهر مباشرة في كل التطبيق</div>
+      </div>
+      <button class="rb" id="fsReset" type="button"><span class="t">الحجم الافتراضي (100%)</span></button>
+      <div class="rb"><span class="t">اتباع حجم خط النظام<small>يستعمل حجم الخط المضبوط في إعدادات الهاتف بدل المنزلق</small></span><input type="checkbox" id="fsSys"></div>
     <div id="icBox">
       <div class="fld" style="border-top:1px solid var(--bd);padding-top:10px"><label>شكل أيقونة التطبيق</label><div class="seg" id="icSeg"><button data-s="a" type="button">أفق</button><button data-s="b" type="button">وهج</button><button data-s="c" type="button">شرائح</button></div></div>
       <div class="rb"><span class="t">لون الأيقونة يتبع لون التطبيق<small>قد تتأخر الشاشة الرئيسية قليلًا في إظهار التغيير</small></span><input type="checkbox" id="icFollow"></div>
