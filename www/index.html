@@ -182,7 +182,10 @@
   <div class="pg" id="pg-look">
   <div class="grp">
     <div class="fld"><label>لون التطبيق</label><div class="sw" id="sw"></div></div>
-      <div class="fld" style="border-top:1px solid var(--bd);padding-top:10px"><label>الخط</label><div class="seg" id="ffSeg"><button data-v="0" type="button">الحالي</button><button data-v="1" type="button">خط النظام</button></div></div>
+      <div class="fld" style="border-top:1px solid var(--bd);padding-top:10px"><label>الخط</label><div class="seg" id="ffSeg"><button data-v="0" type="button">الحالي</button><button data-v="1" type="button">خط من ملف</button></div><div class="hint" id="ffInfo"></div></div>
+      <button class="rb" id="ffPick" type="button"><span class="t">اختيار ملفات الخط<small>حدّد Regular وMedium وBold معًا (ttf أو otf)</small></span></button>
+      <button class="rb" id="ffClear" type="button" hidden><span class="t">إزالة الخط المخصص</span></button>
+      <input type="file" id="ffFile" multiple hidden>
       <div class="fld" style="border-top:1px solid var(--bd);padding-top:10px"><label>حجم الخط: <b id="fsVal"></b></label>
         <div id="fsPrev" style="pointer-events:none;margin:6px 0"></div>
         <input type="range" id="fsRange" min="85" max="140" step="1" style="width:100%">

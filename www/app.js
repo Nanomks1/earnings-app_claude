@@ -160,13 +160,15 @@ const mix = (a, b, t) => { const x = hex2rgb(a), y = hex2rgb(b); return rgb2hex(
 const lum = h => { const [r, g, b] = hex2rgb(h).map(v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }); return .2126 * r + .7152 * g + .0722 * b; };
 const isDark = () => !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
 const effColor = () => (state.sys && /^#[0-9a-f]{6}$/i.test(sysCol)) ? sysCol : (state.color || DEF_COLOR);
+let customOk = false, customLabel = '', customFonts = [];
+const CUSTOM_FAMILY = 'WorkCustom';
 function applyTheme() {
   const base = effColor(), dark = isDark(), [r, g, b] = hex2rgb(base);
   const pri = dark ? mix(base, '#000000', .3) : base;
   const root = document.documentElement.style, set = (k, v) => root.setProperty(k, v);
   set('--pri', pri);
   set('--fs', (state.fsv || 100) / 100);
-  set('--ff', state.font === 1 ? 'sans-serif' : '');
+  set('--ff', state.font === 1 && customOk ? '"' + CUSTOM_FAMILY + '",system-ui,"Noto Sans Arabic","Segoe UI",Tahoma,sans-serif' : '');
   try { applySecure(); } catch (e) {}
   set('--pri2', dark ? mix(base, '#000000', .55) : mix(base, '#ffffff', .22));
   set('--onpri', lum(pri) > .5 ? '#10201f' : '#ffffff');
@@ -1165,8 +1167,70 @@ $('menuClose').onclick = () => {
   $('menu').close(); save(); checkForgot();
 };
 
-function updFont() { [...$('ffSeg').children].forEach(b => b.classList.toggle('on', +b.dataset.v === (state.font || 0))); }
-$('ffSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; state.font = +b.dataset.v; applyTheme(); updFont(); savePrefs(); };
+// ---------- خط من ملف (يُحفظ في مخزن مستقل ولا يدخل النسخ الاحتياطية) ----------
+function fdb() { return new Promise((res, rej) => { const r = indexedDB.open('work-fonts', 1); r.onupgradeneeded = () => r.result.createObjectStore('f'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+async function fdbGet() { const db = await fdb(); return new Promise((res, rej) => { const q = db.transaction('f').objectStore('f').get('custom'); q.onsuccess = () => res(q.result || null); q.onerror = () => rej(q.error); }); }
+async function fdbSet(v) { const db = await fdb(); return new Promise((res, rej) => { const t = db.transaction('f', 'readwrite'); t.objectStore('f').put(v, 'custom'); t.oncomplete = () => res(); t.onerror = t.onabort = () => rej(t.error); }); }
+async function fdbDel() { const db = await fdb(); return new Promise((res, rej) => { const t = db.transaction('f', 'readwrite'); t.objectStore('f').delete('custom'); t.oncomplete = () => res(); t.onerror = t.onabort = () => rej(t.error); }); }
+function fontWeightOf(n) { // يستنتج الوزن من اسم الملف
+  if (/variable|\[wght|-vf\b/.test(n)) return '100 900';
+  const m = [[/thin|hairline/, 100], [/extra-?light|ultra-?light/, 200], [/light/, 300], [/semi-?bold|demi-?bold/, 600], [/extra-?bold|ultra-?bold/, 800], [/black|heavy/, 900], [/bold/, 700], [/medium/, 500]];
+  for (const [r, w] of m) if (r.test(n)) return String(w);
+  return '400';
+}
+async function loadCustomFont(apply) { // apply=false: يقرأ الاسم فقط دون تحميل الخطوط
+  try {
+    const rec = await fdbGet();
+    customLabel = rec && rec.files && rec.files.length ? (rec.label || 'خط مخصص') : '';
+    if (!customLabel || !apply) return false;
+    const fresh = rec.files.map(f => new FontFace(CUSTOM_FAMILY, f.data, { weight: f.weight, style: 'normal' }));
+    await Promise.all(fresh.map(x => x.load()));
+    customFonts.forEach(x => document.fonts.delete(x));
+    fresh.forEach(x => document.fonts.add(x)); customFonts = fresh;
+    return true;
+  } catch (e) { return false; }
+}
+function updFont() {
+  [...$('ffSeg').children].forEach(b => b.classList.toggle('on', +b.dataset.v === (state.font === 1 && customOk ? 1 : 0)));
+  $('ffInfo').textContent = customLabel ? 'الملفات: ' + customLabel : 'لم تختر ملف خط بعد';
+  $('ffClear').hidden = !customLabel;
+}
+$('ffSeg').onclick = async e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const v = +b.dataset.v;
+  if (v === 1) {
+    if (!customLabel) { $('ffFile').click(); return; }
+    customOk = await loadCustomFont(true);
+    if (!customOk) { toast('تعذّر تحميل الخط. اختر الملفات من جديد'); updFont(); return; }
+  }
+  state.font = v; applyTheme(); updFont(); savePrefs();
+};
+$('ffPick').onclick = () => $('ffFile').click();
+$('ffFile').onchange = async () => {
+  const fl = [...$('ffFile').files]; $('ffFile').value = '';
+  if (!fl.length) return;
+  const files = [];
+  try {
+    for (const f of fl) {
+      const n = f.name.toLowerCase();
+      if (!/\.(ttf|otf|woff2?)$/.test(n) || /italic|oblique/.test(n) || f.size > 8 * 1024 * 1024) continue;
+      files.push({ name: f.name, weight: fontWeightOf(n), data: await f.arrayBuffer() });
+    }
+  } catch (e) { toast('تعذّرت قراءة الملفات'); return; }
+  if (!files.length) { toast('لم أجد ملف خط صالحًا (ttf أو otf)'); return; }
+  const label = files.map(f => f.name.replace(/\.[^.]+$/, '')).join(' + ');
+  try { await fdbSet({ files, label }); } catch (e) { toast('تعذّر حفظ الخط'); return; }
+  customOk = await loadCustomFont(true);
+  if (!customOk) { try { await fdbDel(); } catch (e) {} customLabel = ''; updFont(); toast('الملف ليس خطًا سليمًا. لم يتغير شيء'); return; }
+  state.font = 1; applyTheme(); updFont(); savePrefs(); toast('تم تطبيق الخط');
+};
+$('ffClear').onclick = async () => {
+  if (!confirm('إزالة الخط المخصص والعودة للخط الحالي؟')) return;
+  try { await fdbDel(); } catch (e) {}
+  customFonts.forEach(x => document.fonts.delete(x)); customFonts = []; customOk = false; customLabel = '';
+  state.font = 0; applyTheme(); updFont(); savePrefs();
+};
+loadCustomFont(state.font === 1).then(ok => { customOk = ok; applyTheme(); updFont(); });
 function applySecure() {
   const B = nplug('Bio'); if (!B || !B.setSecure) return;
   Promise.resolve(B.setSecure({ on: !!state.secure })).catch(() => {});
