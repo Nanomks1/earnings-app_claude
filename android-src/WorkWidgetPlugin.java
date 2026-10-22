@@ -74,6 +74,16 @@ public class WorkWidgetPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void takeShortcut(PluginCall call) {
+        SharedPreferences p = WorkWidgetProvider.prefs(getContext());
+        String a = p.getString("sc", "");
+        if (!a.isEmpty()) p.edit().remove("sc").commit();
+        JSObject r = new JSObject();
+        r.put("act", a);
+        call.resolve(r);
+    }
+
+    @PluginMethod
     public void setTotal(PluginCall call) {
         SharedPreferences.Editor e = WorkWidgetProvider.prefs(getContext()).edit();
         e.putString("totTxt", call.getString("text", ""));
