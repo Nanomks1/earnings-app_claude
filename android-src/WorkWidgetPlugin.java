@@ -66,8 +66,19 @@ public class WorkWidgetPlugin extends Plugin {
         e.putInt("wIc", call.getInt("ic", 0));
         e.putBoolean("wLabel", Boolean.TRUE.equals(call.getBoolean("label", true)));
         e.putBoolean("wOn", !Boolean.FALSE.equals(call.getBoolean("on", true)));
+        e.putBoolean("totShow", !Boolean.FALSE.equals(call.getBoolean("total", true)));
         e.commit();
         WorkWidgetProvider.refreshAll(getContext());
+        TotalWidgetProvider.refreshAll(getContext());
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void setTotal(PluginCall call) {
+        SharedPreferences.Editor e = WorkWidgetProvider.prefs(getContext()).edit();
+        e.putString("totTxt", call.getString("text", ""));
+        e.commit();
+        TotalWidgetProvider.refreshAll(getContext());
         call.resolve();
     }
 
