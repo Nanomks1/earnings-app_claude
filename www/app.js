@@ -19,6 +19,7 @@ const SETTINGS = {
   forgetH: { def: 12, fix: v => v === undefined ? 12 : Math.max(0, Math.min(48, Math.round(Number(v)) || 0)) },
   fsv: { def: 100, fix: v => Math.max(85, Math.min(140, Math.round(Number(v)) || 100)) },
   sys: { def: false, fix: v => v === true },
+  lockAfter: { def: 60, fix: v => [0, 30, 60, 300].includes(Number(v)) ? Number(v) : 60 },
   trashAuto: { def: true, fix: v => v !== false },
   font: { def: 0, fix: v => Number(v) === 1 ? 1 : 0 },
   secure: { def: false, fix: v => v === true }
@@ -346,15 +347,31 @@ setInterval(() => {
   e.textContent = fmtHM(elapsedMins());
   if ((elapsedMins() > OPEN_WARN) !== !!$('openWarn')) renderShift();
 }, 30000);
+function clockOutForm() {
+  const long = elapsedMins() > 1440;
+  openForm('work', null, { date: state.open.date, start: state.open.start, end: long ? '' : nowTime() });
+  if (long) $('fDur').textContent = 'مضى أكثر من 24 ساعة على الدخول. أدخل وقت الخروج الصحيح.';
+  else if (elapsedMins() > OPEN_WARN) $('fDur').textContent += ' — مدة طويلة، راجع وقت الخروج.';
+}
+// اختصارات الأيقونة (ضغطة مطولة): تفتح نفس نافذتي الدخول والخروج في التطبيق للتأكيد
+function doShortcut(act) {
+  if (!$('lock').hidden) { pendingSc = act; return; }
+  if (act === 'in') {
+    if (state.open) return toast('أنت مسجّل دخول بالفعل');
+    $('iDate').value = today(); $('iTime').value = nowTime(); try { $('inDlg').showModal(); } catch (e) {}
+  } else if (act === 'out') {
+    if (!state.open) return toast('لا توجد وردية جارية');
+    clockOutForm();
+  }
+}
+async function takeShortcut() {
+  const W = nplug('WorkWidget'); if (!W || !W.takeShortcut) return;
+  try { const r = await W.takeShortcut(); if (r && r.act) doShortcut(r.act); } catch (e) {}
+}
 $('shift').onclick = e => {
   const id = e.target.closest('button') && e.target.closest('button').id;
   if (id === 'clockIn') { $('iDate').value = today(); $('iTime').value = nowTime(); $('inDlg').showModal(); }
-  else if (id === 'clockOut') {
-    const long = elapsedMins() > 1440;
-    openForm('work', null, { date: state.open.date, start: state.open.start, end: long ? '' : nowTime() });
-    if (long) $('fDur').textContent = 'مضى أكثر من 24 ساعة على الدخول. أدخل وقت الخروج الصحيح.';
-    else if (elapsedMins() > OPEN_WARN) $('fDur').textContent += ' — مدة طويلة، راجع وقت الخروج.';
-  }
+  else if (id === 'clockOut') clockOutForm();
   else if (id === 'editIn') { $('iDate').value = state.open.date; $('iTime').value = state.open.start; $('inDlg').showModal(); }
   else if (id === 'clockCancel') { if (confirm('إلغاء تسجيل الدخول الحالي؟')) { state.open = null; save(); } }
 };
@@ -1052,7 +1069,7 @@ async function verifyPin(p, stored) {
   return (await legacyHash(p)) === stored;
 }
 const pinLen = () => { const m = /^p2\$(\d+)\$/.exec(state.pin || ''); return m ? Math.min(6, Math.max(4, +m[1])) : 4; };
-let entered = '', hiddenAt = 0, pinFail = {};
+let entered = '', hiddenAt = 0, lastUnlock = 0, pinFail = {};
 try { pinFail = JSON.parse(localStorage.getItem('earnings_pinfail')) || {}; } catch (e) {}
 const savePinFail = () => { try { localStorage.setItem('earnings_pinfail', JSON.stringify(pinFail)); } catch (e) {} };
 (function buildPad() {
@@ -1086,8 +1103,17 @@ $('pad').onclick = async e => {
 };
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) hiddenAt = Date.now();
-  else if (state.pin && hiddenAt && Date.now() - hiddenAt > 60000) showLock();
+  else if (state.pin && hiddenAt && !bioBusy && Date.now() - lastUnlock > 1500 && Date.now() - hiddenAt >= (state.lockAfter ?? 60) * 1000) showLock();
 });
+function updLk() { [...$('lkSeg').children].forEach(b => b.classList.toggle('on', +b.dataset.v === (state.lockAfter ?? 60))); }
+$('lkSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; state.lockAfter = +b.dataset.v; updLk(); savePrefs(); };
+// بعد فتح القفل: يسجّل وقت الفتح، وينفّذ اختصار الأيقونة المؤجّل إن وُجد
+let pendingSc = '';
+new MutationObserver(() => {
+  if (!$('lock').hidden) return;
+  lastUnlock = Date.now();
+  if (pendingSc) { const a = pendingSc; pendingSc = ''; setTimeout(() => doShortcut(a), 350); }
+}).observe($('lock'), { attributes: true, attributeFilter: ['hidden'] });
 
 function openPin() {
   ['pinOld', 'pinNew', 'pinNew2'].forEach(i => $(i).value = '');
@@ -1162,7 +1188,7 @@ $('mHome').onclick = e => { const b = e.target.closest('[data-go]'); if (b) mGo(
 $('menuBtn').onclick = () => {
   mGo('');
   $('srchChk').checked = state.search !== false; $('cur').value = state.currency; $('rate').value = state.rate; $('auto').checked = state.auto; $('forgetH').value = state.forgetH;
-  updFs(); updFont(); $('secChk').checked = !!state.secure; purgeTrash(); updTrashLabel(); updIc(); updWg(); updPinLabel(); $('bioRow').hidden = !bioOk; $('bioChk').checked = !!state.bio; updBkWhere(); updEnc(); buildSwatches(); showVer(); $('menu').showModal();
+  updFs(); updFont(); updLk(); $('secChk').checked = !!state.secure; purgeTrash(); updTrashLabel(); updIc(); updWg(); updPinLabel(); $('bioRow').hidden = !bioOk; $('bioChk').checked = !!state.bio; updBkWhere(); updEnc(); buildSwatches(); showVer(); $('menu').showModal();
 };
 async function showVer() { // رقم النسخة من التطبيق نفسه (يتغير مع كل بناء)
   const A = plugin('App'); if (!A || !A.getInfo) return;
@@ -1589,8 +1615,8 @@ async function pullWidget() { // يستلم ما سجّله الودجت وهو 
   if (keys.length) setTimeout(() => { try { const p = W.ackEvents({ keys }); if (p && p.catch) p.catch(() => {}); } catch (e) {} }, 8000);
   widgetReady = true; syncWidget(); foregroundChecks();
 }
-document.addEventListener('visibilitychange', () => { if (!document.hidden) { pullWidget(); refreshSysColor(); } });
-(function () { const A = plugin('App'); if (A && A.addListener) A.addListener('appStateChange', st => { if (st && st.isActive) pullWidget(); }); })();
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { Promise.resolve(pullWidget()).then(takeShortcut); refreshSysColor(); } });
+(function () { const A = plugin('App'); if (A && A.addListener) A.addListener('appStateChange', st => { if (st && st.isActive) Promise.resolve(pullWidget()).then(takeShortcut); }); })();
 
 // ---------- تنبيهات: نسخة احتياطية قديمة + نسيان الخروج ----------
 const BK_STALE_DAYS = 3;
@@ -1638,7 +1664,7 @@ setMode('cur');
 render();
 showLock();
 checkBio().then(tryBio);
-pullWidget();
+Promise.resolve(pullWidget()).then(() => setTimeout(takeShortcut, 300));
 refreshSysColor();
 
 // ---------- تتبع الواي فاي ----------
