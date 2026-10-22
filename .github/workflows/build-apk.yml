@@ -58,6 +58,7 @@ jobs:
           cp android-src/BioPlugin.java $P/
           cp android-src/WorkWidgetProvider.java $P/
           cp android-src/TotalWidgetProvider.java $P/
+          cp android-src/Shortcuts.java $P/
           cp android-src/WorkWidgetPlugin.java $P/
           cp android-src/MainActivity.java $P/
           cp android-src/WifiTracker.java $P/
