@@ -57,6 +57,7 @@ jobs:
           mkdir -p $P $R/layout $R/drawable $R/xml
           cp android-src/BioPlugin.java $P/
           cp android-src/WorkWidgetProvider.java $P/
+          cp android-src/TotalWidgetProvider.java $P/
           cp android-src/WorkWidgetPlugin.java $P/
           cp android-src/MainActivity.java $P/
           cp android-src/WifiTracker.java $P/
@@ -81,12 +82,61 @@ jobs:
           cp android-src/work_w_colors.xml $R/values/work_w_colors.xml
           cp android-src/work_w_colors_night.xml $R/values-night/work_w_colors.xml
           cp android-src/work_widget_info.xml $R/xml/
+          cat > $R/layout/work_total_widget.xml <<'XMLEOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:id="@+id/work_t_root"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:orientation="vertical"
+              android:gravity="center"
+              android:paddingStart="12dp"
+              android:paddingEnd="12dp"
+              android:paddingTop="6dp"
+              android:paddingBottom="6dp"
+              android:background="@drawable/work_widget_bg">
+              <TextView
+                  android:id="@+id/work_t_label"
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:maxLines="1"
+                  android:textSize="12sp"
+                  android:text="المجموع الكامل" />
+              <TextView
+                  android:id="@+id/work_t_value"
+                  android:layout_width="match_parent"
+                  android:layout_height="0dp"
+                  android:layout_weight="1"
+                  android:gravity="center"
+                  android:maxLines="1"
+                  android:textStyle="bold"
+                  android:textDirection="ltr"
+                  android:autoSizeTextType="uniform"
+                  android:autoSizeMinTextSize="12sp"
+                  android:autoSizeMaxTextSize="26sp"
+                  android:text="" />
+          </LinearLayout>
+          XMLEOF
+          cat > $R/xml/work_total_info.xml <<'XMLEOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+              android:minWidth="110dp"
+              android:minHeight="40dp"
+              android:targetCellWidth="2"
+              android:targetCellHeight="1"
+              android:updatePeriodMillis="0"
+              android:initialLayout="@layout/work_total_widget"
+              android:resizeMode="horizontal|vertical"
+              android:widgetCategory="home_screen" />
+          XMLEOF
           M=android/app/src/main/AndroidManifest.xml
           sed -i 's#</application>#    <receiver android:name=".WorkWidgetProvider" android:exported="true"><intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter><meta-data android:name="android.appwidget.provider" android:resource="@xml/work_widget_info"/></receiver>\n    </application>#' $M
+          sed -i 's#</application>#    <receiver android:name=".TotalWidgetProvider" android:label="المجموع" android:exported="true"><intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter><meta-data android:name="android.appwidget.provider" android:resource="@xml/work_total_info"/></receiver>\n    </application>#' $M
           sed -i 's#</application>#    <service android:name=".WifiWatchService" android:exported="false" android:foregroundServiceType="specialUse"><property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="wifi_presence_tracking"/></service>\n    <receiver android:name=".WifiBootReceiver" android:exported="false"><intent-filter><action android:name="android.intent.action.BOOT_COMPLETED"/><action android:name="android.intent.action.MY_PACKAGE_REPLACED"/></intent-filter></receiver>\n    </application>#' $M
           grep -q 'WifiBootReceiver' $M || { echo "wifi receivers were not added to the manifest"; exit 1; }
           grep -q 'WifiWatchService' $M || { echo "wifi service was not added to the manifest"; exit 1; }
           grep -q 'WorkWidgetProvider' $M || { echo "widget receiver was not added to the manifest"; exit 1; }
+          grep -q 'TotalWidgetProvider' $M || { echo "total widget receiver was not added to the manifest"; exit 1; }
           sed -i '/^dependencies {/a\    implementation "androidx.biometric:biometric:1.1.0"' android/app/build.gradle
           grep -q 'androidx.biometric' android/app/build.gradle || { echo "biometric dependency was not added"; exit 1; }
 
