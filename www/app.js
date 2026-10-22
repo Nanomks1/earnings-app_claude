@@ -409,9 +409,19 @@ $('shift').onclick = async e => {
   else if (id === 'clockCancel') { if (await ask('إلغاء تسجيل الدخول؟', 'لن تُحفظ هذه الوردية الجارية.', { ok: 'إلغاء الدخول', danger: true })) { state.open = null; save(); } }
 };
 $('iCancel').onclick = () => $('inDlg').close();
-$('iOk').onclick = () => {
+$('iOk').onclick = async () => {
   if (!$('iDate').value || !toMin($('iTime').value) && $('iTime').value !== '00:00') return toast('أدخل التاريخ والوقت');
-  state.open = { ...(state.open || {}), date: $('iDate').value, start: $('iTime').value };
+  let date = $('iDate').value, time = $('iTime').value;
+  const k0 = date + ' ' + time;
+  if (!state.open) { // دخول جديد: إن وصلتَ شبكة العمل قبل وقت الضغط بأكثر من 10 دقائق فاسأل
+    const ts = new Date(date + 'T' + time).getTime(), a = await wfArrival(ts);
+    if (a) {
+      const t = wfHM(a.s);
+      if (await ask('وصلتَ إلى شبكة العمل قبل ' + fmtDur((ts - a.s) / 60000), 'هل يبدأ الحساب من ' + t + ' بدل ' + time + '؟', { ok: 'ابدأ من ' + t, cancel: 'أبقِ ' + time })) { date = wfYMD(a.s); time = t; }
+    }
+  }
+  state.open = { ...(state.open || {}), date, start: time };
+  wfAskedMark('in', k0); wfAskedMark('in', date + ' ' + time);
   $('inDlg').close(); save(); toast('تم حفظ وقت الدخول');
 };
 
@@ -1679,7 +1689,7 @@ function checkForgot() {
     if (state.open && await ask('هل نسيت تسجيل الخروج؟', 'أنت مسجّل دخول منذ ' + Math.floor(m / 60) + ' ساعة (من ' + o.start + ').', { ok: 'سجّل الخروج الآن', cancel: 'ما زلت في العمل' })) { const b = $('clockOut'); if (b) b.click(); }
   }, 300);
 }
-function foregroundChecks() { try { checkBkStale(); checkForgot(); wfBadge(); } catch (e) {} }
+function foregroundChecks() { try { checkBkStale(); checkForgot(); wfBadge(); wfOpenCheck(); } catch (e) {} }
 
 // ---------- زر الرجوع ----------
 let lastBack = 0;
@@ -1706,7 +1716,9 @@ Promise.resolve(pullWidget()).then(() => setTimeout(takeShortcut, 300));
 refreshSysColor();
 
 // ---------- تتبع الواي فاي ----------
-let wfOnSaved = null, wfReturn = false, wfAll = [], wfMerge = {}, wfWork = [];
+let wfOnSaved = null, wfReturn = false, wfAll = [], wfMerge = {}, wfWork = [], wfRc = {};
+const wfRcSel = {};
+var wfChk = false;
 const WF_GAP = 10 * 60000;
 const WF_DAYS = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const wfHM = t => { const d = new Date(t); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); };
@@ -1780,21 +1792,22 @@ function wfSessions(ev, now, ws) {
   out.forEach(x => { x.pend = x.e !== null && !x.open && now - x.e < WF_GAP; });
   return out;
 }
-function wfRow(x, done) {
+function wfRow(x, done, nb) {
   const dn = wfIsDone(x, done), sk = !dn && wfIsSkip(x);
   const t = (x.l ? '~' : '') + wfHM(x.s) + ' – ' + (x.open ? '…' : (x.ea ? '~' : '') + wfHM(x.e));
   let sub = x.open ? 'متصل الآن' : x.pend ? 'ينتظر تأكيد الخروج' : fmtDur((x.e - x.s) / 60000);
   if (x.parts > 1) sub += ' • دُمجت ' + x.parts + ' فترات';
   const pd = x.parts > 1 && x.ps ? '<details style="margin-top:4px;color:var(--mut);font-size:calc(13px*var(--fs,1))"><summary>تفاصيل الفترات</summary>' + x.ps.map((q, i) => '<div style="padding:2px 0">' + (i + 1) + '. <span dir="ltr">' + wfHM(q.s) + ' – ' + (q.e == null ? '…' : wfHM(q.e)) + '</span>' + (q.e == null ? '' : ' • ' + esc(fmtDur((q.e - q.s) / 60000))) + '</div>').join('') + '</details>' : '';
-  const btn = dn ? '<span style="color:var(--mut)">أُضيفت</span>' : sk ? '<span style="color:var(--mut)">تُجوهلت</span>' : (x.open || x.pend) ? '' : '<span class="acts" style="margin:0"><button class="ok" type="button" data-wfs="' + x.s + '">أضف</button><button type="button" data-wfk="' + x.s + '" style="flex:none;padding:0 12px;height:40px;color:var(--mut);font-weight:500">تجاهل</button></span>';
+  const btn = dn ? '<span style="color:var(--mut)">أُضيفت</span>' : sk ? '<span style="color:var(--mut)">تُجوهلت</span>' : (x.open || x.pend || nb) ? '' : '<span class="acts" style="margin:0"><button class="ok" type="button" data-wfs="' + x.s + '">أضف</button><button type="button" data-wfk="' + x.s + '" style="flex:none;padding:0 12px;height:40px;color:var(--mut);font-weight:500">تجاهل</button></span>';
   return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--bd)' + (dn || sk ? ';opacity:.6' : '') + '"><div style="flex:1"><span dir="ltr" style="font-weight:700">' + t + '</span><div style="color:var(--mut);font-size:calc(13px*var(--fs,1))">' + esc(sub) + '</div>' + pd + '</div>' + btn + '</div>';
 }
-function wfBlock(list, done) {
+function wfBlock(list, done, rcOn) {
   const by = {}; list.forEach(x => { const k = wfYMD(x.s); (by[k] = by[k] || []).push(x); });
   return Object.keys(by).sort().reverse().slice(0, 14).map(day => {
     const L = by[day], d = new Date(day + 'T00:00:00');
     const dup = allItems().some(i => i.type === 'work' && i.date === day);
-    const ok = L.length >= 2 && L.every(x => !x.open && !x.pend && !wfIsDone(x, done) && !wfIsSkip(x));
+    const rc = rcOn ? wfRecon(day, L, done) : null; if (rc) wfRc[day] = rc;
+    const ok = !rc && L.length >= 2 && L.every(x => !x.open && !x.pend && !wfIsDone(x, done) && !wfIsSkip(x));
     let mg = '';
     if (ok) {
       let brk = 0; for (let i = 1; i < L.length; i++) brk += L[i].s - L[i - 1].e;
@@ -1802,7 +1815,7 @@ function wfBlock(list, done) {
       wfMerge[day] = { s: L[0].s, e: L[L.length - 1].e, brk, keys: L.flatMap(x => x.keys) };
       mg = '<div class="acts" style="margin-top:6px"><button type="button" data-wfd="' + day + '">ادمج الفترات وأضف (استراحة ' + brk + ' د)</button></div>';
     }
-    return '<div style="border:1px solid var(--bd);border-radius:14px;padding:10px 12px;margin:0 0 10px"><div style="font-weight:700;margin-bottom:2px">' + WF_DAYS[d.getDay()] + ' ' + d.getDate() + '/' + (d.getMonth() + 1) + (dup ? ' <small style="color:var(--mut);font-weight:400">• يوجد سجل بهذا اليوم</small>' : '') + '</div>' + L.map(x => wfRow(x, done)).join('') + mg + '</div>';
+    return '<div style="border:1px solid var(--bd);border-radius:14px;padding:10px 12px;margin:0 0 10px"><div style="font-weight:700;margin-bottom:2px">' + WF_DAYS[d.getDay()] + ' ' + d.getDate() + '/' + (d.getMonth() + 1) + (dup ? ' <small style="color:var(--mut);font-weight:400">• يوجد سجل بهذا اليوم</small>' : '') + '</div>' + L.map(x => wfRow(x, done, !!rc)).join('') + (rc ? wfRcHtml(rc) : '') + mg + '</div>';
   }).join('');
 }
 function wfIgnorable() {
@@ -1815,13 +1828,13 @@ async function wfRender() {
   let cfg, ev;
   try { cfg = await W.getConfig(); ev = JSON.parse((await W.getEvents()).json || '[]'); } catch (e) { box.textContent = 'تعذرت قراءة السجل'; return; }
   const now = Date.now(), done = wfDoneSet(), ws = wfSet(cfg);
-  wfAll = wfSessions(ev, now, ws); wfMerge = {};
+  wfAll = wfSessions(ev, now, ws); wfMerge = {}; wfRc = {};
   const work = wfAll.filter(x => x.ssid && ws.has(x.ssid.trim())), unk = wfAll.filter(x => !x.ssid);
   let h = '';
   if (!cfg.on) h += '<div class="info">التتبع مطفأ. فعّله من إعدادات الواي فاي.</div>';
   else if (cfg.root && !ws.size) h += '<div class="info">لم تُضَف شبكة عمل بعد. اتصل بها ثم اضغط «أضف الشبكة الحالية» في إعدادات الواي فاي.</div>';
   wfWork = work;
-  const w = wfBlock(work, done);
+  const w = wfBlock(work, done, true);
   h += w || (cfg.on && (ws.size || !cfg.root) && !unk.length ? '<div class="info">لا توجد فترات بعد.</div>' : '');
   const ign = wfIgnorable();
   if (ign.length) h += '<button type="button" data-wfall="1" data-lbl="تجاهل الكل (' + ign.length + ')" style="width:100%;height:44px;border-radius:14px;border:1px solid var(--bd);background:var(--card2);color:var(--mut);margin:0 0 10px">تجاهل الكل (' + ign.length + ')</button>';
@@ -1836,6 +1849,11 @@ function wfOpen(day, s, e, brk, keys) {
   wfOnSaved = () => wfMarkDone(keys); wfReturn = true;
 }
 $('wfSugBody').onclick = e => {
+  const rcc = e.target.closest('[data-rcc]'), rca = e.target.closest('[data-rca]'), rce = e.target.closest('[data-rce]'), rck = e.target.closest('[data-rck]');
+  if (rcc) { const d = rcc.dataset.day, v = rcc.dataset.rcc; wfRcSel[d] = { ...(wfRcSel[d] || {}), [v[0]]: v[1] }; wfRender(); return; }
+  if (rca) return wfRcApply(rca.dataset.rca, false);
+  if (rce) return wfRcApply(rce.dataset.rce, true);
+  if (rck) { const r = wfRc[rck.dataset.rck]; if (r) { wfMarkSkip(r.keys); toast('أُبقي السجل اليدوي'); wfRender(); wfBadge(); } return; }
   const a = e.target.closest('[data-wfs]'), m = e.target.closest('[data-wfd]'), k = e.target.closest('[data-wfk]'), all = e.target.closest('[data-wfall]');
   if (k) { const x = wfAll.find(y => y.s === Number(k.dataset.wfk)); if (x) { wfMarkSkip(x.keys); wfRender(); wfBadge(); } }
   else if (all) {
@@ -1864,3 +1882,103 @@ async function wfBadge() {
 }
 $('wfCard').onclick = () => $('wfSugOpen').onclick();
 setInterval(() => { if (!document.hidden) wfBadge(); }, 60000); // تحديث البطاقة والتطبيق مفتوح
+
+// ---------- مطابقة السجل اليدوي/الودجت مع الواي فاي ----------
+const wfAskedGet = k => { try { return new Set(JSON.parse(localStorage.getItem('earnings_wf_ask_' + k)) || []); } catch (e) { return new Set(); } };
+function wfAskedMark(k, v) { const t = wfAskedGet(k); t.add(v); try { localStorage.setItem('earnings_wf_ask_' + k, JSON.stringify([...t].slice(-60))); } catch (e) {} }
+async function wfCtx() { // فترات شبكات العمل فقط (التتبع مفعّل وشبكة محدّدة)
+  const W = nplug('WifiTrack'); if (!W) return null;
+  try {
+    const cfg = await W.getConfig(); if (!cfg.on) return null;
+    const ws = wfSet(cfg); if (!ws.size) return null;
+    const ev = JSON.parse((await W.getEvents()).json || '[]'), now = Date.now();
+    return { now, all: wfSessions(ev, now, ws).filter(x => x.ssid && ws.has(x.ssid.trim())) };
+  } catch (e) { return null; }
+}
+const wfCover = (all, t) => all.find(s => s.s <= t + 60000 && (s.open || (s.e != null && s.e >= t - WF_GAP)));
+async function wfArrival(tsIn) { // الفترة التي تشمل لحظة الدخول وبدأت قبلها بأكثر من 10 دقائق
+  if (isNaN(tsIn)) return null;
+  const c = await wfCtx(); if (!c) return null;
+  const x = wfCover(c.all, tsIn);
+  return x && tsIn - x.s > WF_GAP ? x : null;
+}
+async function wfOpenCheck() { // عند فتح التطبيق: دخول متأخر (مثلًا من الودجت) أو نسيان الخروج
+  if (!state.open || wfChk || !nplug('WifiTrack')) return;
+  wfChk = true;
+  try {
+    const c = await wfCtx(); if (!c) return;
+    await new Promise(r => setTimeout(r, 900));
+    const o = state.open;
+    if (!o || !$('lock').hidden || document.querySelector('dialog[open]')) return;
+    const st = new Date(o.date + 'T' + o.start).getTime(); if (isNaN(st)) return;
+    const kin = o.date + ' ' + o.start;
+    if (!wfAskedGet('in').has(kin)) {
+      const x = wfCover(c.all, st);
+      if (x && st - x.s > WF_GAP) {
+        wfAskedMark('in', kin);
+        const t = wfHM(x.s);
+        if (await ask('وصلتَ إلى شبكة العمل قبل ' + fmtDur((st - x.s) / 60000), 'سُجّل الدخول ' + o.start + '. هل يبدأ الحساب من ' + t + '؟', { ok: 'ابدأ من ' + t, cancel: 'أبقِ ' + o.start }) && state.open) {
+          state.open = { ...state.open, date: wfYMD(x.s), start: t }; wfAskedMark('in', wfYMD(x.s) + ' ' + t); save(); toast('تم تعديل وقت الدخول');
+        }
+        return;
+      }
+    }
+    const last = c.all.filter(s => s.s >= st - WF_GAP).slice(-1)[0];
+    if (last && !last.open && !last.pend && last.e != null && last.e > st && c.now - last.e > 30 * 60000 && !wfAskedGet('out').has(String(last.e))) {
+      wfAskedMark('out', String(last.e));
+      const t = wfHM(last.e);
+      if (await ask('خرجتَ من شبكة العمل الساعة ' + t, 'ما زلتَ مسجّل دخول. هل تسجّل الخروج عند ' + t + '؟', { ok: 'سجّل الخروج ' + t, cancel: 'ما زلت في العمل' }) && state.open) {
+        const oo = state.open, brk = Math.round((oo.brk || 0) + (oo.bs ? Math.max(0, (last.e - oo.bs) / 60000) : 0));
+        openForm('work', null, { date: oo.date, start: oo.start, end: t, brk });
+      }
+    }
+  } catch (e) {} finally { wfChk = false; }
+}
+const wfTs = (d, t) => new Date(d + 'T' + t).getTime();
+function wfRecon(day, L, done) { // يقارن سجلًا يدويًا واحدًا بفترات الواي فاي لنفس اليوم
+  if (L.some(x => x.open || x.pend || x.e == null)) return null;
+  const sk = wfSkipSet(), S = L.filter(x => !wfIsSkip(x, sk));
+  if (!S.length || S.every(x => wfIsDone(x, done))) return null;
+  const ws = S[0].s, we = S[S.length - 1].e;
+  const span = i => { const a = wfTs(i.date, i.start); let b = wfTs(i.date, i.end); if (b <= a) b += 864e5; return [a, b]; };
+  const c = state.items.filter(i => i.type === 'work' && !i.remote && i.start && i.end && (([a, b]) => ws < b && a < we)(span(i)));
+  if (c.length !== 1) return null;
+  const it = c[0], [ms, me] = span(it);
+  if (isNaN(ms) || isNaN(me)) return null;
+  let wb = 0; for (let i = 1; i < S.length; i++) wb += (S[i].s - S[i - 1].e) / 60000;
+  wb = Math.round(wb); const mb = Math.round(it.brk || 0);
+  const nS = Math.abs(ws - ms) > WF_GAP, nE = Math.abs(we - me) > WF_GAP, nB = S.length >= 2 && Math.abs(wb - mb) > 10;
+  if (!nS && !nE && !nB) return null; // الأوقات متقاربة: لا شيء يظهر
+  return { day, it, ms, me, ws, we, mb, wb, nS, nE, nB, keys: S.flatMap(x => x.keys) };
+}
+function wfRcRes(r) {
+  const s = wfRcSel[r.day] || {};
+  const rs = r.nS && s.s === 'w' ? r.ws : r.ms, re = r.nE && s.e === 'w' ? r.we : r.me, rb = r.nB && s.b === 'w' ? r.wb : r.mb;
+  return { rs, re, rb, mins: Math.round((re - rs) / 60000 - rb) };
+}
+function wfRcHtml(r) {
+  const sel = wfRcSel[r.day] || {}, x = wfRcRes(r);
+  const chip = (k, v, lbl, val, on) => '<button type="button" data-day="' + r.day + '" data-rcc="' + k + v + '" style="flex:1;min-height:44px;border-radius:12px;border:1px solid ' + (on ? 'var(--pri)' : 'var(--bd)') + ';background:' + (on ? 'var(--card2)' : 'transparent') + ';color:inherit;font-weight:' + (on ? 700 : 500) + '">' + lbl + '<br><span dir="ltr">' + val + '</span></button>';
+  const row = (k, ttl, mv, wv) => { const w = sel[k] === 'w'; return '<div style="margin:8px 0 3px;color:var(--mut);font-size:calc(13px*var(--fs,1))">' + ttl + '</div><div style="display:flex;gap:8px">' + chip(k, 'm', 'يدوي', mv, !w) + chip(k, 'w', 'واي فاي', wv, w) + '</div>'; };
+  const ok = x.mins > 0;
+  return '<div style="margin-top:8px;padding:8px 10px;border-radius:12px;background:var(--card2)"><div style="font-weight:700">مطابقة اليوم</div><div style="color:var(--mut);font-size:calc(13px*var(--fs,1))">السجل يختلف عن الواي فاي. اختر الأصح:</div>'
+    + (r.nS ? row('s', 'الدخول', r.it.start, wfHM(r.ws)) : '') + (r.nE ? row('e', 'الخروج', r.it.end, wfHM(r.we)) : '') + (r.nB ? row('b', 'الاستراحة', r.mb + ' د', r.wb + ' د') : '')
+    + '<div style="margin:8px 0;font-weight:700">الناتج: <span dir="ltr">' + wfHM(x.rs) + ' – ' + wfHM(x.re) + '</span> • ' + (ok ? esc(fmtDur(x.mins)) : 'غير صالح') + (x.rb ? ' (استراحة ' + x.rb + ' د)' : '') + '</div>'
+    + '<div class="acts" style="margin:0"><button class="ok" type="button" data-rca="' + r.day + '"' + (ok ? '' : ' disabled') + '>طبّق</button><button type="button" data-rce="' + r.day + '">عدّل</button><button type="button" data-rck="' + r.day + '">أبقِ اليدوي</button></div></div>';
+}
+async function wfRcApply(day, edit) {
+  const r = wfRc[day]; if (!r) return;
+  const x = wfRcRes(r), date = wfYMD(x.rs), st = wfHM(x.rs), en = wfHM(x.re);
+  if (edit) {
+    $('wfSug').close(); openForm('work', r.it);
+    $('fDate').value = date; $('fStart').value = st; $('fEnd').value = en; $('fBrk').value = x.rb || '';
+    updDur(); wfOnSaved = () => wfMarkDone(r.keys); wfReturn = true; return;
+  }
+  if (!(x.mins > 0)) return toast('الناتج غير صالح. راجع الاستراحة');
+  const ov = findOverlap(date, st, en, r.it.id);
+  if (ov && !(await ask('الوقت يتداخل مع سجل آخر', fmtDay(ov.date) + ' ' + ltr(ov.start + ' – ' + ov.end), { ok: 'طبّق رغم ذلك' }))) return;
+  if (x.mins > LONG_MIN && !(await ask('مدة الوردية طويلة', 'مدتها ' + fmtDur(x.mins) + '. هل هي صحيحة؟', { ok: 'نعم، صحيحة', cancel: 'رجوع' }))) return;
+  const rate = r.it.rate || state.rate, rec = { ...r.it, date, start: st, end: en, brk: x.rb, mins: x.mins, rate, amount: x.mins / 60 * rate };
+  state.items = state.items.map(i => i.id === rec.id ? rec : i);
+  wfMarkDone(r.keys); save(); toast('حُدّث السجل: ' + st + ' – ' + en); wfRender(); wfBadge();
+}
