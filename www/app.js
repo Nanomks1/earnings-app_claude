@@ -339,6 +339,23 @@ const elapsedMins = () => {
   const m = (Date.now() - new Date(o.date + 'T' + o.start).getTime()) / 60000;
   return isNaN(m) ? 0 : Math.max(0, m);
 };
+// نافذة تأكيد بشكل التطبيق بدل نافذة النظام الأصلية؛ تُرجع Promise<boolean>
+let askRes = null;
+function ask(title, msg, o) {
+  o = o || {};
+  return new Promise(res => {
+    if (askRes) askRes(false);
+    askRes = res;
+    $('askT').textContent = title; $('askM').textContent = msg || ''; $('askM').hidden = !msg;
+    $('askYes').textContent = o.ok || 'متابعة'; $('askNo').textContent = o.cancel || 'رجوع';
+    $('askYes').className = o.danger ? 'dg' : 'ok'; $('askNo').className = o.danger ? 'ok' : '';
+    try { $('askDlg').showModal(); } catch (e) { askRes = null; res(false); }
+  });
+}
+function askDone(v) { const r = askRes; askRes = null; if ($('askDlg').open) $('askDlg').close(); if (r) r(v); }
+$('askYes').onclick = () => askDone(true);
+$('askNo').onclick = () => askDone(false);
+$('askDlg').addEventListener('close', () => { if (askRes) askDone(false); });
 const brkNow = () => { const o = state.open; return o ? (o.brk || 0) + (o.bs ? Math.max(0, (Date.now() - o.bs) / 60000) : 0) : 0; }; // دقائق الاستراحة (المنتهية + الجارية)
 const netMins = () => Math.max(0, elapsedMins() - brkNow());
 const brkInfoText = () => { const o = state.open; return !o ? '' : o.bs ? 'في استراحة منذ ' + fmtHM(Math.max(0, (Date.now() - o.bs) / 60000)) : o.brk > 0 ? 'استراحة: ' + Math.round(o.brk) + ' د' : ''; };
@@ -383,13 +400,13 @@ async function takeShortcut() {
   const W = nplug('WorkWidget'); if (!W || !W.takeShortcut) return;
   try { const r = await W.takeShortcut(); if (r && r.act) doShortcut(r.act); } catch (e) {}
 }
-$('shift').onclick = e => {
+$('shift').onclick = async e => {
   const id = e.target.closest('button') && e.target.closest('button').id;
   if (id === 'clockIn') { $('iDate').value = today(); $('iTime').value = nowTime(); $('inDlg').showModal(); }
   else if (id === 'clockOut') clockOutForm();
   else if (id === 'brkBtn') toggleBreak();
   else if (id === 'editIn') { $('iDate').value = state.open.date; $('iTime').value = state.open.start; $('inDlg').showModal(); }
-  else if (id === 'clockCancel') { if (confirm('إلغاء تسجيل الدخول الحالي؟')) { state.open = null; save(); } }
+  else if (id === 'clockCancel') { if (await ask('إلغاء تسجيل الدخول؟', 'لن تُحفظ هذه الوردية الجارية.', { ok: 'إلغاء الدخول', danger: true })) { state.open = null; save(); } }
 };
 $('iCancel').onclick = () => $('inDlg').close();
 $('iOk').onclick = () => {
@@ -907,7 +924,7 @@ function findOverlap(date, s, e, skipId) {
     return t0 < b && a < t1;
   }) || null;
 }
-$('fSave').onclick = () => {
+$('fSave').onclick = async () => {
   const date = $('fDate').value;
   if (!date) return toast('أدخل التاريخ');
   const rec = { id: editing ? editing.id : Date.now(), type: mode === 'adv' ? 'adv' : 'work', date, note: $('fNote').value.trim() };
@@ -923,9 +940,10 @@ $('fSave').onclick = () => {
       } else return toast('أدخل البداية والنهاية (والاستراحة أقل من المدة)');
     } else {
       const ov = findOverlap(date, $('fStart').value, $('fEnd').value, editing ? editing.id : null);
-      if (ov && !confirm('يتداخل هذا الوقت مع سجل آخر: ' + fmtDay(ov.date) + ' ' + ltr(ov.start + ' – ' + ov.end) + '. هل تريد الحفظ رغم ذلك؟')) return;
+      if (ov && !(await ask('الوقت يتداخل مع سجل آخر', fmtDay(ov.date) + ' ' + ltr(ov.start + ' – ' + ov.end), { ok: 'احفظ رغم ذلك' }))) return;
       const same = $('fStart').value === $('fEnd').value;
-      if (same ? !confirm('البداية تساوي النهاية، وستُحسب المدة 24 ساعة. متابعة؟') : m > LONG_MIN && !confirm('مدة الوردية ' + fmtDur(m) + '، وهي طويلة. هل هي صحيحة؟')) return;
+      if (same) { if (!(await ask('البداية تساوي النهاية', 'ستُحسب المدة 24 ساعة.', { ok: 'متابعة' }))) return; }
+      else if (m > LONG_MIN && !(await ask('مدة الوردية طويلة', 'مدتها ' + fmtDur(m) + '. هل هي صحيحة؟', { ok: 'نعم، صحيحة', cancel: 'تعديل' }))) return;
       Object.assign(rec, { remote: false, start: $('fStart').value, end: $('fEnd').value, brk: parseInt($('fBrk').value) || 0, mins: m, rate: editing && editing.rate ? editing.rate : state.rate });
     }
     rec.amount = rec.mins / 60 * rec.rate;
@@ -967,13 +985,13 @@ setTimeout(purgeTrash, 0);
 $('trashAuto').onchange = () => { state.trashAuto = $('trashAuto').checked; savePrefs(); };
 $('trashOpen').onclick = () => { $('trashAuto').checked = state.trashAuto !== false; renderTrash(); $('trashDlg').showModal(); };
 $('trashClose').onclick = () => $('trashDlg').close();
-$('trashBody').onclick = e => {
+$('trashBody').onclick = async e => {
   const b = e.target.closest('.item'); if (!b) return;
   const t = (state.trash || []).find(x => x.id == b.dataset.id);
-  if (t && confirm('استعادة هذا السجل إلى الفترة الحالية؟')) { restoreItem(t); renderTrash(); updTrashLabel(); }
+  if (t && await ask('استعادة السجل؟', 'سيعود إلى الفترة الحالية.', { ok: 'استعادة' })) { restoreItem(t); renderTrash(); updTrashLabel(); }
 };
-$('trashEmpty').onclick = () => {
-  if (!(state.trash || []).length || !confirm('إفراغ السلة نهائيًا؟ لا يمكن استرجاع السجلات بعدها.')) return;
+$('trashEmpty').onclick = async () => {
+  if (!(state.trash || []).length || !(await ask('إفراغ السلة؟', 'لا يمكن استرجاع السجلات بعدها.', { ok: 'إفراغ', danger: true }))) return;
   state.trash = []; save(); renderTrash(); updTrashLabel(); toast('تم إفراغ السلة');
 };
 
@@ -994,10 +1012,10 @@ $('payBtn').onclick = () => {
 };
 $('pRecv').addEventListener('input', updPay);
 $('pCancel').onclick = () => $('payDlg').close();
-$('pOk').onclick = () => {
+$('pOk').onclick = async () => {
   const r = parseFloat($('pRecv').value), paidAt = $('pDate').value;
   if (isNaN(r) || r < 0 || !paidAt) return toast('أدخل التاريخ والمبلغ');
-  if (!confirm('تأكيد استلام ' + num(r) + cur() + '؟ ستنتقل الفترة الحالية إلى الأرشيف.')) return;
+  if (!(await ask('تأكيد الاستلام', 'استلام ' + num(r) + cur() + '. ستنتقل الفترة الحالية إلى الأرشيف.', { ok: 'تأكيد' }))) return;
   const c = calc(state.items), d = due();
   state.archive.push({ id: Date.now(), paidAt, due: d, received: r, carryIn: state.carry, remain: round2(d - r),
     note: $('pNote').value.trim(), items: state.items, work: c.work, adv: c.adv, mins: c.mins, days: c.days });
@@ -1005,14 +1023,14 @@ $('pOk').onclick = () => {
   state.items = [];
   $('payDlg').close(); save(); setView('arc'); toast('تم الاستلام ونُقلت الفترة إلى الأرشيف');
 };
-$('arch').onclick = e => {
+$('arch').onclick = async e => {
   if (e.target.closest('#shareAll')) { askShare('مشاركة كل الدفعات', d => archivesText(d), d => ({ cfg: archivesCfg(d), name: 'work-batches-' + today() + '.pdf' })); return; }
   const ed = e.target.closest('.ed1');
   if (ed) { const a = state.archive.find(x => x.id == ed.dataset.id); if (a) openAp(a); return; }
   const s1 = e.target.closest('.sh1');
   if (s1) { const a = state.archive.find(x => x.id == s1.dataset.id); if (a) askShare('مشاركة الدفعة', d => archiveText(a, d), d => ({ cfg: archiveCfg(a, d), name: 'work-batch-' + a.paidAt + '.pdf' })); return; }
   if (!e.target.closest('#undoPay')) return;
-  if (!confirm('التراجع عن آخر دفعة؟ ستعود أيامها إلى الفترة الحالية.')) return;
+  if (!(await ask('التراجع عن آخر دفعة؟', 'ستعود أيامها إلى الفترة الحالية.', { ok: 'تراجع عن الدفعة', danger: true }))) return;
   const a = state.archive.pop();
   state.items = [...a.items, ...state.items];
   state.carry = a.carryIn || 0;
@@ -1035,11 +1053,11 @@ function updAp() {
 }
 $('aRecv').addEventListener('input', updAp);
 $('aCancel').onclick = () => $('apDlg').close();
-$('aOk').onclick = () => {
+$('aOk').onclick = async () => {
   const a = apEdit, r = parseFloat($('aRecv').value), paidAt = $('aDate').value;
   if (!a || isNaN(r) || r < 0 || !paidAt) return toast('أدخل التاريخ والمبلغ');
   const delta = round2(r - a.received);
-  if (delta && !confirm('تغيير المبلغ المستلم بمقدار ' + signed(delta) + ' سيعدّل الرصيد المرحَّل بعده. متابعة؟')) return;
+  if (delta && !(await ask('تغيير المبلغ المستلم؟', 'التغيير بمقدار ' + signed(delta) + ' سيعدّل الرصيد المرحَّل بعده.', { ok: 'متابعة' }))) return;
   const idx = state.archive.findIndex(x => x.id === a.id);
   a.paidAt = paidAt; a.note = $('aNote').value.trim(); a.received = r; a.remain = round2(a.due - r);
   if (delta) {
@@ -1281,7 +1299,7 @@ $('ffFile').onchange = async () => {
   state.font = 1; applyTheme(); updFont(); savePrefs(); toast('تم تطبيق الخط');
 };
 $('ffClear').onclick = async () => {
-  if (!confirm('إزالة الخط المخصص والعودة للخط الحالي؟')) return;
+  if (!(await ask('إزالة الخط المخصص؟', 'ستعود للخط الحالي.', { ok: 'إزالة', danger: true }))) return;
   try { await fdbDel(); } catch (e) {}
   customFonts.forEach(x => document.fonts.delete(x)); customFonts = []; customOk = false; customLabel = '';
   state.font = 0; applyTheme(); updFont(); savePrefs();
@@ -1471,16 +1489,16 @@ function updEnc() {
 }
 $('encBtn').onclick = () => { $('encPw').value = ''; $('encPw2').value = ''; updEnc(); $('encDlg').showModal(); };
 $('encCancel').onclick = () => $('encDlg').close();
-$('encSave').onclick = () => {
+$('encSave').onclick = async () => {
   const a = $('encPw').value;
   if (!(window.crypto && crypto.subtle)) return toast('التشفير غير متاح على هذا الجهاز');
   if (a.length < 6) return toast('كلمة السر 6 أحرف على الأقل');
   if (a !== $('encPw2').value) return toast('التأكيد غير مطابق');
-  if (!confirm('تنبيه: إن نسيت كلمة السر لا يمكن استرجاع النسخ المشفرة أبدًا. متابعة؟')) return;
+  if (!(await ask('تفعيل التشفير؟', 'إن نسيت كلمة السر لا يمكن استرجاع النسخ المشفرة أبدًا.', { ok: 'تفعيل التشفير' }))) return;
   enc = { on: true, pw: a }; saveEnc(); $('encDlg').close(); updEnc(); autoBackup(); toast('تم تفعيل تشفير النسخ الاحتياطي');
 };
-$('encOff').onclick = () => {
-  if (!confirm('إيقاف التشفير؟ ستُحفظ النسخ القادمة بدون تشفير.')) return;
+$('encOff').onclick = async () => {
+  if (!(await ask('إيقاف التشفير؟', 'ستُحفظ النسخ القادمة بدون تشفير.', { ok: 'إيقاف', danger: true }))) return;
   enc = {}; saveEnc(); $('encDlg').close(); updEnc(); autoBackup(); toast('تم إيقاف التشفير');
 };
 
@@ -1523,10 +1541,10 @@ async function applyBackup(text) {
     const d = await readBackup(text);
     if (!d) return;
     if (!Array.isArray(d.items)) throw 0;
-    if (!confirm('سيتم استبدال البيانات الحالية بالنسخة الاحتياطية. متابعة؟')) return;
+    if (!(await ask('استعادة النسخة الاحتياطية؟', 'سيتم استبدال البيانات الحالية بها.', { ok: 'استعادة', danger: true }))) return;
     if (isNative() && !isEmpty(state)) { // نسخة من بياناتك الحالية قبل استبدالها
       try { await putFile('earnings-before-restore-' + stamp() + '.json', await backupText()); }
-      catch (e) { if (!confirm('تعذر حفظ نسخة من بياناتك الحالية قبل الاستعادة. متابعة رغم ذلك؟')) return; }
+      catch (e) { if (!(await ask('تعذر حفظ نسخة من بياناتك الحالية', 'هل تتابع الاستعادة رغم ذلك؟', { ok: 'تابع', danger: true }))) return; }
     }
     clearTimeout(bkTimer);
     const keepPin = state.pin, keepBio = state.bio, keepPrefs = state.prefs;
@@ -1657,8 +1675,8 @@ function checkForgot() {
   const m = elapsedMins();
   if (m < h * 60 || Date.now() - forgetAsked < 3600000) return;
   forgetAsked = Date.now();
-  setTimeout(() => {
-    if (state.open && confirm('أنت مسجّل دخول منذ ' + Math.floor(m / 60) + ' ساعة (من ' + o.start + '). هل نسيت تسجيل الخروج؟\n\nموافق = تسجيل الخروج الآن')) { const b = $('clockOut'); if (b) b.click(); }
+  setTimeout(async () => {
+    if (state.open && await ask('هل نسيت تسجيل الخروج؟', 'أنت مسجّل دخول منذ ' + Math.floor(m / 60) + ' ساعة (من ' + o.start + ').', { ok: 'سجّل الخروج الآن', cancel: 'ما زلت في العمل' })) { const b = $('clockOut'); if (b) b.click(); }
   }, 300);
 }
 function foregroundChecks() { try { checkBkStale(); checkForgot(); wfBadge(); } catch (e) {} }
@@ -1741,7 +1759,7 @@ $('wfBat').onclick = async () => {
 };
 $('wfClear').onclick = async () => {
   const W = nplug('WifiTrack'); if (!W) return;
-  if (!confirm('مسح كل أحداث الواي فاي المسجّلة؟ سجلاتك لن تتأثر.')) return;
+  if (!(await ask('مسح أحداث الواي فاي؟', 'سجلاتك لن تتأثر.', { ok: 'مسح', danger: true }))) return;
   try { await W.clearEvents(); localStorage.removeItem('earnings_wf_done'); localStorage.removeItem('earnings_wf_skip'); toast('تم المسح'); wfBadge(); } catch (e) { toast('تعذر المسح'); }
 };
 

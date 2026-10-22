@@ -239,3 +239,8 @@ dialog:not([open])::backdrop{opacity:0}
 .open .edst .ic{width:13px;height:13px}
 .open .btns #brkBtn{padding:0 12px;white-space:nowrap}
 .open .btns #brkBtn.on{border-color:var(--pri);color:var(--pri)}
+.askm{margin:0 0 16px;color:var(--mut);font-size:calc(14px*var(--fs,1));line-height:1.7;white-space:pre-line}
+.asks{display:flex;gap:8px}
+.asks button{flex:1;height:46px;border-radius:12px;font-weight:700;border:1px solid var(--bd);background:var(--card2);color:var(--text)}
+.asks button.ok{background:var(--pri);color:var(--onpri);border:0}
+.asks button.dg{background:var(--ntint);color:var(--neg);border:0}
