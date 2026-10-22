@@ -19,16 +19,17 @@ const SETTINGS = {
   forgetH: { def: 12, fix: v => v === undefined ? 12 : Math.max(0, Math.min(48, Math.round(Number(v)) || 0)) },
   fsv: { def: 100, fix: v => Math.max(85, Math.min(140, Math.round(Number(v)) || 100)) },
   sys: { def: false, fix: v => v === true },
+  trashAuto: { def: true, fix: v => v !== false },
   font: { def: 0, fix: v => Number(v) === 1 ? 1 : 0 },
   secure: { def: false, fix: v => v === true }
 };
 // تفضيلات الجهاز التي تدخل النسخة الاحتياطية (مظهر الودجت، شكل الأيقونة، خيار التفصيل في المشاركة)
-const PREFS_DEF = () => ({ wg: { bg: 0, fg: 0, ic: 0, label: true, on: true }, ic: { style: 'a', follow: true }, sd: true });
+const PREFS_DEF = () => ({ wg: { bg: 0, fg: 0, ic: 0, label: true, on: true, total: true }, ic: { style: 'a', follow: true }, sd: true });
 const inSet = (v, a) => a.includes(Number(v)) ? Number(v) : 0;
 function normPrefs(p) {
   const o = PREFS_DEF(); if (!p || typeof p !== 'object') return o;
   const w = p.wg && typeof p.wg === 'object' ? p.wg : {}, c = p.ic && typeof p.ic === 'object' ? p.ic : {};
-  o.wg = { bg: inSet(w.bg, [0, 1, 2, 3]), fg: inSet(w.fg, [0, 1, 2]), ic: inSet(w.ic, [0, 1, 2]), label: w.label !== false, on: w.on !== false };
+  o.wg = { bg: inSet(w.bg, [0, 1, 2, 3]), fg: inSet(w.fg, [0, 1, 2]), ic: inSet(w.ic, [0, 1, 2]), label: w.label !== false, on: w.on !== false, total: w.total !== false };
   o.ic = { style: ['a', 'b', 'c'].includes(c.style) ? c.style : 'a', follow: c.follow !== false };
   o.sd = p.sd !== false;
   return o;
@@ -148,7 +149,8 @@ function savePrefs() { // حفظ التفضيلات مع الحالة (فتدخ�
   if (state.auto) { clearTimeout(bkTimer); bkTimer = setTimeout(autoBackup, 800); }
 }
 function save(noBackup) {
-  localStorage.setItem(KEY, JSON.stringify(state));
+  try { localStorage.setItem(KEY, JSON.stringify(state)); }
+  catch (e) { toast('تعذّر الحفظ: مساحة التخزين ممتلئة. أفرغ السلة أو صدّر نسخة احتياطية'); }
   render(); syncWidget();
   if (state.auto && !noBackup) { clearTimeout(bkTimer); bkTimer = setTimeout(autoBackup, 800); }
 }
@@ -922,7 +924,15 @@ function renderTrash() {
   $('trashBody').innerHTML = t.length ? t.map(itemRow).join('') : emptyBox('archive', 'السلة فارغة.');
   $('trashEmpty').hidden = !t.length;
 }
-$('trashOpen').onclick = () => { renderTrash(); $('trashDlg').showModal(); };
+function purgeTrash() { // حذف نهائي لما مرّ عليه 30 يومًا في السلة
+  if (state.trashAuto === false || !(state.trash || []).length) return;
+  const cut = Date.now() - 30 * 864e5;
+  const keep = state.trash.filter(t => !t.delAt || t.delAt > cut);
+  if (keep.length !== state.trash.length) { state.trash = keep; save(); }
+}
+setTimeout(purgeTrash, 0);
+$('trashAuto').onchange = () => { state.trashAuto = $('trashAuto').checked; savePrefs(); };
+$('trashOpen').onclick = () => { $('trashAuto').checked = state.trashAuto !== false; renderTrash(); $('trashDlg').showModal(); };
 $('trashClose').onclick = () => $('trashDlg').close();
 $('trashBody').onclick = e => {
   const b = e.target.closest('.item'); if (!b) return;
@@ -1152,18 +1162,22 @@ $('mHome').onclick = e => { const b = e.target.closest('[data-go]'); if (b) mGo(
 $('menuBtn').onclick = () => {
   mGo('');
   $('srchChk').checked = state.search !== false; $('cur').value = state.currency; $('rate').value = state.rate; $('auto').checked = state.auto; $('forgetH').value = state.forgetH;
-  updFs(); updFont(); $('secChk').checked = !!state.secure; updTrashLabel(); updIc(); updWg(); updPinLabel(); $('bioRow').hidden = !bioOk; $('bioChk').checked = !!state.bio; updBkWhere(); updEnc(); buildSwatches(); showVer(); $('menu').showModal();
+  updFs(); updFont(); $('secChk').checked = !!state.secure; purgeTrash(); updTrashLabel(); updIc(); updWg(); updPinLabel(); $('bioRow').hidden = !bioOk; $('bioChk').checked = !!state.bio; updBkWhere(); updEnc(); buildSwatches(); showVer(); $('menu').showModal();
 };
 async function showVer() { // رقم النسخة من التطبيق نفسه (يتغير مع كل بناء)
   const A = plugin('App'); if (!A || !A.getInfo) return;
   try { const i = await A.getInfo(); $('appVer').textContent = 'النسخة ' + ltr(i.version + (i.build ? ' (' + i.build + ')' : '')); $('appVer').hidden = false; } catch (e) {}
 }
-$('menuClose').onclick = () => {
-  if (mPage) { mGo(''); return; }
+function applyMenuFields() {
   state.currency = $('cur').value.trim();
   const r = parseFloat($('rate').value); if (r > 0) state.rate = r;
   state.auto = $('auto').checked;
   const fh = parseInt($('forgetH').value, 10); if (!isNaN(fh)) state.forgetH = Math.max(0, Math.min(48, fh));
+}
+['cur', 'rate', 'auto', 'forgetH'].forEach(id => { $(id).onchange = () => { applyMenuFields(); save(); }; }); // يُحفظ فور التغيير لا عند الإغلاق فقط
+$('menuClose').onclick = () => {
+  if (mPage) { mGo(''); return; }
+  applyMenuFields();
   $('menu').close(); save(); checkForgot();
 };
 
@@ -1290,12 +1304,13 @@ function wgApply() { savePrefs(); wgPush(); }
 function updWg() {
   $('wgBox').hidden = !isNative(); $('rowWg').hidden = !isNative();
   [['wgBg', 'bg'], ['wgFg', 'fg'], ['wgIc', 'ic']].forEach(([id, k]) => [...$(id).children].forEach(b => b.classList.toggle('on', +b.dataset.v === wgPref[k])));
-  $('wgLabel').checked = wgPref.label; $('wgOn').checked = wgPref.on !== false;
+  $('wgLabel').checked = wgPref.label; $('wgOn').checked = wgPref.on !== false; $('wgTotal').checked = wgPref.total !== false;
 }
 [['wgBg', 'bg'], ['wgFg', 'fg'], ['wgIc', 'ic']].forEach(([id, k]) => {
   $(id).onclick = e => { const b = e.target.closest('button'); if (!b) return; wgPref[k] = +b.dataset.v; wgApply(); updWg(); };
 });
 $('wgLabel').onchange = () => { wgPref.label = $('wgLabel').checked; wgApply(); };
+$('wgTotal').onchange = () => { wgPref.total = $('wgTotal').checked; wgApply(); };
 $('wgOn').onchange = () => {
   wgPref.on = $('wgOn').checked; wgApply();
   if (!wgPref.on && state.open) toast('الودجت معطّل. دخولك الجاري محفوظ، اخرج من التطبيق.');
@@ -1539,6 +1554,7 @@ function syncWidget() { // يعكس حالة الدخول الحالية على 
   wsT = setTimeout(() => {
     const o = state.open;
     try { W.setOpen(o ? { open: true, date: o.date, start: o.start, ts: new Date(o.date + 'T' + o.start).getTime() } : { open: false }); } catch (e) {}
+    try { W.setTotal({ text: signed(due()).replace(/[\u2066\u2069]/g, '') }); } catch (e) {} // ودجت المجموع (للقراءة فقط)
   }, 200);
 }
 async function pullWidget() { // يستلم ما سجّله الودجت وهو مغلق التطبيق
