@@ -237,3 +237,5 @@ dialog:not([open])::backdrop{opacity:0}
 
 .open .edst{background:none;border:0;color:inherit;font:inherit;padding:0 2px;display:inline-flex;align-items:center;gap:4px;text-decoration:underline dotted;height:auto;min-height:0}
 .open .edst .ic{width:13px;height:13px}
+.open .btns #brkBtn{padding:0 12px;white-space:nowrap}
+.open .btns #brkBtn.on{border-color:var(--pri);color:var(--pri)}

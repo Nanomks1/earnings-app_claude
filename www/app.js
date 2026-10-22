@@ -42,7 +42,12 @@ function norm(d) {
   for (const k in SETTINGS) s[k] = SETTINGS[k].fix(d[k]);
   if (d.fsv === undefined && [1, 2].includes(Number(d.fs))) s.fsv = Number(d.fs) === 1 ? 113 : 116; // ترحيل من الخطوات القديمة
   s.carry = Number(d.carry) || 0;
-  if (d.open && d.open.date && d.open.start) s.open = { date: d.open.date, start: d.open.start };
+  if (d.open && d.open.date && d.open.start) {
+    s.open = { date: d.open.date, start: d.open.start };
+    const b = Math.round((Number(d.open.brk) || 0) * 100) / 100, bs = Number(d.open.bs) || 0;
+    if (b > 0) s.open.brk = b;
+    if (bs > 0) s.open.bs = bs;
+  }
   const fix = i => {
     const o = { ...i };
     if (o.type !== 'work') { o.type = 'adv'; o.amount = Number(o.amount) || 0; delete o.remote; return o; }
@@ -334,22 +339,32 @@ const elapsedMins = () => {
   const m = (Date.now() - new Date(o.date + 'T' + o.start).getTime()) / 60000;
   return isNaN(m) ? 0 : Math.max(0, m);
 };
+const brkNow = () => { const o = state.open; return o ? (o.brk || 0) + (o.bs ? Math.max(0, (Date.now() - o.bs) / 60000) : 0) : 0; }; // دقائق الاستراحة (المنتهية + الجارية)
+const netMins = () => Math.max(0, elapsedMins() - brkNow());
+const brkInfoText = () => { const o = state.open; return !o ? '' : o.bs ? 'في استراحة منذ ' + fmtHM(Math.max(0, (Date.now() - o.bs) / 60000)) : o.brk > 0 ? 'استراحة: ' + Math.round(o.brk) + ' د' : ''; };
+function toggleBreak() {
+  const o = state.open; if (!o) return;
+  if (o.bs) { o.brk = Math.round(((o.brk || 0) + (Date.now() - o.bs) / 60000) * 100) / 100; delete o.bs; toast('انتهت الاستراحة'); }
+  else { o.bs = Date.now(); toast('بدأت الاستراحة'); }
+  save();
+}
 function renderShift() {
   const o = state.open;
   $('shift').innerHTML = !o
     ? `<button class="clock" id="clockIn"><span class="bub">${ic('play')}</span><span><b>تسجيل دخول العمل</b><small>اضغط عند وصولك للعمل</small></span></button>`
-    : `<div class="open"><div class="top"><span class="pulse"></span><div style="flex:1"><b>أنت الآن في العمل</b><br><small>دخلت <button type="button" class="edst" id="editIn" aria-label="تعديل وقت الدخول"><span dir="ltr">${o.start}</span>${ic('edit')}</button></small></div><div class="el num" id="elapsed">${fmtHM(elapsedMins())}</div></div>
+    : `<div class="open"><div class="top"><span class="pulse"></span><div style="flex:1"><b>أنت الآن في العمل</b><br><small>دخلت <button type="button" class="edst" id="editIn" aria-label="تعديل وقت الدخول"><span dir="ltr">${o.start}</span>${ic('edit')}</button></small>${o.bs || o.brk > 0 ? '<br><small id="brkInfo">' + brkInfoText() + '</small>' : ''}</div><div class="el num" id="elapsed">${fmtHM(netMins())}</div></div>
        ${elapsedMins() > OPEN_WARN ? '<div class="note warn" id="openWarn">مضى وقت طويل على الدخول. تأكد من وقت الخروج.</div>' : ''}
-       <div class="btns"><button id="clockOut">${ic('stop')}تسجيل الخروج</button><button id="clockCancel" aria-label="إلغاء">${ic('x')}</button></div></div>`;
+       <div class="btns"><button id="clockOut">${ic('stop')}تسجيل الخروج</button><button id="brkBtn"${o.bs ? ' class="on"' : ''}>${o.bs ? 'إنهاء الاستراحة' : 'استراحة'}</button><button id="clockCancel" aria-label="إلغاء">${ic('x')}</button></div></div>`;
 }
 setInterval(() => {
   const e = $('elapsed'); if (!e || !state.open) return;
-  e.textContent = fmtHM(elapsedMins());
+  e.textContent = fmtHM(netMins());
+  const bi = $('brkInfo'); if (bi) bi.textContent = brkInfoText();
   if ((elapsedMins() > OPEN_WARN) !== !!$('openWarn')) renderShift();
 }, 30000);
 function clockOutForm() {
   const long = elapsedMins() > 1440;
-  openForm('work', null, { date: state.open.date, start: state.open.start, end: long ? '' : nowTime() });
+  openForm('work', null, { date: state.open.date, start: state.open.start, end: long ? '' : nowTime(), brk: Math.round(brkNow()) });
   if (long) $('fDur').textContent = 'مضى أكثر من 24 ساعة على الدخول. أدخل وقت الخروج الصحيح.';
   else if (elapsedMins() > OPEN_WARN) $('fDur').textContent += ' — مدة طويلة، راجع وقت الخروج.';
 }
@@ -372,13 +387,14 @@ $('shift').onclick = e => {
   const id = e.target.closest('button') && e.target.closest('button').id;
   if (id === 'clockIn') { $('iDate').value = today(); $('iTime').value = nowTime(); $('inDlg').showModal(); }
   else if (id === 'clockOut') clockOutForm();
+  else if (id === 'brkBtn') toggleBreak();
   else if (id === 'editIn') { $('iDate').value = state.open.date; $('iTime').value = state.open.start; $('inDlg').showModal(); }
   else if (id === 'clockCancel') { if (confirm('إلغاء تسجيل الدخول الحالي؟')) { state.open = null; save(); } }
 };
 $('iCancel').onclick = () => $('inDlg').close();
 $('iOk').onclick = () => {
   if (!$('iDate').value || !toMin($('iTime').value) && $('iTime').value !== '00:00') return toast('أدخل التاريخ والوقت');
-  state.open = { date: $('iDate').value, start: $('iTime').value };
+  state.open = { ...(state.open || {}), date: $('iDate').value, start: $('iTime').value };
   $('inDlg').close(); save(); toast('تم حفظ وقت الدخول');
 };
 
@@ -860,7 +876,7 @@ function openForm(m, item, pre) {
   $('fDate').value = pre ? pre.date : item ? item.date : today();
   $('fStart').value = pre ? pre.start : item && item.start || '';
   $('fEnd').value = pre ? pre.end : item && item.end || '';
-  $('fBrk').value = item && item.brk || '';
+  $('fBrk').value = pre && pre.brk ? pre.brk : item && item.brk || '';
   $('fAmt').value = item && m !== 'work' ? item.amount : '';
   $('fNote').value = item ? item.note || '' : '';
   $('fDel').hidden = !item;
@@ -1600,9 +1616,13 @@ async function pullWidget() { // يستلم ما سجّله الودجت وهو 
         changed = true;
         if (state.items.some(i => i.type === 'work' && i.date === ev.date && i.start === ev.start && i.end === ev.end)) state.open = null; // أُضيف سابقًا
         else if (!(mins > 0)) { state.open = null; msg = 'تجاهلتُ خروجًا من الودجت: المدة أقل من دقيقة'; }
-        else if (mins > OPEN_WARN) { state.open = { date: ev.date, start: ev.start }; msg = 'الخروج من الودجت جاء بعد وقت طويل. سجّل الخروج يدويًا'; }
+        else if (mins > OPEN_WARN) { state.open = { ...(state.open || {}), date: ev.date, start: ev.start }; msg = 'الخروج من الودجت جاء بعد وقت طويل. سجّل الخروج يدويًا'; }
         else {
-          state.items.push({ id: Date.now() + (n++), type: 'work', date: ev.date, note: '', remote: false, start: ev.start, end: ev.end, brk: 0, mins, rate: state.rate, amount: mins / 60 * state.rate });
+          const o0 = state.open && state.open.date === ev.date && state.open.start === ev.start ? state.open : null;
+          let brk = o0 ? Math.round((o0.brk || 0) + (o0.bs ? Math.max(0, (ev.endTs - o0.bs) / 60000) : 0)) : 0;
+          if (brk >= mins) brk = 0;
+          const net = mins - brk;
+          state.items.push({ id: Date.now() + (n++), type: 'work', date: ev.date, note: '', remote: false, start: ev.start, end: ev.end, brk, mins: net, rate: state.rate, amount: net / 60 * state.rate });
           state.open = null; msg = 'سُجّل يوم العمل من الودجت';
         }
       }
