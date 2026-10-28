@@ -4,13 +4,13 @@ import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
-import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.view.View;
 import android.widget.RemoteViews;
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -21,7 +21,7 @@ import org.json.JSONObject;
 public class WorkWidgetProvider extends AppWidgetProvider {
     static final String ACT = "com.pd.earnings.WIDGET_TOGGLE";
     static final String REVERT = "com.pd.earnings.WIDGET_REVERT";
-    static final long ARM_MS = 60000;
+    static final long ARM_MS = 8000;
 
     static SharedPreferences prefs(Context c) {
         return c.getSharedPreferences("work_widget", Context.MODE_PRIVATE);
@@ -42,6 +42,26 @@ public class WorkWidgetProvider extends AppWidgetProvider {
         return new SimpleDateFormat(pattern, Locale.US).format(new Date(t));
     }
 
+    private static int hmToMin(String hm) {
+        if (hm == null) return -1;
+        String[] parts = hm.split(":");
+        if (parts.length != 2) return -1;
+        try {
+            return Integer.parseInt(parts[0]) * 60 + Integer.parseInt(parts[1]);
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
+    private static String fmtMoney(double v, String cur) {
+        NumberFormat nf = NumberFormat.getNumberInstance(Locale.US);
+        nf.setMaximumFractionDigits(2);
+        nf.setMinimumFractionDigits(0);
+        String s = (v < 0 ? "\u2212" : "") + nf.format(Math.abs(v));
+        if (cur != null && !cur.trim().isEmpty()) s += " " + cur.trim();
+        return s;
+    }
+
     static void toggle(Context c) {
         synchronized (WorkWidgetProvider.class) {
             SharedPreferences p = prefs(c);
@@ -56,13 +76,33 @@ public class WorkWidgetProvider extends AppWidgetProvider {
                 JSONObject o = new JSONObject();
                 SharedPreferences.Editor ed = p.edit();
                 if (p.getBoolean("open", false)) {
+                    String startStr = p.getString("start", "");
+                    String endStr = fmt("HH:mm", now);
+                    long startTs = p.getLong("startTs", now);
                     o.put("t", "out");
                     o.put("date", p.getString("date", ""));
-                    o.put("start", p.getString("start", ""));
-                    o.put("startTs", p.getLong("startTs", now));
-                    o.put("end", fmt("HH:mm", now));
+                    o.put("start", startStr);
+                    o.put("startTs", startTs);
+                    o.put("end", endStr);
                     o.put("endTs", now);
                     ed.putBoolean("open", false);
+
+                    // تحديث ودجت المجموع مباشرة عند تسجيل الخروج من الودجت
+                    int sMin = hmToMin(startStr);
+                    int eMin = hmToMin(endStr);
+                    int mins = (sMin >= 0 && eMin >= 0)
+                            ? (eMin >= sMin ? (eMin - sMin) : (eMin + 1440 - sMin))
+                            : (int) Math.round((now - startTs) / 60000.0);
+                    int brk = p.getInt("openBrk", 0);
+                    if (brk >= mins || brk < 0) brk = 0;
+                    int netMins = mins - brk;
+                    if (netMins > 0 && mins <= 16 * 60 && p.getBoolean("hasTotVal", false)) {
+                        float rate = p.getFloat("rate", 10f);
+                        double newTot = p.getFloat("totVal", 0f) + (netMins / 60.0) * rate;
+                        ed.putFloat("totVal", (float) newTot);
+                        ed.putString("totTxt", fmtMoney(newTot, p.getString("cur", "DH")));
+                    }
+                    ed.putInt("openBrk", 0);
                 } else {
                     o.put("t", "in");
                     o.put("date", fmt("yyyy-MM-dd", now));
@@ -72,6 +112,7 @@ public class WorkWidgetProvider extends AppWidgetProvider {
                     ed.putString("date", fmt("yyyy-MM-dd", now));
                     ed.putString("start", fmt("HH:mm", now));
                     ed.putLong("startTs", now);
+                    ed.putInt("openBrk", 0);
                 }
                 ev.put(o);
                 ed.putString("events", ev.toString());
@@ -152,7 +193,7 @@ public class WorkWidgetProvider extends AppWidgetProvider {
         if (REVERT.equals(i.getAction())) {
             SharedPreferences rp = prefs(c);
             long ra = rp.getLong("armedAt", 0);
-            if (ra > 0 && System.currentTimeMillis() - ra > ARM_MS - 2000) {
+            if (ra > 0 && System.currentTimeMillis() - ra >= ARM_MS - 500) {
                 rp.edit().putLong("armedAt", 0).commit();
             }
             refreshAll(c);
@@ -174,6 +215,7 @@ public class WorkWidgetProvider extends AppWidgetProvider {
             p.edit().putLong("armedAt", 0).commit();
             toggle(c);
             refreshAll(c);
+            TotalWidgetProvider.refreshAll(c);
         } else {
             p.edit().putLong("armedAt", now).commit();
             refreshAll(c);
@@ -186,7 +228,29 @@ public class WorkWidgetProvider extends AppWidgetProvider {
             } catch (Exception e) {
                 // لا شيء
             }
-
+            final Context app = c.getApplicationContext();
+            final PendingResult pr = goAsync();
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        Thread.sleep(ARM_MS + 200);
+                        SharedPreferences sp = prefs(app);
+                        if (sp.getLong("armedAt", 0) == now) {
+                            sp.edit().putLong("armedAt", 0).commit();
+                            refreshAll(app);
+                        }
+                    } catch (Throwable e) {
+                        // لا شيء
+                    } finally {
+                        try {
+                            pr.finish();
+                        } catch (Throwable e) {
+                            // لا شيء
+                        }
+                    }
+                }
+            }).start();
         }
     }
 }
