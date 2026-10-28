@@ -447,7 +447,7 @@ function renderArchive() {
         ${a.carryIn ? `<div class="kv"><span>مرحَّل قبلها</span><b>${signed(a.carryIn)}</b></div>` : ''}
         <div class="kv"><span>المستحق</span><b>${signed(a.due)}</b></div>
         <div class="kv"><span>المستلم</span><b>${money(a.received)}</b></div>
-        ${rem ? `<div class="kv"><span>${rem > 0 ? 'بقي لك (رُحِّل)' : 'زيادة (خُصمت لاحقًا)'}</span><b>${signed(rem)}</b></div>` : ''}
+        ${rem ? `<div class="kv"><span>${rem > 0 ? 'بقي لك (رُحِّل)' : 'زيادة (خُصمت لاحقًا)'}</span><b">${signed(rem)}</b></div>` : ''}
         ${a.note ? `<div class="kv"><span>ملاحظة</span><b style="direction:rtl">${esc(a.note)}</b></div>` : ''}
         ${lines ? '<div style="margin-top:8px">' + lines + '</div>' : ''}
         <div style="display:flex;gap:8px;margin-top:12px"><button class="pay ed1" data-id="${a.id}" style="flex:1;width:auto;margin:0;height:42px;font-size:calc(14px*var(--fs,1))">${ic('edit')}تعديل</button><button class="pay sh1" data-id="${a.id}" style="flex:2;width:auto;margin:0;height:42px;font-size:calc(14px*var(--fs,1))">${ic('share')}مشاركة هذه الدفعة</button></div>
@@ -876,7 +876,6 @@ async function sharePdf(cfg, name) {
     }
   } catch (e) { if (!/cancel/i.test(String((e && e.message) || e))) toast('تعذر مشاركة التقرير'); }
 }
-
 // ---------- النموذج ----------
 const toMin = t => { const m = /^(\d{1,2}):(\d{2})$/.exec(t || ''); return m ? (+m[1]) * 60 + (+m[2]) : null; };
 function workMins() {
@@ -1617,14 +1616,14 @@ $('file').onchange = e => {
 
 // ---------- ودجت الشاشة الرئيسية (دخول/خروج بضغطة) ----------
 let widgetReady = false, wsT;
-function syncWidget() { // يعكس حالة الدخول الحالية على الودجت
+function syncWidget() { // يعكس حالة الدخول الحالية والمجموع على الودجت
   if (!widgetReady) return;
   const W = nplug('WorkWidget'); if (!W) return;
   clearTimeout(wsT);
   wsT = setTimeout(() => {
-    const o = state.open;
-    try { W.setOpen(o ? { open: true, date: o.date, start: o.start, ts: new Date(o.date + 'T' + o.start).getTime() } : { open: false }); } catch (e) {}
-    try { W.setTotal({ text: signed(due()).replace(/[\u2066\u2069]/g, '') }); } catch (e) {} // ودجت المجموع (للقراءة فقط)
+    const o = state.open, dVal = due();
+    try { W.setOpen(o ? { open: true, date: o.date, start: o.start, ts: new Date(o.date + 'T' + o.start).getTime(), brk: Math.round(brkNow()) } : { open: false }); } catch (e) {}
+    try { W.setTotal({ text: signed(dVal).replace(/[\u2066\u2069]/g, ''), val: dVal, rate: state.rate, cur: state.currency }); } catch (e) {} // ودجت المجموع
   }, 200);
 }
 async function pullWidget() { // يستلم ما سجّله الودجت وهو مغلق التطبيق
@@ -1648,10 +1647,13 @@ async function pullWidget() { // يستلم ما سجّله الودجت وهو 
         else {
           const o0 = state.open && state.open.date === ev.date && state.open.start === ev.start ? state.open : null;
           let brk = o0 ? Math.round((o0.brk || 0) + (o0.bs ? Math.max(0, (ev.endTs - o0.bs) / 60000) : 0)) : 0;
-          if (brk >= mins) brk = 0;
+          let brkWarn = false;
+          if (o0 && o0.bs) brkWarn = true;
+          if (brk >= mins) { brk = Math.round(o0 ? (o0.brk || 0) : 0); if (brk >= mins) brk = 0; brkWarn = true; }
           const net = mins - brk;
           state.items.push({ id: Date.now() + (n++), type: 'work', date: ev.date, note: '', remote: false, start: ev.start, end: ev.end, brk, mins: net, rate: state.rate, amount: net / 60 * state.rate });
-          state.open = null; msg = 'سُجّل يوم العمل من الودجت';
+          state.open = null;
+          msg = brkWarn ? 'سُجّل اليوم من الودجت (كانت الاستراحة مفتوحة، راجع السجل)' : 'سُجّل يوم العمل من الودجت';
         }
       }
     });
