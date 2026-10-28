@@ -13,6 +13,7 @@ import android.os.Build;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.json.JSONArray;
@@ -23,6 +24,8 @@ final class WifiTracker {
     static final String ACTION_WAKE = "com.pd.earnings.WIFI_WAKE";
     static final String ACTION_POLL = "com.pd.earnings.WIFI_POLL";
     private static final long POLL_MS = 5L * 60 * 1000;
+    private static final int QUIET_FROM = 22 * 60 + 1; // بعد 10:00 مساءً لا فحص
+    private static final int QUIET_TO = 9 * 60;        // حتى 9:00 صباحًا
     private static final String PREFS = "wifi_track";
     private static final int MAX_EVENTS = 400;
     private static final Pattern INFO = Pattern.compile("SSID:\\s*\"(.*?)\",\\s*BSSID:\\s*([0-9a-fA-F:]{17})");
@@ -133,10 +136,41 @@ final class WifiTracker {
             Context a = c.getApplicationContext();
             AlarmManager am = (AlarmManager) a.getSystemService(Context.ALARM_SERVICE);
             if (am == null) return;
-            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + POLL_MS, pollPi(a));
+            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, nextPollAt(System.currentTimeMillis()), pollPi(a));
         } catch (Throwable e) {
             // تجاهل
         }
+    }
+
+    private static int minuteOfDay(long t) {
+        Calendar c = Calendar.getInstance();
+        c.setTimeInMillis(t);
+        return c.get(Calendar.HOUR_OF_DAY) * 60 + c.get(Calendar.MINUTE);
+    }
+
+    private static boolean quiet(long t) {
+        int m = minuteOfDay(t);
+        return m >= QUIET_FROM || m < QUIET_TO;
+    }
+
+    // الفحص التالي: بعد 5 دقائق، وخارج ساعات الراحة؛ فحص واحد عند 10:00 مساءً ثم التالي 9:00 صباحًا
+    private static long nextPollAt(long now) {
+        long t = now + POLL_MS;
+        if (!quiet(t)) return t;
+        Calendar c = Calendar.getInstance();
+        c.setTimeInMillis(now);
+        int m = c.get(Calendar.HOUR_OF_DAY) * 60 + c.get(Calendar.MINUTE);
+        c.set(Calendar.SECOND, 0);
+        c.set(Calendar.MILLISECOND, 0);
+        if (m < 22 * 60) {
+            c.set(Calendar.HOUR_OF_DAY, 22);
+            c.set(Calendar.MINUTE, 0);
+            return c.getTimeInMillis();
+        }
+        c.set(Calendar.HOUR_OF_DAY, 9);
+        c.set(Calendar.MINUTE, 0);
+        if (c.getTimeInMillis() <= now) c.add(Calendar.DAY_OF_MONTH, 1);
+        return c.getTimeInMillis();
     }
 
     static void cancelPoll(Context c) {
@@ -154,8 +188,10 @@ final class WifiTracker {
             if (!isOn(c)) return;
             SharedPreferences p = prefs(c);
             long t = System.currentTimeMillis();
+            if (quiet(t)) return;
             boolean up = wifiUp(c);
             if (up) {
+                p.edit().putLong("poll_up", t).commit();
                 if (!"c".equals(state(c))) {
                     long dn = p.getLong("poll_dn", 0);
                     long est = (dn > 0 && t - dn <= POLL_MS * 3) ? (dn + t) / 2 : t;
@@ -163,9 +199,16 @@ final class WifiTracker {
                 }
             } else {
                 p.edit().putLong("poll_dn", t).commit();
+                if ("c".equals(state(c))) {
+                    long pu = p.getLong("poll_up", 0);
+                    if (pu > 0) {
+                        long dt = (t - pu <= POLL_MS * 3) ? (pu + t) / 2 : pu;
+                        p.edit().putLong("dc_t", dt).commit();
+                    }
+                }
             }
             onWake(c, false);
-            p.edit().remove("est_t").commit();
+            p.edit().remove("est_t").remove("dc_t").commit();
         } finally {
             if (isOn(c)) schedulePoll(c);
         }
@@ -289,7 +332,8 @@ final class WifiTracker {
                 if (!wifiUp(c) && "c".equals(state(c))) {
                     try {
                         prefs(c).edit().remove("pend_t").commit();
-                        onDisconnected(c, t, 0);
+                        long dc = prefs(c).getLong("dc_t", 0);
+                        onDisconnected(c, dc > 0 ? dc : t, dc > 0 ? 1 : 0);
                     } catch (Exception e) {
                         // تجاهل
                     }
