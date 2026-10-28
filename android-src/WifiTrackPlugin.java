@@ -99,7 +99,7 @@ public class WifiTrackPlugin extends Plugin {
         }
     }
 
-    // يستثني التطبيق من توفير البطارية بالروت (أوامر ثابتة)
+    // يستثني التطبيق من توفير البطارية وقيود الخلفية بالروت (أوامر ثابتة)
     @PluginMethod
     public void batteryExempt(final PluginCall call) {
         final Context c = getContext();
@@ -110,8 +110,7 @@ public class WifiTrackPlugin extends Plugin {
                     call.reject("root-off");
                     return;
                 }
-                String a = WifiTracker.su("dumpsys deviceidle whitelist +" + c.getPackageName(), 8000);
-                WifiTracker.su("cmd appops set " + c.getPackageName() + " RUN_ANY_IN_BACKGROUND allow", 8000);
+                String a = WifiTracker.exemptBatteryNow(c);
                 if (a != null && a.contains(c.getPackageName())) call.resolve();
                 else call.reject("failed");
             }
