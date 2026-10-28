@@ -11,6 +11,7 @@ import android.net.NetworkRequest;
 import android.os.Build;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.json.JSONArray;
@@ -21,7 +22,10 @@ final class WifiTracker {
     static final String ACTION_WAKE = "com.pd.earnings.WIFI_WAKE";
     private static final String PREFS = "wifi_track";
     private static final int MAX_EVENTS = 400;
-    private static final Pattern INFO = Pattern.compile("SSID: \"(.*?)\", BSSID: ([0-9a-fA-F:]{17})");
+    private static final Pattern INFO = Pattern.compile("SSID:\\s*\"(.*?)\",\\s*BSSID:\\s*([0-9a-fA-F:]{17})");
+    private static final Pattern INFO_UNQUOTED = Pattern.compile("SSID:\\s*([^\",\\s]+),\\s*BSSID:\\s*([0-9a-fA-F:]{17})");
+    private static final Pattern CMD_SSID = Pattern.compile("Wifi is connected to \"(.*?)\"");
+    private static final Pattern CMD_BSSID = Pattern.compile("BSSID:\\s*([0-9a-fA-F:]{17})");
     private static final Object LOCK = new Object();
 
     private WifiTracker() {
@@ -39,29 +43,65 @@ final class WifiTracker {
         return prefs(c).getBoolean("root", false);
     }
 
-    // تشغيل التتبع: تسجيل استيقاظ النظام عند اتصال الواي فاي (يبقى حتى لو أُغلقت الخدمة)، وبدء الخدمة إن كان الواي فاي متصلًا الآن
+    static NetworkRequest buildWifiRequest() {
+        NetworkRequest.Builder b = new NetworkRequest.Builder()
+                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI);
+        try {
+            b.removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
+            b.removeCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN);
+        } catch (Throwable e) {
+            // تجاهل
+        }
+        return b.build();
+    }
+
+    // تشغيل التتبع: تسجيل استيقاظ النظام عند اتصال الواي فاي، وبدء الخدمة إن كان الواي فاي متصلًا الآن
     static void start(final Context c) {
         if (!isOn(c)) return;
         registerWake(c);
-        if (useRoot(c)) {
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                if (useRoot(c)) {
                     exemptBattery(c);
                 }
-            }).start();
-        }
-        if (wifiUp(c)) startSvc(c);
+                if (wifiUp(c)) {
+                    onWake(c);
+                } else if ("c".equals(state(c))) {
+                    try {
+                        onDisconnected(c, System.currentTimeMillis(), 1);
+                    } catch (Exception e) {
+                        // تجاهل
+                    }
+                }
+            }
+        }).start();
     }
 
-    private static void startSvc(Context c) {
+    static void startSvc(Context c) {
+        Context a = c.getApplicationContext();
+        Intent i = new Intent(a, WifiWatchService.class);
         try {
-            Context a = c.getApplicationContext();
-            Intent i = new Intent(a, WifiWatchService.class);
             if (Build.VERSION.SDK_INT >= 26) a.startForegroundService(i);
             else a.startService(i);
-        } catch (Exception e) {
-            // قد يرفض النظام البدء من الخلفية؛ تبدأ عند فتح التطبيق
+            return;
+        } catch (Throwable e) {
+            // في أندرويد 17 قد يمنع النظام البدء من الخلفية؛ نستعمل الروت إن كان مفعّلًا
+        }
+        if (useRoot(a)) {
+            try {
+                exemptBatteryNow(a);
+                if (Build.VERSION.SDK_INT >= 26) a.startForegroundService(i);
+                else a.startService(i);
+                return;
+            } catch (Throwable e) {
+                // محاولة التشغيل المباشر بأمر الروت
+            }
+            try {
+                su("am start-foreground-service -n " + a.getPackageName() + "/.WifiWatchService", 5000);
+            } catch (Throwable e) {
+                // تجاهل
+            }
         }
     }
 
@@ -82,10 +122,12 @@ final class WifiTracker {
     private static PendingIntent wakePi(Context a, int flags) {
         Intent i = new Intent(a, WifiBootReceiver.class);
         i.setAction(ACTION_WAKE);
+        i.setPackage(a.getPackageName());
+        i.addFlags(Intent.FLAG_RECEIVER_FOREGROUND);
         return PendingIntent.getBroadcast(a, 11, i, flags);
     }
 
-    // يطلب من النظام إيقاظ التطبيق عند ظهور شبكة واي فاي (يبقى التسجيل عند النظام ما دام الجهاز يعمل)
+    // يطلب من النظام إيقاظ التطبيق عند ظهور أو تغيّر شبكة واي فاي
     private static void registerWake(Context c) {
         if (Build.VERSION.SDK_INT < 26) return;
         try {
@@ -97,8 +139,7 @@ final class WifiTracker {
             } catch (Exception e) {
                 // لم يكن مسجَّلًا
             }
-            NetworkRequest rq = new NetworkRequest.Builder().addTransportType(NetworkCapabilities.TRANSPORT_WIFI).build();
-            cm.registerNetworkCallback(rq, pi);
+            cm.registerNetworkCallback(buildWifiRequest(), pi);
         } catch (Exception e) {
             // تجاهل
         }
@@ -130,26 +171,89 @@ final class WifiTracker {
         return false;
     }
 
-    // يوقظنا النظام عند حدث واي فاي: إن كان متصلًا ولا توجد خدمة تعمل نسجّل الوقت ونبدأ الخدمة
+    static boolean isOtherNetwork(Context c, String name) {
+        if (name == null || name.trim().isEmpty()) return false;
+        ArrayList<String> w = WifiTrackPlugin.workList(prefs(c));
+        return !w.isEmpty() && !w.contains(name.trim());
+    }
+
+    // يوقظنا النظام عند حدث واي فاي: نسجّل الدخول أو الخروج فورًا في الخلفية ثم نشغّل الخدمة الأمامية
     static void onWake(Context c) {
         if (!isOn(c)) return;
         long t = System.currentTimeMillis();
         count(c, t);
-        if (WifiWatchService.running || !wifiUp(c)) return;
-        prefs(c).edit().putLong("pend_t", t).commit();
-        startSvc(c);
+
+        if (wifiUp(c)) {
+            SharedPreferences p = prefs(c);
+            if (!"c".equals(state(c)) && p.getLong("pend_t", 0) == 0) {
+                p.edit().putLong("pend_t", t).commit();
+            }
+            boolean root = useRoot(c);
+            String[] r = root ? readWifiRoot() : null;
+            if (r != null && isOtherNetwork(c, r[0])) {
+                // شبكة معروفة وليست من شبكات العمل: إن كان هناك اتصال عمل مفتوح نغلقه ولا نشغّل الخدمة
+                p.edit().remove("pend_t").commit();
+                if ("c".equals(state(c))) {
+                    try {
+                        onDisconnected(c, t, 1);
+                    } catch (Exception e) {
+                        // تجاهل
+                    }
+                }
+                return;
+            }
+            try {
+                long pt = p.getLong("pend_t", 0);
+                long ct = (pt > 0 && t - pt < 60000) ? pt : t;
+                onConnected(c, ct, r == null ? null : r[0], r == null ? null : r[1], 0);
+            } catch (Exception e) {
+                // تجاهل
+            }
+            if (!WifiWatchService.running) {
+                startSvc(c);
+            }
+        } else {
+            // انقطع الواي فاي والخدمة غير شغالة: نتحقق بعد لحظة ثم نسجّل الخروج مباشرة
+            if (!WifiWatchService.running && "c".equals(state(c))) {
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException e) {
+                    return;
+                }
+                if (!wifiUp(c) && "c".equals(state(c))) {
+                    try {
+                        prefs(c).edit().remove("pend_t").commit();
+                        onDisconnected(c, t, 0);
+                    } catch (Exception e) {
+                        // تجاهل
+                    }
+                }
+            }
+        }
     }
 
-    // استثناء التطبيق من توفير البطارية بالروت (أوامر ثابتة)، مرة كل 12 ساعة كحد أقصى
+    // استثناء التطبيق من قيود الخلفية والبطارية في أندرويد 17 بالروت
+    static String exemptBatteryNow(Context c) {
+        String pkg = c.getPackageName();
+        String cmd = "dumpsys deviceidle whitelist +" + pkg + "; "
+                + "cmd appops set " + pkg + " RUN_ANY_IN_BACKGROUND allow; "
+                + "cmd appops set " + pkg + " RUN_IN_BACKGROUND allow; "
+                + "cmd appops set " + pkg + " START_FOREGROUND allow; "
+                + "cmd appops set " + pkg + " WAKE_LOCK allow; "
+                + "am set-standby-bucket " + pkg + " active";
+        String a = su(cmd, 8000);
+        if (a != null && a.contains(pkg)) {
+            prefs(c).edit().putLong("bat_t", System.currentTimeMillis()).commit();
+        }
+        return a;
+    }
+
     static void exemptBattery(Context c) {
         try {
             SharedPreferences p = prefs(c);
             long now = System.currentTimeMillis();
             if (now - p.getLong("bat_t", 0) < 12L * 3600 * 1000) return;
-            String pkg = c.getPackageName();
-            String a = su("dumpsys deviceidle whitelist +" + pkg, 8000);
-            su("cmd appops set " + pkg + " RUN_ANY_IN_BACKGROUND allow", 8000);
-            if (a != null && a.contains(pkg)) p.edit().putLong("bat_t", now).commit();
+            exemptBatteryNow(c);
         } catch (Exception e) {
             // تجاهل
         }
@@ -189,13 +293,39 @@ final class WifiTracker {
         }
     }
 
-    // يرجع {الاسم, BSSID} للشبكة المتصلة الآن، أو null
+    private static boolean validSsid(String s) {
+        if (s == null) return false;
+        String t = s.trim();
+        return !t.isEmpty() && !"<unknown ssid>".equalsIgnoreCase(t) && !"0x".equalsIgnoreCase(t);
+    }
+
+    // يرجع {الاسم, BSSID} للشبكة المتصلة الآن، متوافق مع أندرويد 16 و17
     static String[] readWifiRoot() {
-        for (int i = 0; i < 3; i++) {
-            String out = su("dumpsys wifi | grep -m1 \"mWifiInfo.*Supplicant state: COMPLETED\"", 3000);
+        for (int i = 0; i < 4; i++) {
+            String out = su("cmd wifi status 2>/dev/null; dumpsys wifi | grep -E -m2 'mWifiInfo|WifiInfo'", 3500);
             if (out != null) {
                 Matcher m = INFO.matcher(out);
-                if (m.find()) return new String[]{m.group(1), m.group(2).toLowerCase()};
+                while (m.find()) {
+                    String ssid = m.group(1);
+                    String bssid = m.group(2).toLowerCase();
+                    if (validSsid(ssid) && !"02:00:00:00:00:00".equals(bssid)) {
+                        return new String[]{ssid, bssid};
+                    }
+                }
+                Matcher mc = CMD_SSID.matcher(out);
+                if (mc.find() && validSsid(mc.group(1))) {
+                    Matcher mb = CMD_BSSID.matcher(out);
+                    String bssid = mb.find() ? mb.group(1).toLowerCase() : "";
+                    return new String[]{mc.group(1), bssid};
+                }
+                Matcher mu = INFO_UNQUOTED.matcher(out);
+                while (mu.find()) {
+                    String ssid = mu.group(1);
+                    String bssid = mu.group(2).toLowerCase();
+                    if (validSsid(ssid) && !"02:00:00:00:00:00".equals(bssid)) {
+                        return new String[]{ssid, bssid};
+                    }
+                }
             }
             try {
                 Thread.sleep(1000);
@@ -214,7 +344,7 @@ final class WifiTracker {
     // يصفّر الحالة ويعيد تشغيل المراقبة ليلتقط الاتصال الحالي
     static void reset(Context c) {
         synchronized (LOCK) {
-            prefs(c).edit().putString("state", "d").putString("ssid", "").commit();
+            prefs(c).edit().putString("state", "d").putString("ssid", "").remove("conn_t").remove("pend_t").commit();
         }
         restart(c);
     }
@@ -240,7 +370,7 @@ final class WifiTracker {
                 add(s, t, "d", null, null, flag);
             }
             add(s, t, "c", ssid, bssid, flag);
-            s.edit().putString("state", "c").putString("ssid", ssid == null ? "" : ssid).commit();
+            s.edit().putString("state", "c").putString("ssid", ssid == null ? "" : ssid).putLong("conn_t", t).commit();
         }
     }
 
@@ -250,7 +380,7 @@ final class WifiTracker {
         synchronized (LOCK) {
             if (!"c".equals(s.getString("state", "d"))) return;
             add(s, t, "d", null, null, flag);
-            s.edit().putString("state", "d").putString("ssid", "").commit();
+            s.edit().putString("state", "d").putString("ssid", "").remove("conn_t").remove("pend_t").commit();
         }
     }
 
@@ -277,7 +407,7 @@ final class WifiTracker {
             synchronized (LOCK) {
                 if ("c".equals(s.getString("state", "d"))) {
                     add(s, System.currentTimeMillis(), "d", null, null, 2);
-                    s.edit().putString("state", "d").putString("ssid", "").commit();
+                    s.edit().putString("state", "d").putString("ssid", "").remove("conn_t").remove("pend_t").commit();
                 }
             }
         } catch (Exception e) {
