@@ -8,6 +8,11 @@ import android.app.Service;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.RectF;
+import android.graphics.drawable.Icon;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
@@ -61,11 +66,35 @@ public class WifiWatchService extends Service {
         return START_STICKY;
     }
 
+    private static Icon iconCache;
+
+    // أيقونة واي فاي أحادية اللون (ثلاثة أقواس ونقطة) تُرسم برمجيًا بدل أيقونة المزامنة
+    private static synchronized Icon wifiIcon() {
+        if (iconCache == null) {
+            Bitmap bm = Bitmap.createBitmap(96, 96, Bitmap.Config.ARGB_8888);
+            Canvas c = new Canvas(bm);
+            Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+            p.setColor(0xFFFFFFFF);
+            p.setStyle(Paint.Style.STROKE);
+            p.setStrokeWidth(9f);
+            p.setStrokeCap(Paint.Cap.ROUND);
+            float cx = 48f, cy = 78f;
+            float[] rr = {20f, 38f, 56f};
+            for (float r : rr) {
+                c.drawArc(new RectF(cx - r, cy - r, cx + r, cy + r), 225f, 90f, false, p);
+            }
+            p.setStyle(Paint.Style.FILL);
+            c.drawCircle(cx, cy, 6.5f, p);
+            iconCache = Icon.createWithBitmap(bm);
+        }
+        return iconCache;
+    }
+
     private Notification buildNote() {
         Notification.Builder b;
         if (Build.VERSION.SDK_INT >= 26) b = new Notification.Builder(this, CH);
         else b = new Notification.Builder(this);
-        b.setContentTitle("تتبع الواي فاي").setContentText(noteText).setSmallIcon(android.R.drawable.stat_notify_sync_noanim).setOngoing(true).setOnlyAlertOnce(true);
+        b.setContentTitle("تتبع الواي فاي").setContentText(noteText).setSmallIcon(wifiIcon()).setOngoing(true).setOnlyAlertOnce(true);
         Intent li = getPackageManager().getLaunchIntentForPackage(getPackageName());
         if (li != null) {
             b.setContentIntent(PendingIntent.getActivity(this, 0, li, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT));
