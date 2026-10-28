@@ -24,7 +24,7 @@ import org.json.JSONObject;
 public class WorkWidgetProvider extends AppWidgetProvider {
     static final String ACT = "com.pd.earnings.WIDGET_TOGGLE";
     static final String REVERT = "com.pd.earnings.WIDGET_REVERT";
-    static final long ARM_MS = 10000;
+    static final long ARM_MS = 60000;
     private static final Handler H = new Handler(Looper.getMainLooper());
     private static Runnable revertTask;
 
