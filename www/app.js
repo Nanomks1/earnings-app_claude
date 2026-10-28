@@ -447,7 +447,7 @@ function renderArchive() {
         ${a.carryIn ? `<div class="kv"><span>مرحَّل قبلها</span><b>${signed(a.carryIn)}</b></div>` : ''}
         <div class="kv"><span>المستحق</span><b>${signed(a.due)}</b></div>
         <div class="kv"><span>المستلم</span><b>${money(a.received)}</b></div>
-        ${rem ? `<div class="kv"><span>${rem > 0 ? 'بقي لك (رُحِّل)' : 'زيادة (خُصمت لاحقًا)'}</span><b">${signed(rem)}</b></div>` : ''}
+        ${rem ? `<div class="kv"><span>${rem > 0 ? 'بقي لك (رُحِّل)' : 'زيادة (خُصمت لاحقًا)'}</span><b>${signed(rem)}</b></div>` : ''}
         ${a.note ? `<div class="kv"><span>ملاحظة</span><b style="direction:rtl">${esc(a.note)}</b></div>` : ''}
         ${lines ? '<div style="margin-top:8px">' + lines + '</div>' : ''}
         <div style="display:flex;gap:8px;margin-top:12px"><button class="pay ed1" data-id="${a.id}" style="flex:1;width:auto;margin:0;height:42px;font-size:calc(14px*var(--fs,1))">${ic('edit')}تعديل</button><button class="pay sh1" data-id="${a.id}" style="flex:2;width:auto;margin:0;height:42px;font-size:calc(14px*var(--fs,1))">${ic('share')}مشاركة هذه الدفعة</button></div>
