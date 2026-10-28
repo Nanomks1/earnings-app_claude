@@ -30,7 +30,7 @@ import java.util.Set;
 public class WifiWatchService extends Service {
     private static final String CH = "wifi_watch";
     private static final int NID = 4107;
-    private static final long GRACE_MS = 10L * 60 * 1000; // مدة بقاء الإشعار بعد الانقطاع
+    private static final long GRACE_MS = 90L * 1000; // مدة بقاء الإشعار بعد الانقطاع (90 ثانية)
     static volatile boolean running = false;
     private NotificationManager nm;
     private ConnectivityManager cm;
@@ -203,7 +203,7 @@ public class WifiWatchService extends Service {
                         scheduleStop(GRACE_MS);
                     } else if (stopTask == null) {
                         note("غير متصل بالواي فاي");
-                        scheduleStop(30000);
+                        scheduleStop(15000);
                     }
                 } catch (Exception e) {
                     // تجاهل
