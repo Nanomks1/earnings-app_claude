@@ -1,6 +1,6 @@
 // ---------- المزامنة المشفرة عبر Dropbox ----------
 // ملف واحد مشفر (AES-256-GCM) في مجلد التطبيق داخل Dropbox. لا دمج تلقائي: عند التعارض يُسأل المستخدم.
-// يُحمَّل بعد app.js ويستعمل دوالّه ومتغيراته العامة (state, save, norm, putFile ...).
+// يُحمَّل بعد app.js ويستعمل دوالّه ومتغيراته العامة (state, save, norm, putFile, ask ...).
 (function () {
   'use strict';
   const APP_KEY = 'a5we6valz1kokfn';
@@ -227,13 +227,13 @@
 
   // ---------- نافذة التعارض ----------
   $('syConf').addEventListener('close', () => { confOpen = false; });
-  $('syKeepLocal').onclick = () => {
-    if (!confirm('ستُستبدل نسخة السحابة بنسخة هذا الهاتف. تبقى النسخة القديمة في سجل إصدارات Dropbox مدة محدودة. متابعة؟')) return;
+  $('syKeepLocal').onclick = async () => {
+    if (!(await ask('إبقاء نسخة هذا الهاتف؟', 'ستُستبدل نسخة السحابة بنسخة هذا الهاتف. تبقى النسخة القديمة في سجل إصدارات Dropbox مدة محدودة.', { ok: 'إبقاء نسخة الهاتف' }))) return;
     const d = conf; $('syConf').close();
     guarded(async () => { const cur = snap(); if (!(await push(cur, await hashOf(cur), d.rev))) throw fail('empty'); }, 'حُفظت نسخة هذا الهاتف في السحابة');
   };
-  $('syTakeCloud').onclick = () => {
-    if (!confirm('ستُستبدل بيانات هذا الهاتف بنسخة السحابة. تُحفظ أولًا نسخة أمان من بيانات هذا الهاتف في مجلد النسخ الاحتياطي. متابعة؟')) return;
+  $('syTakeCloud').onclick = async () => {
+    if (!(await ask('أخذ نسخة السحابة؟', 'ستُستبدل بيانات هذا الهاتف بنسخة السحابة. تُحفظ أولًا نسخة أمان من بيانات هذا الهاتف في مجلد النسخ الاحتياطي.', { ok: 'أخذ نسخة السحابة', danger: true }))) return;
     const d = conf; $('syConf').close();
     guarded(() => applyCloud(d.obj, d.rev, { force: true, ui: true }), 'تم أخذ نسخة السحابة');
   };
@@ -272,7 +272,7 @@
         const a = $('syPw').value;
         if (a.length < 8) return toast('كلمة السر 8 أحرف على الأقل');
         if (a !== $('syPw2').value) return toast('التأكيد غير مطابق');
-        if (!confirm('تنبيه: إن نسيت كلمة السر ولم يعد عندك هاتف مرتبط، فلا يمكن استرجاع بيانات السحابة أبدًا. متابعة؟')) return;
+        if (!(await ask('تفعيل المزامنة؟', 'إن نسيت كلمة السر ولم يعد عندك هاتف مرتبط، فلا يمكن استرجاع بيانات السحابة أبدًا.', { ok: 'تفعيل المزامنة' }))) return;
         $('syNext').textContent = 'جارٍ التفعيل…';
         const salt = crypto.getRandomValues(new Uint8Array(16));
         S.key = b64(await derive(a, salt, ITER)); S.salt = b64(salt); S.iter = ITER; S.rev = ''; S.h = ''; S.err = ''; persist();
@@ -290,7 +290,7 @@
     finally { wizBusy = false; $('syNext').disabled = false; }
   };
   async function unlink() {
-    if (!confirm('فصل المزامنة عن هذا الهاتف؟ تبقى بياناتك هنا كما هي، ويبقى الملف المشفر في Dropbox.')) return;
+    if (!(await ask('فصل المزامنة عن هذا الهاتف؟', 'تبقى بياناتك هنا كما هي، ويبقى الملف المشفر في Dropbox.', { ok: 'فصل المزامنة', danger: true }))) return;
     try { const t = await accessToken(); await fetch(API + '/auth/token/revoke', { method: 'POST', headers: { Authorization: 'Bearer ' + t } }); } catch (e) {}
     S = {}; at = ''; atExp = 0; clearTimeout(pushT); persist(); ui(); toast('تم فصل المزامنة');
   }
@@ -323,3 +323,4 @@
   setTimeout(() => run('open'), 2500);
   window.__sync = { run, flow, S: () => S, seal, hashOf, snap, linked };
 })();
+                                                         
