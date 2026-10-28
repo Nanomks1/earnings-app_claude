@@ -87,6 +87,16 @@ public class WorkWidgetPlugin extends Plugin {
     public void setTotal(PluginCall call) {
         SharedPreferences.Editor e = WorkWidgetProvider.prefs(getContext()).edit();
         e.putString("totTxt", call.getString("text", ""));
+        if (call.getData().has("val")) {
+            e.putFloat("totVal", (float) call.getData().optDouble("val", 0.0));
+            e.putBoolean("hasTotVal", true);
+        }
+        if (call.getData().has("rate")) {
+            e.putFloat("rate", (float) call.getData().optDouble("rate", 10.0));
+        }
+        if (call.getData().has("cur")) {
+            e.putString("cur", call.getString("cur", ""));
+        }
         e.commit();
         TotalWidgetProvider.refreshAll(getContext());
         call.resolve();
@@ -104,6 +114,9 @@ public class WorkWidgetPlugin extends Plugin {
                 e.putString("date", call.getString("date", ""));
                 e.putString("start", call.getString("start", ""));
                 e.putLong("startTs", ts > 0 ? ts : System.currentTimeMillis());
+                e.putInt("openBrk", call.getData().optInt("brk", 0));
+            } else {
+                e.putInt("openBrk", 0);
             }
             e.commit();
         }
