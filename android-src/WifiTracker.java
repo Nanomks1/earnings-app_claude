@@ -333,7 +333,7 @@ final class WifiTracker {
                     try {
                         prefs(c).edit().remove("pend_t").commit();
                         long dc = prefs(c).getLong("dc_t", 0);
-                        onDisconnected(c, dc > 0 ? dc : t, dc > 0 ? 1 : 0);
+                        onDisconnected(c, dc > 0 ? dc : t, dc > 0 ? 2 : 0);
                     } catch (Exception e) {
                         // تجاهل
                     }
