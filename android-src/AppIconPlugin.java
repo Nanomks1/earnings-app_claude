@@ -21,15 +21,23 @@ public class AppIconPlugin extends Plugin {
             }
             PackageManager pm = getContext().getPackageManager();
             String pkg = getContext().getPackageName();
-            pm.setComponentEnabledSetting(new ComponentName(pkg, "com.pd.earnings.Ic_" + id),
-                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP);
+            ComponentName target = new ComponentName(pkg, "com.pd.earnings.Ic_" + id);
+            if (pm.getComponentEnabledSetting(target) != PackageManager.COMPONENT_ENABLED_STATE_ENABLED) {
+                pm.setComponentEnabledSetting(target,
+                        PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP);
+            }
             String[] styles = {"a", "b", "c"};
             for (String s : styles) {
                 for (int i = 0; i < 12; i++) {
                     String o = s + i;
                     if (o.equals(id)) continue;
-                    pm.setComponentEnabledSetting(new ComponentName(pkg, "com.pd.earnings.Ic_" + o),
-                            PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
+                    ComponentName cn = new ComponentName(pkg, "com.pd.earnings.Ic_" + o);
+                    int st = pm.getComponentEnabledSetting(cn);
+                    if (st == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                            || ("a0".equals(o) && st == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT)) {
+                        pm.setComponentEnabledSetting(cn,
+                                PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
+                    }
                 }
             }
             call.resolve();
