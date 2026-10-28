@@ -15,9 +15,7 @@ import android.graphics.RectF;
 import android.graphics.drawable.Icon;
 import android.net.ConnectivityManager;
 import android.net.Network;
-import android.net.NetworkCapabilities;
-import android.net.NetworkRequest;
-import android.os.Build;
+import android.net.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
@@ -92,7 +90,7 @@ public class WifiWatchService extends Service {
 
     private Notification buildNote() {
         Notification.Builder b;
-        if (Build.VERSION.SDK_INT >= 26) b = new Notification.Builder(this, CH);
+        if (android.os.Build.VERSION.SDK_INT >= 26) b = new Notification.Builder(this, CH);
         else b = new Notification.Builder(this);
         b.setContentTitle("تتبع الواي فاي").setContentText(noteText).setSmallIcon(wifiIcon()).setOngoing(true).setOnlyAlertOnce(true);
         Intent li = getPackageManager().getLaunchIntentForPackage(getPackageName());
@@ -104,11 +102,11 @@ public class WifiWatchService extends Service {
 
     private void startFg() {
         nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        if (Build.VERSION.SDK_INT >= 26) {
+        if (android.os.Build.VERSION.SDK_INT >= 26) {
             nm.createNotificationChannel(new NotificationChannel(CH, "تتبع الواي فاي", NotificationManager.IMPORTANCE_MIN));
         }
         Notification n = buildNote();
-        if (Build.VERSION.SDK_INT >= 34) startForeground(NID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+        if (android.os.Build.VERSION.SDK_INT >= 34) startForeground(NID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
         else startForeground(NID, n);
     }
 
@@ -147,14 +145,13 @@ public class WifiWatchService extends Service {
 
     // شبكة معروفة الاسم وليست من شبكات العمل (تُتجاهل). إن كانت قائمة العمل فارغة فكل شبكة تُتتبَّع
     private boolean other(String name) {
-        if (name == null || name.trim().isEmpty()) return false;
-        ArrayList<String> w = WifiTrackPlugin.workList(WifiTracker.prefs(this));
-        return !w.isEmpty() && !w.contains(name.trim());
+        return WifiTracker.isOtherNetwork(this, name);
     }
 
     private boolean inWork(String name) {
         if (name == null) return false;
-        return WifiTrackPlugin.workList(WifiTracker.prefs(this)).contains(name.trim());
+        ArrayList<String> w = WifiTrackPlugin.workList(WifiTracker.prefs(this));
+        return w.contains(name.trim());
     }
 
     private void begin() {
@@ -187,8 +184,7 @@ public class WifiWatchService extends Service {
             }
         };
         try {
-            NetworkRequest rq = new NetworkRequest.Builder().addTransportType(NetworkCapabilities.TRANSPORT_WIFI).build();
-            cm.registerNetworkCallback(rq, cb);
+            cm.registerNetworkCallback(WifiTracker.buildWifiRequest(), cb);
         } catch (Exception e) {
             cb = null;
             stopSelf();
@@ -224,7 +220,6 @@ public class WifiWatchService extends Service {
             SharedPreferences p = WifiTracker.prefs(this);
             int flag = t - regT < 4000 ? 1 : 0;
             long ct = t;
-            // وقت الاتصال الحقيقي الذي سجّله مستقبل الاستيقاظ قبل بدء الخدمة
             long pt = p.getLong("pend_t", 0);
             if (pt > 0) {
                 p.edit().remove("pend_t").commit();
@@ -244,8 +239,9 @@ public class WifiWatchService extends Service {
             active.add(n);
             cancelStop();
             WifiTracker.onConnected(this, ct, r == null ? null : r[0], r == null ? null : r[1], flag);
-            note((r != null && inWork(r[0]) ? "متصل بشبكة العمل" : "متصل بالواي فاي") + " منذ " + hm(ct));
-            if (r == null && root) retryName(ct, 1);
+            long since = p.getLong("conn_t", ct);
+            note((r != null && inWork(r[0]) ? "متصل بشبكة العمل" : "متصل بالواي فاي") + " منذ " + hm(since));
+            if (r == null && root) retryName(since, 1);
         } catch (Exception e) {
             // تجاهل
         }
@@ -260,8 +256,18 @@ public class WifiWatchService extends Service {
                 try {
                     if (active.isEmpty() || !WifiTracker.isOn(WifiWatchService.this)) return;
                     String[] r = WifiTracker.readWifiRoot();
-                    if (r != null) WifiTracker.onConnected(WifiWatchService.this, t, r[0], r[1], 0);
-                    else retryName(t, attempt + 1);
+                    if (r != null) {
+                        if (other(r[0])) {
+                            active.clear();
+                            WifiTracker.onDisconnected(WifiWatchService.this, System.currentTimeMillis(), 1);
+                            scheduleStop(1000);
+                            return;
+                        }
+                        WifiTracker.onConnected(WifiWatchService.this, t, r[0], r[1], 0);
+                        note((inWork(r[0]) ? "متصل بشبكة العمل" : "متصل بالواي فاي") + " منذ " + hm(t));
+                    } else {
+                        retryName(t, attempt + 1);
+                    }
                 } catch (Exception e) {
                     // تجاهل
                 }
