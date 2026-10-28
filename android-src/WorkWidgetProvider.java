@@ -8,6 +8,9 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.SystemClock;
 import android.view.View;
 import android.widget.RemoteViews;
 import java.text.NumberFormat;
@@ -21,7 +24,9 @@ import org.json.JSONObject;
 public class WorkWidgetProvider extends AppWidgetProvider {
     static final String ACT = "com.pd.earnings.WIDGET_TOGGLE";
     static final String REVERT = "com.pd.earnings.WIDGET_REVERT";
-    static final long ARM_MS = 8000;
+    static final long ARM_MS = 10000;
+    private static final Handler H = new Handler(Looper.getMainLooper());
+    private static Runnable revertTask;
 
     static SharedPreferences prefs(Context c) {
         return c.getSharedPreferences("work_widget", Context.MODE_PRIVATE);
@@ -212,6 +217,10 @@ public class WorkWidgetProvider extends AppWidgetProvider {
         final long now = System.currentTimeMillis();
         long armed = p.getLong("armedAt", 0);
         if (armed > 0 && now - armed <= ARM_MS) {
+            if (revertTask != null) {
+                H.removeCallbacks(revertTask);
+                revertTask = null;
+            }
             p.edit().putLong("armedAt", 0).commit();
             toggle(c);
             refreshAll(c);
@@ -219,38 +228,29 @@ public class WorkWidgetProvider extends AppWidgetProvider {
         } else {
             p.edit().putLong("armedAt", now).commit();
             refreshAll(c);
+            final Context app = c.getApplicationContext();
+            if (revertTask != null) H.removeCallbacks(revertTask);
+            revertTask = new Runnable() {
+                @Override
+                public void run() {
+                    revertTask = null;
+                    SharedPreferences sp = prefs(app);
+                    if (sp.getLong("armedAt", 0) == now) {
+                        sp.edit().putLong("armedAt", 0).commit();
+                        refreshAll(app);
+                    }
+                }
+            };
+            H.postDelayed(revertTask, ARM_MS);
             try {
                 AlarmManager am = (AlarmManager) c.getSystemService(Context.ALARM_SERVICE);
                 Intent ri = new Intent(c, WorkWidgetProvider.class);
                 ri.setAction(REVERT);
                 PendingIntent rpi = PendingIntent.getBroadcast(c, 1, ri, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-                am.set(AlarmManager.RTC, now + ARM_MS, rpi);
+                am.set(AlarmManager.ELAPSED_REALTIME, SystemClock.elapsedRealtime() + ARM_MS + 1000, rpi);
             } catch (Exception e) {
                 // لا شيء
             }
-            final Context app = c.getApplicationContext();
-            final PendingResult pr = goAsync();
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        Thread.sleep(ARM_MS + 200);
-                        SharedPreferences sp = prefs(app);
-                        if (sp.getLong("armedAt", 0) == now) {
-                            sp.edit().putLong("armedAt", 0).commit();
-                            refreshAll(app);
-                        }
-                    } catch (Throwable e) {
-                        // لا شيء
-                    } finally {
-                        try {
-                            pr.finish();
-                        } catch (Throwable e) {
-                            // لا شيء
-                        }
-                    }
-                }
-            }).start();
         }
     }
 }
