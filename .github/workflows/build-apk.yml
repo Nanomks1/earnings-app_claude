@@ -133,7 +133,7 @@ jobs:
           M=android/app/src/main/AndroidManifest.xml
           sed -i 's#</application>#    <receiver android:name=".WorkWidgetProvider" android:exported="true"><intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter><meta-data android:name="android.appwidget.provider" android:resource="@xml/work_widget_info"/></receiver>\n    </application>#' $M
           sed -i 's#</application>#    <receiver android:name=".TotalWidgetProvider" android:label="المجموع" android:exported="true"><intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter><meta-data android:name="android.appwidget.provider" android:resource="@xml/work_total_info"/></receiver>\n    </application>#' $M
-          sed -i 's#</application>#    <service android:name=".WifiWatchService" android:exported="false" android:foregroundServiceType="specialUse"><property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="wifi_presence_tracking"/></service>\n    <receiver android:name=".WifiBootReceiver" android:exported="false"><intent-filter><action android:name="android.intent.action.BOOT_COMPLETED"/><action android:name="android.intent.action.MY_PACKAGE_REPLACED"/></intent-filter></receiver>\n    </application>#' $M
+          sed -i 's#</application>#    <service android:name=".WifiWatchService" android:exported="false" android:foregroundServiceType="specialUse"><property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="wifi_presence_tracking"/></service>\n    <receiver android:name=".WifiBootReceiver" android:exported="false" android:directBootAware="true"><intent-filter><action android:name="android.intent.action.BOOT_COMPLETED"/><action android:name="android.intent.action.LOCKED_BOOT_COMPLETED"/><action android:name="android.intent.action.MY_PACKAGE_REPLACED"/><action android:name="com.pd.earnings.WIFI_WAKE"/><action android:name="android.net.wifi.STATE_CHANGE"/><action android:name="android.net.conn.CONNECTIVITY_CHANGE"/></intent-filter></receiver>\n    </application>#' $M
           grep -q 'WifiBootReceiver' $M || { echo "wifi receivers were not added to the manifest"; exit 1; }
           grep -q 'WifiWatchService' $M || { echo "wifi service was not added to the manifest"; exit 1; }
           grep -q 'WorkWidgetProvider' $M || { echo "widget receiver was not added to the manifest"; exit 1; }
@@ -147,7 +147,7 @@ jobs:
           sed -i '/defaultConfig {/a\        ndk { abiFilters "arm64-v8a" }' android/app/build.gradle
           M=android/app/src/main/AndroidManifest.xml
           sed -i 's#<application#<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29"/>\n    <application#' $M
-          sed -i 's#<application#<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>\n    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\n    <application#' $M
+          sed -i 's#<application#<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>\n    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>\n    <uses-permission android:name="android.permission.WAKE_LOCK"/>\n    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\n    <application#' $M
           grep -q 'FOREGROUND_SERVICE_SPECIAL_USE' $M || { echo "wifi permissions were not added to the manifest"; exit 1; }
           sed -i 's#<application#<application android:requestLegacyExternalStorage="true"#' $M
 
@@ -156,10 +156,10 @@ jobs:
           N: ${{ github.run_number }}
         run: |
           G=android/app/build.gradle
-          sed -i "s/versionCode [0-9][0-9]*/versionCode $N/; s/versionName \"[^\"]*\"/versionName \"3.0.$N\"/" $G
-          grep -q "versionCode $N\$" $G || { echo "versionCode was not updated"; exit 1; }
-          grep -q "versionName \"3.0.$N\"" $G || { echo "versionName was not updated"; exit 1; }
-          echo "Version: 3.0.$N (code $N)"
+          sed -i "s/versionCode [0-9][0-9]*/versionCode $N/; s/versionName \"[^\"]*\"/versionName \"4.0.$N\"/" $G
+          grep -q "versionCode $N$" $G || { echo "versionCode was not updated"; exit 1; }
+          grep -q "versionName \"4.0.$N\"" $G || { echo "versionName was not updated"; exit 1; }
+          echo "Version: 4.0.$N (code $N)"
 
       - name: Sync web assets
         run: npx cap sync android
@@ -196,9 +196,9 @@ jobs:
       - name: Name the APK by version
         env:
           N: ${{ github.run_number }}
-        run: mv work-release.apk "work-v3.0.$N.apk"
+        run: mv work-release.apk "work-v4.0.$N.apk"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: work-v3.0.${{ github.run_number }}
-          path: work-v3.0.${{ github.run_number }}.apk
+          name: work-v4.0.${{ github.run_number }}
+          path: work-v4.0.${{ github.run_number }}.apk
