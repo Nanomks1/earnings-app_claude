@@ -1,5 +1,6 @@
 package com.pd.earnings;
 
+import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
@@ -20,6 +21,8 @@ import org.json.JSONObject;
 // تتبع اتصال/انقطاع الواي فاي في خانة منفصلة عن السجل. الأحداث تُخزَّن في SharedPreferences.
 final class WifiTracker {
     static final String ACTION_WAKE = "com.pd.earnings.WIFI_WAKE";
+    static final String ACTION_POLL = "com.pd.earnings.WIFI_POLL";
+    private static final long POLL_MS = 5L * 60 * 1000;
     private static final String PREFS = "wifi_track";
     private static final int MAX_EVENTS = 400;
     private static final Pattern INFO = Pattern.compile("SSID:\\s*\"(.*?)\",\\s*BSSID:\\s*([0-9a-fA-F:]{17})");
@@ -59,6 +62,7 @@ final class WifiTracker {
     static void start(final Context c) {
         if (!isOn(c)) return;
         registerWake(c);
+        schedulePoll(c);
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -107,11 +111,63 @@ final class WifiTracker {
 
     static void stop(Context c) {
         unregisterWake(c);
+        cancelPoll(c);
         try {
             Context a = c.getApplicationContext();
             a.stopService(new Intent(a, WifiWatchService.class));
         } catch (Exception e) {
             // تجاهل
+        }
+    }
+
+    private static PendingIntent pollPi(Context a) {
+        Intent i = new Intent(a, WifiBootReceiver.class);
+        i.setAction(ACTION_POLL);
+        i.setPackage(a.getPackageName());
+        return PendingIntent.getBroadcast(a, 12, i, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    // شبكة أمان: منبّه خفيف كل ~5 دقائق يفحص الواي فاي حتى لو لم يوقظنا النظام
+    static void schedulePoll(Context c) {
+        try {
+            Context a = c.getApplicationContext();
+            AlarmManager am = (AlarmManager) a.getSystemService(Context.ALARM_SERVICE);
+            if (am == null) return;
+            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + POLL_MS, pollPi(a));
+        } catch (Throwable e) {
+            // تجاهل
+        }
+    }
+
+    static void cancelPoll(Context c) {
+        try {
+            Context a = c.getApplicationContext();
+            AlarmManager am = (AlarmManager) a.getSystemService(Context.ALARM_SERVICE);
+            if (am != null) am.cancel(pollPi(a));
+        } catch (Throwable e) {
+            // تجاهل
+        }
+    }
+
+    static void onPoll(Context c) {
+        try {
+            if (!isOn(c)) return;
+            SharedPreferences p = prefs(c);
+            long t = System.currentTimeMillis();
+            boolean up = wifiUp(c);
+            if (up) {
+                if (!"c".equals(state(c))) {
+                    long dn = p.getLong("poll_dn", 0);
+                    long est = (dn > 0 && t - dn <= POLL_MS * 3) ? (dn + t) / 2 : t;
+                    p.edit().putLong("est_t", est).commit();
+                }
+            } else {
+                p.edit().putLong("poll_dn", t).commit();
+            }
+            onWake(c, false);
+            p.edit().remove("est_t").commit();
+        } finally {
+            if (isOn(c)) schedulePoll(c);
         }
     }
 
@@ -179,9 +235,13 @@ final class WifiTracker {
 
     // يوقظنا النظام عند حدث واي فاي: نسجّل الدخول أو الخروج فورًا في الخلفية ثم نشغّل الخدمة الأمامية
     static void onWake(Context c) {
+        onWake(c, true);
+    }
+
+    static void onWake(Context c, boolean cnt) {
         if (!isOn(c)) return;
         long t = System.currentTimeMillis();
-        count(c, t);
+        if (cnt) count(c, t);
 
         if (wifiUp(c)) {
             SharedPreferences p = prefs(c);
@@ -205,7 +265,13 @@ final class WifiTracker {
             try {
                 long pt = p.getLong("pend_t", 0);
                 long ct = (pt > 0 && t - pt < 60000) ? pt : t;
-                onConnected(c, ct, r == null ? null : r[0], r == null ? null : r[1], 0);
+                int fl = 0;
+                long est = p.getLong("est_t", 0);
+                if (est > 0) {
+                    ct = est;
+                    fl = 1;
+                }
+                onConnected(c, ct, r == null ? null : r[0], r == null ? null : r[1], fl);
             } catch (Exception e) {
                 // تجاهل
             }

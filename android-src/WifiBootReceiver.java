@@ -31,6 +31,8 @@ public class WifiBootReceiver extends BroadcastReceiver {
                         WifiTracker.start(app);
                     } else if (Intent.ACTION_MY_PACKAGE_REPLACED.equals(a)) {
                         WifiTracker.start(app);
+                    } else if (WifiTracker.ACTION_POLL.equals(a)) {
+                        WifiTracker.onPoll(app);
                     } else if (WifiTracker.ACTION_WAKE.equals(a)
                             || "android.net.wifi.STATE_CHANGE".equals(a)
                             || "android.net.conn.CONNECTIVITY_CHANGE".equals(a)) {
