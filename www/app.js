@@ -557,7 +557,7 @@ function weekCfg(k, d) {
 function archiveCfg(a, d) {
   const list = [...a.items].sort(byDate), rem = round2(a.remain || 0), extra = [];
   if (a.carryIn) extra.push(['مرحَّل قبلها', signed(a.carryIn)]);
-  extra.push(['المستحق', signed(a.due)], ['المستلم', money(a.received), true]);
+  extra.push(['المستحق', signed(a.due), true], ['المستلم', money(a.received)]);
   if (rem) extra.push([rem > 0 ? 'بقي لك (رُحِّل)' : 'زيادة (خُصمت لاحقًا)', money(Math.abs(rem))]);
   return { title: 'كشف دفعة', sub: 'الاستلام: ' + fmtShort(a.paidAt) + ' • الفترة: ' + rangeOf(list), items: list, detail: d, extra };
 }
@@ -804,7 +804,8 @@ function reportPages(cfg) {
   if (c.ramt) cards.push(['أجر العمل عن بعد', money(c.ramt), P.BL, 'ltr']);
   if (c.adv) cards.push(['الكريدي', '−' + money(c.adv), P.RD, 'ltr']);
   cards.push(['الصافي', money(net), net < 0 ? P.RD : P.GN, 'ltr', net < 0 ? P.RD : P.GN]);
-  (cfg.extra || []).forEach(r => cards.push([r[0], r[1], P.INK, 'ltr', r[2] ? P.GO : null]));
+  const strong = [];
+  (cfg.extra || []).forEach(r => r[2] ? strong.push(r) : cards.push([r[0], r[1], P.INK, 'ltr', null]));
   const CWD = (W - 2 * M - 24) / 2, CH = 124;
   cards.forEach((k, n) => {
     const col = n % 2, row = Math.floor(n / 2), cx = col ? M : R - CWD, cy = y + row * (CH + 24);
@@ -812,7 +813,16 @@ function reportPages(cfg) {
     T(k[0], 28, '400', 'rtl', 'right', cx + CWD - 24, cy + 44, P.GR);
     T(k[1], 46, '700', k[3], 'right', cx + CWD - 24, cy + 98, k[2]);
   });
-  y += Math.ceil(cards.length / 2) * (CH + 24) + 16;
+  y += Math.ceil(cards.length / 2) * (CH + 24);
+  strong.forEach(r => {
+    const BH = 150;
+    rr(M, y, W - 2 * M, BH, 22, dk ? '#3a2f12' : '#fdf3d0', P.ACC);
+    x.fillStyle = P.ACC; x.fillRect(R - 14, y + 22, 8, BH - 44);
+    T(r[0], 34, '700', 'rtl', 'right', R - 36, y + 62, P.GR);
+    T(r[1], 78, '700', 'ltr', 'left', M + 36, y + 106, P.GO);
+    y += BH + 24;
+  });
+  y += 16;
   if (cfg.detail) {
     if (y + HH + RH * 2 > H - 100) newPage(false); else head();
     items.forEach((i, k) => {
