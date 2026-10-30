@@ -452,20 +452,25 @@ $('iOk').onclick = async () => {
   $('inDlg').close(); buzz(15); save(); toast('تم حفظ وقت الدخول');
 };
 
+const pays = a => Array.isArray(a.pays) ? a.pays : [{ id: 1, d: a.paidAt, a: Number(a.received) || 0, n: a.note || '' }];
+const paysSorted = a => [...pays(a)].sort((x, y) => (x.d || '').localeCompare(y.d || '') || x.id - y.id);
+function payLines(a) { const ps = paysSorted(a); return ps.length > 1 ? ps.map(p => '💵 ' + fmtShort(p.d) + ': ' + money(p.a) + (p.n ? ' • ' + clean(p.n) : '')) : []; }
 function renderArchive() {
   if (isFlt()) {
     const m = state.archive.flatMap(a => a.items).filter(match).sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
     $('arch').innerHTML = m.length ? m.map(itemRow).join('') : emptyBox('search', 'لا توجد نتائج مطابقة في الأرشيف.');
     return;
   }
-  const arc = [...state.archive].reverse();
-  $('arch').innerHTML = arc.length ? `<button class="pay" style="margin:0;width:100%" id="shareAll">${ic('share')}مشاركة كل الدفعات</button>` + arc.map(a => {
+  const arc = [...state.archive].reverse(), totRec = round2(arc.reduce((t, a) => t + (Number(a.received) || 0), 0));
+  $('arch').innerHTML = arc.length ? `<button class="pay" style="margin:0;width:100%" id="shareAll">${ic('share')}مشاركة كل الدفعات</button><div style="display:flex;justify-content:space-between;gap:10px;margin:10px 4px 0;font-size:calc(13px*var(--fs,1));color:var(--mut)"><span>مجموع المستلم: <b style="color:var(--text)">${money(totRec)}</b></span><span>عدد الدفعات: <b style="color:var(--text)">${arc.length}</b></span></div>` + arc.map(a => {
     const dates = a.items.map(i => i.date).sort();
     const range = dates.length ? fmtShort(dates[0]) + ' ← ' + fmtShort(dates[dates.length - 1]) : '—';
     const lines = [...a.items].sort((x, y) => x.date.localeCompare(y.date)).map(i =>
       `${fmtShort(i.date)}: ${i.type === 'work' ? (i.remote ? 'عن بعد = ' : fmtDur(i.mins) + ' = ') + money(i.amount) : 'كريدي ' + signed(-i.amount)}${i.note ? ' • ' + esc(i.note) : ''}`).join('<br>');
-    const rem = round2(a.remain || 0);
-    return `<details class="card"><summary><span class="bub">${ic('tcircle')}</span><div><b>${fmtShort(a.paidAt)}</b><small>${range}</small></div><b class="num" style="direction:ltr">${money(a.received)}</b></summary>
+    const rem = round2(a.remain || 0), ps = paysSorted(a);
+    const badge = rem === 0 ? `<span style="color:var(--pos)">مسدّدة</span>` : rem > 0 ? `<span style="color:var(--neg)">بقي ${money(rem)}</span>` : `<span style="color:var(--pos)">زيادة ${money(-rem)}</span>`;
+    const payRows = ps.map(p => `<div class="kv" style="align-items:center;padding:0 0 0 0"><span>${fmtShort(p.d)}${p.n ? ' • ' + esc(p.n) : ''}</span><span style="display:flex;align-items:center;gap:6px"><b>${money(p.a)}</b><button class="pe" type="button" data-id="${a.id}" data-p="${p.id}" aria-label="تعديل الدفعة" style="background:none;border:0;color:var(--mut);width:36px;height:36px;display:grid;place-items:center">${ic('edit')}</button></span></div>`).join('');
+    return `<details class="card"><summary><span class="bub">${ic('tcircle')}</span><div><b>${fmtShort(a.paidAt)}</b><small>${range} • ${badge}</small></div><b class="num" style="direction:ltr">${money(a.received)}</b></summary>
       <div class="lines">
         <div class="kv"><span>أيام العمل</span><b>${a.days}</b></div>
         <div class="kv"><span>مجموع الساعات</span><b>${fmtHM(a.mins)}</b></div>
@@ -473,11 +478,11 @@ function renderArchive() {
         <div class="kv"><span>الكريدي</span><b>${signed(-a.adv)}</b></div>
         ${a.carryIn ? `<div class="kv"><span>مرحَّل قبلها</span><b>${signed(a.carryIn)}</b></div>` : ''}
         <div class="kv"><span>المستحق</span><b>${signed(a.due)}</b></div>
-        <div class="kv"><span>المستلم</span><b>${money(a.received)}</b></div>
+        <div class="kv"><span>المستلم${ps.length > 1 ? ' (' + ps.length + ' دفعات)' : ''}</span><b>${money(a.received)}</b></div>
+        ${payRows}
         ${rem ? `<div class="kv"><span>${rem > 0 ? 'بقي لك (رُحِّل)' : 'زيادة (خُصمت لاحقًا)'}</span><b>${signed(rem)}</b></div>` : ''}
-        ${a.note ? `<div class="kv"><span>ملاحظة</span><b style="direction:rtl">${esc(a.note)}</b></div>` : ''}
         ${lines ? '<div style="margin-top:8px">' + lines + '</div>' : ''}
-        <div style="display:flex;gap:8px;margin-top:12px"><button class="pay ed1" data-id="${a.id}" style="flex:1;width:auto;margin:0;height:42px;font-size:calc(14px*var(--fs,1))">${ic('edit')}تعديل</button><button class="pay sh1" data-id="${a.id}" style="flex:2;width:auto;margin:0;height:42px;font-size:calc(14px*var(--fs,1))">${ic('share')}مشاركة هذه الدفعة</button></div>
+        <div style="display:flex;gap:8px;margin-top:12px"><button class="pay ap1" data-id="${a.id}" style="flex:1;width:auto;margin:0;height:42px;font-size:calc(14px*var(--fs,1))">${ic('plus')}إضافة دفعة</button><button class="pay sh1" data-id="${a.id}" style="flex:2;width:auto;margin:0;height:42px;font-size:calc(14px*var(--fs,1))">${ic('share')}مشاركة هذه الدفعة</button></div>
       </div></details>`;
   }).join('') + `<button class="pay" style="margin:6px 0 0;width:100%" id="undoPay">${ic('restore')}التراجع عن آخر دفعة</button>`
     : emptyBox('archive', 'لا توجد دفعات سابقة بعد.<br>عند استلام دفعة تظهر هنا.');
@@ -554,9 +559,11 @@ function archiveText(a, d) {
   const list = [...a.items].sort(byDate), rem = round2(a.remain || 0), extra = [];
   if (a.carryIn) extra.push('↩️ مرحَّل قبلها: ' + signed(a.carryIn));
   extra.push('🧾 المستحق: ' + signed(a.due));
+  const ps = pays(a);
+  extra.push(...payLines(a));
   if (rem) extra.push(rem > 0 ? '⏳ بقي لك (رُحِّل): ' + money(rem) : '➕ زيادة (خُصمت لاحقًا): ' + money(-rem));
-  if (a.note) extra.push('📝 ' + clean(a.note));
-  return periodText('كشف دفعة', ['🗓 تاريخ الاستلام: ' + fmtShort(a.paidAt), '🗓 الفترة: ' + rangeOf(list)], list, d, extra, '💵 ' + bold('المستلم: ' + ltr(moneyP(a.received))));
+  if (ps.length === 1 && ps[0].n) extra.push('📝 ' + clean(ps[0].n));
+  return periodText('كشف دفعة', ['🗓 ' + (ps.length > 1 ? 'أول استلام: ' : 'تاريخ الاستلام: ') + fmtShort(a.paidAt), '🗓 الفترة: ' + rangeOf(list)], list, d, extra, '💵 ' + bold('المستلم: ' + ltr(moneyP(a.received))));
 }
 function archivesText(d) {
   const arc = [...state.archive].sort((a, b) => a.paidAt.localeCompare(b.paidAt) || a.id - b.id);
@@ -566,6 +573,7 @@ function archivesText(d) {
     const list = [...a.items].sort(byDate), rem = round2(a.remain || 0);
     total += a.received;
     out.push('', '📌 ' + bold((n + 1) + ') ' + fmtShort(a.paidAt)), '🗓 ' + rangeOf(list), '🧾 المستحق: ' + signed(a.due), '💵 المستلم: ' + money(a.received));
+    out.push(...payLines(a).map(x => '   ' + x));
     if (rem) out.push(rem > 0 ? '⏳ بقي لك: ' + money(rem) : '➕ زيادة: ' + money(-rem));
     if (d && list.length) out.push('', ...dayGroups(list));
   });
@@ -585,8 +593,10 @@ function archiveCfg(a, d) {
   const list = [...a.items].sort(byDate), rem = round2(a.remain || 0), extra = [];
   if (a.carryIn) extra.push(['مرحَّل قبلها', signed(a.carryIn)]);
   extra.push(['المستحق', signed(a.due), true], ['المستلم', money(a.received)]);
+  const ps = paysSorted(a);
+  if (ps.length > 1) ps.forEach(p => extra.push(['استلام ' + fmtShort(p.d), money(p.a)]));
   if (rem) extra.push([rem > 0 ? 'بقي لك (رُحِّل)' : 'زيادة (خُصمت لاحقًا)', money(Math.abs(rem))]);
-  return { title: 'كشف دفعة', sub: 'الاستلام: ' + fmtShort(a.paidAt) + ' • الفترة: ' + rangeOf(list), items: list, detail: d, extra };
+  return { title: 'كشف دفعة', sub: (ps.length > 1 ? 'أول استلام: ' : 'الاستلام: ') + fmtShort(a.paidAt) + ' • الفترة: ' + rangeOf(list), items: list, detail: d, extra };
 }
 function summaryCfg(d) {
   const list = [...inRange()].sort(byDate), from = $('sFrom').value, to = $('sTo').value;
@@ -1070,49 +1080,56 @@ $('pOk').onclick = async () => {
   if (isNaN(r) || r < 0 || !paidAt) return toast('أدخل التاريخ والمبلغ');
   if (!(await ask('تأكيد الاستلام', 'استلام ' + num(r) + cur() + '. ستنتقل الفترة الحالية إلى الأرشيف.', { ok: 'تأكيد' }))) return;
   const c = calc(state.items), d = due();
-  state.archive.push({ id: Date.now(), paidAt, due: d, received: r, carryIn: state.carry, remain: round2(d - r),
-    note: $('pNote').value.trim(), items: state.items, work: c.work, adv: c.adv, mins: c.mins, days: c.days });
+  const nid = Date.now();
+  state.archive.push({ id: nid, paidAt, due: d, received: r, carryIn: state.carry, remain: round2(d - r),
+    pays: [{ id: nid, d: paidAt, a: r, n: $('pNote').value.trim() }], items: state.items, work: c.work, adv: c.adv, mins: c.mins, days: c.days });
   state.carry = round2(d - r);
   state.items = [];
   $('payDlg').close(); buzz([20, 50, 20]); save(); setView('arc'); toast('تم الاستلام ونُقلت الفترة إلى الأرشيف');
 };
 $('arch').onclick = async e => {
   if (e.target.closest('#shareAll')) { askShare('مشاركة كل الدفعات', d => archivesText(d), d => ({ cfg: archivesCfg(d), name: 'work-batches-' + today() + '.pdf' })); return; }
-  const ed = e.target.closest('.ed1');
-  if (ed) { const a = state.archive.find(x => x.id == ed.dataset.id); if (a) openAp(a); return; }
+  const pe = e.target.closest('.pe');
+  if (pe) { const a = state.archive.find(x => x.id == pe.dataset.id); if (a) openAp(a, pays(a).find(x => x.id == pe.dataset.p)); return; }
+  const ad = e.target.closest('.ap1');
+  if (ad) { const a = state.archive.find(x => x.id == ad.dataset.id); if (a) openAp(a, null); return; }
   const s1 = e.target.closest('.sh1');
   if (s1) { const a = state.archive.find(x => x.id == s1.dataset.id); if (a) askShare('مشاركة الدفعة', d => archiveText(a, d), d => ({ cfg: archiveCfg(a, d), name: 'work-batch-' + a.paidAt + '.pdf' })); return; }
   if (!e.target.closest('#undoPay')) return;
-  if (!(await ask('التراجع عن آخر دفعة؟', 'ستعود أيامها إلى الفترة الحالية.', { ok: 'تراجع عن الدفعة', danger: true }))) return;
+  const lastA = state.archive[state.archive.length - 1], np = lastA ? pays(lastA).length : 0;
+  if (!(await ask('التراجع عن آخر دفعة؟', 'ستعود أيامها إلى الفترة الحالية.' + (np > 1 ? ' وتُحذف معها ' + np + ' دفعات مستلمة.' : ''), { ok: 'تراجع عن الدفعة', danger: true }))) return;
   const a = state.archive.pop();
   state.items = [...a.items, ...state.items];
   state.carry = a.carryIn || 0;
   save(); setView('list'); toast('تم التراجع عن الدفعة');
 };
 
-let apEdit = null;
-function laterCount() { return apEdit ? state.archive.length - state.archive.findIndex(x => x.id === apEdit.id) - 1 : 0; }
-function openAp(a) {
-  apEdit = a; $('aDate').value = a.paidAt || ''; $('aRecv').value = a.received; $('aNote').value = a.note || '';
-  $('aInfo').textContent = 'المستحق: ' + signed(a.due);
-  $('aWarn').textContent = 'تغيير المبلغ المستلم يغيّر الرصيد المرحَّل في الدفعات اللاحقة وفي الفترة الحالية بالفرق نفسه.';
-  updAp(); $('apDlg').showModal();
+let apEdit = null, apPay = null;
+function openAp(a, p) { // p = دفعة موجودة للتعديل، أو null لإضافة دفعة جديدة
+  apEdit = a; apPay = p || null;
+  const dlg = $('apDlg'); dlg.querySelector('h2').textContent = p ? 'تعديل دفعة مستلمة' : 'إضافة دفعة';
+  $('aDate').value = p ? (p.d || '') : today(); $('aRecv').value = p ? p.a : round2(Math.max(0, a.remain || 0)); $('aNote').value = p ? (p.n || '') : '';
+  $('aInfo').textContent = 'المستحق: ' + signed(a.due) + ' • المستلم: ' + money(a.received);
+  const later = state.archive.length - state.archive.findIndex(x => x.id === a.id) - 1;
+  $('aWarn').textContent = 'أي تغيير في مجموع المستلم يغيّر المرحَّل إلى الفترة الحالية' + (later ? ' وأرقام الدفعات اللاحقة' : '') + ' بالفرق نفسه.';
+  let del = $('aDel');
+  if (!del) { del = document.createElement('button'); del.id = 'aDel'; del.type = 'button'; del.className = 'del'; del.textContent = 'حذف'; $('aCancel').before(del); del.onclick = delPay; }
+  del.hidden = !p;
+  updAp(); dlg.showModal();
 }
 function updAp() {
   const r = parseFloat($('aRecv').value);
   if (!apEdit || isNaN(r)) { $('aRem').textContent = ''; return; }
-  const rem = round2(apEdit.due - r);
-  $('aRem').textContent = rem === 0 ? 'لا يوجد فرق.' : rem > 0 ? 'بقي لك ' + money(rem) + ' ويُرحَّل.' : 'زيادة ' + money(-rem) + ' تُخصم لاحقًا.';
+  const rem = round2(apEdit.due - (apEdit.received - (apPay ? apPay.a : 0) + r));
+  $('aRem').textContent = rem === 0 ? 'بعدها: مسدّدة بالكامل.' : rem > 0 ? 'بعدها: بقي لك ' + money(rem) + ' ويُرحَّل.' : 'بعدها: زيادة ' + money(-rem) + ' تُخصم لاحقًا.';
 }
 $('aRecv').addEventListener('input', updAp);
 $('aCancel').onclick = () => $('apDlg').close();
-$('aOk').onclick = async () => {
-  const a = apEdit, r = parseFloat($('aRecv').value), paidAt = $('aDate').value;
-  if (!a || isNaN(r) || r < 0 || !paidAt) return toast('أدخل التاريخ والمبلغ');
-  const delta = round2(r - a.received);
-  if (delta && !(await ask('تغيير المبلغ المستلم؟', 'التغيير بمقدار ' + signed(delta) + ' سيعدّل الرصيد المرحَّل بعده.', { ok: 'متابعة' }))) return;
-  const idx = state.archive.findIndex(x => x.id === a.id);
-  a.paidAt = paidAt; a.note = $('aNote').value.trim(); a.received = r; a.remain = round2(a.due - r);
+function setPays(a, arr) { // يحفظ قائمة الدفعات ويعيد حساب المستلم والمرحَّل
+  arr = arr.map(p => ({ ...p })).sort((x, y) => (x.d || '').localeCompare(y.d || '') || x.id - y.id);
+  const rec = round2(arr.reduce((t, p) => t + p.a, 0)), delta = round2(rec - a.received), idx = state.archive.findIndex(x => x.id === a.id);
+  a.pays = arr; delete a.note; a.received = rec; a.remain = round2(a.due - rec);
+  if (arr.length) a.paidAt = arr[0].d;
   if (delta) {
     for (let j = idx + 1; j < state.archive.length; j++) {
       const b = state.archive[j];
@@ -1120,8 +1137,28 @@ $('aOk').onclick = async () => {
     }
     state.carry = round2(state.carry - delta);
   }
-  apEdit = null; $('apDlg').close(); save(); toast('تم تعديل الدفعة');
+}
+async function confirmPays(a, arr, what) {
+  const delta = round2(arr.reduce((t, p) => t + p.a, 0) - a.received);
+  if (!delta) return true;
+  return ask(what, 'مجموع المستلم يتغير بمقدار ' + signed(delta) + ' ويصبح المرحَّل إلى الفترة الحالية ' + signed(round2(state.carry - delta)) + '.', { ok: 'متابعة' });
+}
+$('aOk').onclick = async () => {
+  const a = apEdit, r = parseFloat($('aRecv').value), d = $('aDate').value;
+  if (!a || isNaN(r) || r < 0 || !d) return toast('أدخل التاريخ والمبلغ');
+  const cur0 = pays(a), p = apPay, n = $('aNote').value.trim();
+  const arr = p ? cur0.map(x => x.id === p.id ? { ...x, d, a: r, n } : x) : [...cur0, { id: Date.now(), d, a: r, n }];
+  if (!(await confirmPays(a, arr, p ? 'تعديل الدفعة؟' : 'إضافة الدفعة؟'))) return;
+  setPays(a, arr);
+  apEdit = null; apPay = null; $('apDlg').close(); save(); toast(p ? 'تم تعديل الدفعة' : 'تمت إضافة الدفعة');
 };
+async function delPay() {
+  const a = apEdit, p = apPay; if (!a || !p) return;
+  const arr = pays(a).filter(x => x.id !== p.id);
+  if (!(await ask('حذف هذه الدفعة؟', 'يتغير مجموع المستلم بمقدار ' + signed(-p.a) + ' ويصبح المرحَّل إلى الفترة الحالية ' + signed(round2(state.carry + p.a)) + '.', { ok: 'حذف', danger: true }))) return;
+  setPays(a, arr);
+  apEdit = null; apPay = null; $('apDlg').close(); save(); toast('تم حذف الدفعة');
+}
 
 // ---------- القفل ----------
 // صيغة الرمز المخزّن: p2$طول$ملح$بصمة (PBKDF2 بملح عشوائي). الصيغة القديمة (SHA-256 بملح ثابت) تُقبل وتُرقّى عند أول فتح ناجح.
