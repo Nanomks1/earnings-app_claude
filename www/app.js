@@ -25,7 +25,7 @@ const SETTINGS = {
   secure: { def: false, fix: v => v === true }
 };
 // تفضيلات الجهاز التي تدخل النسخة الاحتياطية (مظهر الودجت، شكل الأيقونة، خيار التفصيل في المشاركة)
-const PREFS_DEF = () => ({ wg: { bg: 0, fg: 0, ic: 0, label: true, on: true, total: true }, ic: { style: 'a', follow: true }, sd: true });
+const PREFS_DEF = () => ({ wg: { bg: 0, fg: 0, ic: 0, label: true, on: true, total: true }, ic: { style: 'a', follow: true }, sd: true, mo: 2, hp: true });
 const inSet = (v, a) => a.includes(Number(v)) ? Number(v) : 0;
 function normPrefs(p) {
   const o = PREFS_DEF(); if (!p || typeof p !== 'object') return o;
@@ -33,6 +33,8 @@ function normPrefs(p) {
   o.wg = { bg: inSet(w.bg, [0, 1, 2, 3]), fg: inSet(w.fg, [0, 1, 2]), ic: inSet(w.ic, [0, 1, 2]), label: w.label !== false, on: w.on !== false, total: w.total !== false };
   o.ic = { style: ['a', 'b', 'c'].includes(c.style) ? c.style : 'a', follow: c.follow !== false };
   o.sd = p.sd !== false;
+  o.mo = [0, 1, 2].includes(Number(p.mo)) ? Number(p.mo) : 2;
+  o.hp = p.hp !== false;
   return o;
 }
 function norm(d) {
@@ -176,6 +178,7 @@ function applyTheme() {
   const root = document.documentElement.style, set = (k, v) => root.setProperty(k, v);
   set('--pri', pri);
   set('--fs', (state.fsv || 100) / 100);
+  document.documentElement.dataset.mo = state.prefs ? state.prefs.mo : 2;
   set('--ff', state.font === 1 && customOk ? '"' + CUSTOM_FAMILY + '",system-ui,"Noto Sans Arabic","Segoe UI",Tahoma,sans-serif' : '');
   try { applySecure(); } catch (e) {}
   set('--pri2', dark ? mix(base, '#000000', .55) : mix(base, '#ffffff', .22));
@@ -312,9 +315,34 @@ $('csvBtn').onclick = async () => {
   } catch (e) { if (!/cancel/i.test(String((e && e.message) || e))) toast('تعذر التصدير'); }
 };
 
+const buzz = ms => { try { if (state.prefs.hp && navigator.vibrate) navigator.vibrate(ms || 12); } catch (e) {} };
+let cntRaf = 0, cntVal = null;
+function countTo(el, v) { // عدّاد ناعم للمجموع (الحركات الكاملة فقط)
+  cancelAnimationFrame(cntRaf);
+  const from = cntVal; cntVal = v;
+  if (from === null || from === v || state.prefs.mo !== 2) { el.textContent = signed(v); return; }
+  const t0 = performance.now(), D = 450;
+  const step = t => {
+    const k = Math.min(1, (t - t0) / D), e = 1 - Math.pow(1 - k, 3);
+    el.textContent = signed(k < 1 ? Math.round((from + (v - from) * e) * 100) / 100 : v);
+    if (k < 1) cntRaf = requestAnimationFrame(step);
+  };
+  cntRaf = requestAnimationFrame(step);
+}
+function playIn(el) { // يعيد تشغيل حركة الظهور على حاوية
+  if (!el || state.prefs.mo === 0) return;
+  el.classList.remove('fx'); void el.offsetWidth; el.classList.add('fx');
+  clearTimeout(el._fx); el._fx = setTimeout(() => el.classList.remove('fx'), 900);
+}
+const dirty = { arc: true, cal: true, sum: true };
+function renderView() { // يرسم فقط التبويبات الظاهرة؛ والباقي عند فتحه
+  if (view === 'arc') { renderArchive(); dirty.arc = false; } else dirty.arc = true;
+  if (view === 'cal') { renderCal(); dirty.cal = false; } else dirty.cal = true;
+  if (view === 'sum') { renderSummary(); dirty.sum = false; } else dirty.sum = true;
+}
 function render() {
   const c = calc(state.items);
-  $('total').textContent = signed(due());
+  countTo($('total'), due());
   const cells = [['الأجور', money(c.work)], ['الكريدي', signed(-c.adv)]];
   if (state.carry) cells.push(['مرحَّل', signed(state.carry)]);
   $('mini').style.setProperty('--n', cells.length);
@@ -327,9 +355,8 @@ function render() {
     const g = calc(groups[k]);
     return `<div class="wk"><span>${weekLabel(k)}</span><span class="r"><b class="num">${signed(g.work - g.adv)}</b><button class="wkb" data-wk="${k}" aria-label="مشاركة الأسبوع">${ic('share')}</button></span></div>` + groups[k].map(itemRow).join('');
   }).join('') : isFlt() ? emptyBox('search', 'لا توجد نتائج مطابقة.') : emptyBox('clock', 'لا توجد سجلات في الفترة الحالية.<br>سجّل دخول العمل أو أضف يومًا.');
-  renderArchive();
   renderFltRes();
-  renderSummary(); renderCal();
+  renderView();
 }
 
 // ---------- دخول / خروج ----------
@@ -422,7 +449,7 @@ $('iOk').onclick = async () => {
   }
   state.open = { ...(state.open || {}), date, start: time };
   wfAskedMark('in', k0); wfAskedMark('in', date + ' ' + time);
-  $('inDlg').close(); save(); toast('تم حفظ وقت الدخول');
+  $('inDlg').close(); buzz(15); save(); toast('تم حفظ وقت الدخول');
 };
 
 function renderArchive() {
@@ -627,7 +654,11 @@ function renderChart() {
   for (let k = 6; k >= 0; k--) { const d = new Date(); d.setDate(d.getDate() - k); days.push(iso(d)); }
   const mins = days.map(d => allItems().filter(i => i.type === 'work' && i.date === d).reduce((s, i) => s + i.mins, 0));
   const max = Math.max(...mins, 1), tot = mins.reduce((a, b) => a + b, 0);
-  $('chart').innerHTML = `<div class="ch"><b>ساعات آخر 7 أيام</b><span class="num">${fmtHM(tot)} س</span></div><div class="bars">` +
+  const pd = new Date(); pd.setDate(pd.getDate() - 13); const p0 = iso(pd); pd.setDate(pd.getDate() + 6); const p1 = iso(pd);
+  const prev = allItems().filter(i => i.type === 'work' && i.date >= p0 && i.date <= p1).reduce((s, i) => s + i.mins, 0);
+  const dm = Math.round(tot - prev);
+  const cmp = prev || tot ? `<div class="cmp ${dm > 0 ? 'up' : dm < 0 ? 'dn' : ''}">${dm === 0 ? 'مثل الأسبوع السابق' : (dm > 0 ? '+' : '−') + fmtHM(Math.abs(dm)) + ' س عن الأسبوع السابق'}</div>` : '';
+  $('chart').innerHTML = `<div class="ch"><b>ساعات آخر 7 أيام</b><span class="num">${fmtHM(tot)} س</span></div>${cmp}<div class="bars">` +
     days.map((d, n) => {
       const h = mins[n] / 60;
       return `<div class="b ${mins[n] ? 'has' : ''} ${n === 6 ? 'today' : ''}"><span class="bv num">${mins[n] ? +h.toFixed(1) : ''}</span><i style="height:${mins[n] ? Math.max(6, Math.round(mins[n] / max * 84)) : 3}px"></i><span class="bd">${WD[dt(d).getDay()]}</span></div>`;
@@ -707,6 +738,8 @@ function setView(v) {
   $('tabList').classList.toggle('on', v === 'list');
   $('tabArc').classList.toggle('on', v === 'arc'); $('tabCal').classList.toggle('on', v === 'cal');
   $('tabSum').classList.toggle('on', v === 'sum');
+  if ((v === 'arc' && dirty.arc) || (v === 'cal' && dirty.cal) || (v === 'sum' && dirty.sum)) renderView();
+  playIn({ list: $('list'), arc: $('arch'), cal: $('cal'), sum: $('summary') }[v]);
 }
 $('tabList').onclick = () => setView('list');
 $('tabArc').onclick = () => setView('arc'); $('tabCal').onclick = () => setView('cal');
@@ -971,9 +1004,10 @@ $('fSave').onclick = async () => {
     if (isNaN(rec.amount) || rec.amount < 0) return toast('أدخل مبلغ الكريدي');
   }
   state.items = editing ? state.items.map(i => i.id === editing.id ? rec : i) : [...state.items, rec];
+  const wasShift = fromShift;
   if (fromShift) { state.open = null; fromShift = false; }
   if (wfOnSaved) wfOnSaved();
-  $('form').close(); save();
+  $('form').close(); if (wasShift) buzz([12, 40, 12]); save();
 };
 function restoreItem(t) {
   const { delAt, ...it } = t;
@@ -1040,7 +1074,7 @@ $('pOk').onclick = async () => {
     note: $('pNote').value.trim(), items: state.items, work: c.work, adv: c.adv, mins: c.mins, days: c.days });
   state.carry = round2(d - r);
   state.items = [];
-  $('payDlg').close(); save(); setView('arc'); toast('تم الاستلام ونُقلت الفترة إلى الأرشيف');
+  $('payDlg').close(); buzz([20, 50, 20]); save(); setView('arc'); toast('تم الاستلام ونُقلت الفترة إلى الأرشيف');
 };
 $('arch').onclick = async e => {
   if (e.target.closest('#shareAll')) { askShare('مشاركة كل الدفعات', d => archivesText(d), d => ({ cfg: archivesCfg(d), name: 'work-batches-' + today() + '.pdf' })); return; }
@@ -1241,7 +1275,7 @@ $('mHome').onclick = e => { const b = e.target.closest('[data-go]'); if (b) mGo(
 $('menuBtn').onclick = () => {
   mGo('');
   $('srchChk').checked = state.search !== false; $('cur').value = state.currency; $('rate').value = state.rate; $('auto').checked = state.auto; $('forgetH').value = state.forgetH;
-  updFs(); updFont(); updLk(); $('secChk').checked = !!state.secure; purgeTrash(); updTrashLabel(); updIc(); updWg(); updPinLabel(); $('bioRow').hidden = !bioOk; $('bioChk').checked = !!state.bio; updBkWhere(); updEnc(); buildSwatches(); showVer(); $('menu').showModal();
+  $('hpChk').checked = state.prefs.hp; playIn($('list')); updFs(); updMo(); updFont(); updLk(); $('secChk').checked = !!state.secure; purgeTrash(); updTrashLabel(); updIc(); updWg(); updPinLabel(); $('bioRow').hidden = !bioOk; $('bioChk').checked = !!state.bio; updBkWhere(); updEnc(); buildSwatches(); showVer(); $('menu').showModal();
 };
 async function showVer() { // رقم النسخة من التطبيق نفسه (يتغير مع كل بناء)
   const A = plugin('App'); if (!A || !A.getInfo) return;
@@ -1340,6 +1374,9 @@ $('fsRange').oninput = () => {
   $('fsVal').textContent = ltr(state.fsv + '%');
 };
 $('fsRange').onchange = () => savePrefs();
+const updMo = () => [...$('moSeg').children].forEach(b => b.classList.toggle('on', +b.dataset.v === state.prefs.mo));
+$('hpChk').onchange = () => { state.prefs.hp = $('hpChk').checked; savePrefs(); buzz(20); };
+$('moSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; state.prefs.mo = +b.dataset.v; document.documentElement.dataset.mo = state.prefs.mo; updMo(); savePrefs(); };
 $('fsReset').onclick = () => { state.fsv = 100; applyTheme(); updFs(); savePrefs(); };
 
 // ---------- أيقونة التطبيق (شكلان × ثمانية ألوان) ----------

@@ -97,6 +97,8 @@ h1{font-size:calc(22px*var(--fs,1));margin:0;font-weight:800}
 .nodata{font-size:calc(13px*var(--fs,1));color:var(--mut);text-align:center;padding:18px 0}
 .chart .ch{display:flex;justify-content:space-between;align-items:center;font-size:calc(14px*var(--fs,1));margin-bottom:12px}
 .chart .ch span{font-size:calc(12.5px*var(--fs,1));color:var(--mut)}
+.cmp{font-size:calc(12px*var(--fs,1));color:var(--mut);margin:-2px 0 8px;direction:rtl}
+.cmp.up{color:var(--pos)}.cmp.dn{color:var(--neg)}
 .bars{display:flex;gap:6px;align-items:flex-end;height:128px}
 .bars .b{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:100%;min-width:0}
 .bars .bv{font-size:calc(11px*var(--fs,1));color:var(--mut);height:14px;line-height:14px;direction:ltr}
@@ -233,6 +235,16 @@ dialog{transition:opacity .18s ease-in,transform .18s ease-in,display .18s allow
 dialog:not([open]){opacity:0;transform:translateY(24px)}
 dialog::backdrop{transition:opacity .18s,display .18s allow-discrete,overlay .18s allow-discrete}
 dialog:not([open])::backdrop{opacity:0}
+@keyframes fi{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+.fx>*{animation:fi .26s ease-out both}
+.fx>*:nth-child(2){animation-delay:.03s}.fx>*:nth-child(3){animation-delay:.06s}.fx>*:nth-child(4){animation-delay:.09s}.fx>*:nth-child(5){animation-delay:.12s}.fx>*:nth-child(n+6){animation-delay:.15s}
+[data-mo="1"] .fx>*{animation-name:fi;animation-delay:0s!important;animation-duration:.18s}
+[data-mo="2"] .fx .bars i,[data-mo="2"] .fx .col i{transform-origin:bottom;animation:grow .5s cubic-bezier(.2,.8,.2,1) both}
+.item,.stat,.tabs button{transition:transform .12s,background .2s}
+[data-mo="2"] .item:active,[data-mo="2"] .stat:active{transform:scale(.985)}
+[data-mo="0"] *,[data-mo="0"] *::before,[data-mo="0"] *::after{animation:none!important;transition:none!important}
+[data-mo="1"] .total,[data-mo="1"] .pulse{animation:none}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 
 .open .edst{background:none;border:0;color:inherit;font:inherit;padding:0 2px;display:inline-flex;align-items:center;gap:4px;text-decoration:underline dotted;height:auto;min-height:0}
