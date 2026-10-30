@@ -11,6 +11,7 @@ import android.content.pm.ServiceInfo;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.RectF;
 import android.graphics.drawable.Icon;
 import android.net.ConnectivityManager;
@@ -66,23 +67,35 @@ public class WifiWatchService extends Service {
 
     private static Icon iconCache;
 
-    // أيقونة واي فاي أحادية اللون (ثلاثة أقواس ونقطة) تُرسم برمجيًا بدل أيقونة المزامنة
-    private static synchronized Icon wifiIcon() {
+    // أيقونة التطبيق أحادية اللون (هاتف ومفتاح ربط) تُرسم برمجيًا على شبكة 24×24
+    private static synchronized Icon appIcon() {
         if (iconCache == null) {
             Bitmap bm = Bitmap.createBitmap(96, 96, Bitmap.Config.ARGB_8888);
             Canvas c = new Canvas(bm);
+            c.scale(4f, 4f);
             Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
             p.setColor(0xFFFFFFFF);
             p.setStyle(Paint.Style.STROKE);
-            p.setStrokeWidth(9f);
             p.setStrokeCap(Paint.Cap.ROUND);
-            float cx = 48f, cy = 78f;
-            float[] rr = {20f, 38f, 56f};
-            for (float r : rr) {
-                c.drawArc(new RectF(cx - r, cy - r, cx + r, cy + r), 225f, 90f, false, p);
-            }
-            p.setStyle(Paint.Style.FILL);
-            c.drawCircle(cx, cy, 6.5f, p);
+            p.setStrokeJoin(Paint.Join.ROUND);
+            // الهاتف: مفتوح من الجهة العليا اليمنى ليمرّ منه المفتاح
+            p.setStrokeWidth(1.8f);
+            Path ph = new Path();
+            ph.moveTo(13.5f, 13f);
+            ph.lineTo(13.5f, 19f);
+            ph.arcTo(new RectF(9.5f, 17f, 13.5f, 21f), 0f, 90f);
+            ph.lineTo(5.5f, 21f);
+            ph.arcTo(new RectF(3.5f, 17f, 7.5f, 21f), 90f, 90f);
+            ph.lineTo(3.5f, 4.5f);
+            ph.arcTo(new RectF(3.5f, 2.5f, 7.5f, 6.5f), 180f, 90f);
+            ph.lineTo(11f, 2.5f);
+            c.drawPath(ph, p);
+            // ذراع المفتاح
+            p.setStrokeWidth(2.4f);
+            c.drawLine(15.38f, 8.62f, 7.2f, 16.8f, p);
+            // رأس المفتاح: قوس مفتوح نحو الأعلى واليمين
+            p.setStrokeWidth(2.2f);
+            c.drawArc(new RectF(14.5f, 3.5f, 20.5f, 9.5f), -5f, 280f, false, p);
             iconCache = Icon.createWithBitmap(bm);
         }
         return iconCache;
@@ -92,7 +105,7 @@ public class WifiWatchService extends Service {
         Notification.Builder b;
         if (Build.VERSION.SDK_INT >= 26) b = new Notification.Builder(this, CH);
         else b = new Notification.Builder(this);
-        b.setContentTitle("تتبع الواي فاي").setContentText(noteText).setSmallIcon(wifiIcon()).setOngoing(true).setOnlyAlertOnce(true);
+        b.setContentTitle("تتبع الواي فاي").setContentText(noteText).setSmallIcon(appIcon()).setOngoing(true).setOnlyAlertOnce(true);
         Intent li = getPackageManager().getLaunchIntentForPackage(getPackageName());
         if (li != null) {
             b.setContentIntent(PendingIntent.getActivity(this, 0, li, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT));
