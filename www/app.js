@@ -297,7 +297,12 @@ function csvText() {
   all.sort((x, y) => x[0].date.localeCompare(y[0].date) || x[0].id - y[0].id);
   const rows = [['التاريخ', 'النوع', 'البداية', 'النهاية', 'استراحة (دقيقة)', 'المدة (ساعة)', 'المبلغ' + (state.currency ? ' (' + state.currency + ')' : ''), 'ملاحظة', 'الفترة']];
   all.forEach(([i, per]) => rows.push([i.date, i.type === 'adv' ? 'كريدي' : i.remote ? 'عن بعد' : 'عمل', i.start || '', i.end || '', i.brk || '', i.type === 'work' && !i.remote ? round2(i.mins / 60) : '', round2(i.type === 'adv' ? -i.amount : i.amount), i.note || '', per]));
-  return '\ufeff' + rows.map(r => r.map(csvCell).join(',')).join('\r\n');
+  const prow = [];
+  state.archive.forEach(a => paysSorted(a).forEach((p, k) => prow.push([p.d, round2(p.a), 'دفعة ' + a.paidAt, k === 0 ? round2(a.due) : '', p.n || ''])));
+  prow.sort((x, y) => x[0].localeCompare(y[0]));
+  let out = rows.map(r => r.map(csvCell).join(',')).join('\r\n');
+  if (prow.length) out += '\r\n\r\n' + [['تاريخ الاستلام', 'المبلغ المستلم' + (state.currency ? ' (' + state.currency + ')' : ''), 'الدفعة', 'مستحق الدفعة', 'ملاحظة'], ...prow].map(r => r.map(csvCell).join(',')).join('\r\n');
+  return '\ufeff' + out;
 }
 $('csvBtn').onclick = async () => {
   if (!allItems().length) return toast('لا توجد سجلات للتصدير');
@@ -480,9 +485,10 @@ function renderArchive() {
         <div class="kv"><span>المستحق</span><b>${signed(a.due)}</b></div>
         <div class="kv"><span>المستلم${ps.length > 1 ? ' (' + ps.length + ' دفعات)' : ''}</span><b>${money(a.received)}</b></div>
         ${payRows}
+        ${a.adj ? `<div class="kv"><span>تسوية من دفعة سابقة</span><b>${signed(a.adj)}</b></div>` : ''}
         ${rem ? `<div class="kv"><span>${rem > 0 ? 'بقي لك (رُحِّل)' : 'زيادة (خُصمت لاحقًا)'}</span><b>${signed(rem)}</b></div>` : ''}
         ${lines ? '<div style="margin-top:8px">' + lines + '</div>' : ''}
-        <div style="display:flex;gap:8px;margin-top:12px"><button class="pay ap1" data-id="${a.id}" style="flex:1;width:auto;margin:0;height:42px;font-size:calc(14px*var(--fs,1))">${ic('plus')}إضافة دفعة</button><button class="pay sh1" data-id="${a.id}" style="flex:2;width:auto;margin:0;height:42px;font-size:calc(14px*var(--fs,1))">${ic('share')}مشاركة هذه الدفعة</button></div>
+        <div style="display:flex;gap:8px;margin-top:12px"><button class="pay ap1" data-id="${a.id}" style="flex:0 0 auto;width:auto;margin:0;height:42px;padding:0 16px;white-space:nowrap;font-size:calc(14px*var(--fs,1))">${ic('plus')}إضافة دفعة</button><button class="pay sh1" data-id="${a.id}" style="flex:1 1 auto;width:auto;margin:0;height:42px;padding:0 12px;white-space:nowrap;font-size:calc(14px*var(--fs,1))">${ic('share')}مشاركة هذه الدفعة</button></div>
       </div></details>`;
   }).join('') + `<button class="pay" style="margin:6px 0 0;width:100%" id="undoPay">${ic('restore')}التراجع عن آخر دفعة</button>`
     : emptyBox('archive', 'لا توجد دفعات سابقة بعد.<br>عند استلام دفعة تظهر هنا.');
@@ -561,6 +567,7 @@ function archiveText(a, d) {
   extra.push('🧾 المستحق: ' + signed(a.due));
   const ps = pays(a);
   extra.push(...payLines(a));
+  if (a.adj) extra.push('↪️ تسوية من دفعة سابقة: ' + signed(a.adj));
   if (rem) extra.push(rem > 0 ? '⏳ بقي لك (رُحِّل): ' + money(rem) : '➕ زيادة (خُصمت لاحقًا): ' + money(-rem));
   if (ps.length === 1 && ps[0].n) extra.push('📝 ' + clean(ps[0].n));
   return periodText('كشف دفعة', ['🗓 ' + (ps.length > 1 ? 'أول استلام: ' : 'تاريخ الاستلام: ') + fmtShort(a.paidAt), '🗓 الفترة: ' + rangeOf(list)], list, d, extra, '💵 ' + bold('المستلم: ' + ltr(moneyP(a.received))));
@@ -574,6 +581,7 @@ function archivesText(d) {
     total += a.received;
     out.push('', '📌 ' + bold((n + 1) + ') ' + fmtShort(a.paidAt)), '🗓 ' + rangeOf(list), '🧾 المستحق: ' + signed(a.due), '💵 المستلم: ' + money(a.received));
     out.push(...payLines(a).map(x => '   ' + x));
+    if (a.adj) out.push('↪️ تسوية من دفعة سابقة: ' + signed(a.adj));
     if (rem) out.push(rem > 0 ? '⏳ بقي لك: ' + money(rem) : '➕ زيادة: ' + money(-rem));
     if (d && list.length) out.push('', ...dayGroups(list));
   });
@@ -595,6 +603,7 @@ function archiveCfg(a, d) {
   extra.push(['المستحق', signed(a.due), true], ['المستلم', money(a.received)]);
   const ps = paysSorted(a);
   if (ps.length > 1) ps.forEach(p => extra.push(['استلام ' + fmtShort(p.d), money(p.a)]));
+  if (a.adj) extra.push(['تسوية من دفعة سابقة', signed(a.adj)]);
   if (rem) extra.push([rem > 0 ? 'بقي لك (رُحِّل)' : 'زيادة (خُصمت لاحقًا)', money(Math.abs(rem))]);
   return { title: 'كشف دفعة', sub: (ps.length > 1 ? 'أول استلام: ' : 'الاستلام: ') + fmtShort(a.paidAt) + ' • الفترة: ' + rangeOf(list), items: list, detail: d, extra };
 }
@@ -696,16 +705,14 @@ function renderMonths() {
     ms.map(m => `<div class="mb"><div class="pair">${col(m.w, 'w')}${col(m.c, 'c')}</div><span class="bd">${esc(m.d.toLocaleDateString('ar-u-nu-latn', { month: 'short' }))}</span></div>`).join('') +
     `</div><div class="lg"><span><i class="w"></i>الأجور</span><span><i class="c"></i>الكريدي</span></div>`;
 }
-function balSeries() { // رصيدك (المستحق) بعد كل يوم، ويُعاد ضبطه عند كل دفعة
-  const pts = [], per = [...state.archive].sort((a, b) => (a.paidAt || '').localeCompare(b.paidAt || '') || a.id - b.id)
-    .map(a => ({ items: a.items, start: a.carryIn || 0, end: a.remain, at: a.paidAt })).concat([{ items: state.items, start: state.carry || 0 }]);
-  per.forEach(p => {
-    let bal = p.start; const days = {};
-    [...p.items].sort(byDate).forEach(i => { days[i.date] = (days[i.date] || 0) + (i.type === 'work' ? i.amount : -i.amount); });
-    Object.keys(days).sort().forEach(d => { bal += days[d]; pts.push({ d, v: round2(bal) }); });
-    if (p.end !== undefined && p.at) { const last = pts[pts.length - 1]; if (last && last.d === p.at) last.v = round2(p.end); else pts.push({ d: p.at, v: round2(p.end) }); }
-  });
-  return pts;
+function balSeries() { // رصيدك (المستحق) تراكميًا: الأجور − الكريدي − كل ما استُلم، بتاريخ كل يوم وكل دفعة
+  const days = {}, add = (d, v) => { if (d) days[d] = (days[d] || 0) + v; };
+  [...state.archive.flatMap(a => a.items), ...state.items].forEach(i => add(i.date, i.type === 'work' ? i.amount : -i.amount));
+  state.archive.forEach(a => paysSorted(a).forEach(p => add(p.d, -p.a)));
+  let bal = state.archive.length ? (state.archive[0].carryIn || 0) : (state.carry || 0);
+  const pts = Object.keys(days).sort().map(d => { bal += days[d]; return { d, v: round2(bal) }; });
+  const gap = pts.length ? round2(due() - pts[pts.length - 1].v) : 0; // لو كانت أرقام قديمة غير متسقة: يطابق آخر الرسم "المستحق الآن" دائمًا
+  return gap ? pts.map(p => ({ d: p.d, v: round2(p.v + gap) })) : pts;
 }
 function renderBalance() {
   const from = $('sFrom').value, to = $('sTo').value;
@@ -978,13 +985,16 @@ function findOverlap(date, s, e, skipId) {
   const t0 = new Date(date + 'T' + s).getTime(); let t1 = new Date(date + 'T' + e).getTime();
   if (isNaN(t0) || isNaN(t1)) return null;
   if (t1 <= t0) t1 += 864e5;
-  return state.items.find(i => {
+  const chk = i => {
     if (i.id === skipId || i.type !== 'work' || i.remote || !i.start || !i.end) return false;
     const a = new Date(i.date + 'T' + i.start).getTime(); let b = new Date(i.date + 'T' + i.end).getTime();
     if (isNaN(a) || isNaN(b)) return false;
     if (b <= a) b += 864e5;
     return t0 < b && a < t1;
-  }) || null;
+  };
+  const cur = state.items.find(chk); if (cur) return cur;
+  for (const a of state.archive) { const h = a.items.find(chk); if (h) return { ...h, arc: a.paidAt }; } // سجل في دفعة مؤرشفة
+  return null;
 }
 $('fSave').onclick = async () => {
   const date = $('fDate').value;
@@ -1002,7 +1012,7 @@ $('fSave').onclick = async () => {
       } else return toast('أدخل البداية والنهاية (والاستراحة أقل من المدة)');
     } else {
       const ov = findOverlap(date, $('fStart').value, $('fEnd').value, editing ? editing.id : null);
-      if (ov && !(await ask('الوقت يتداخل مع سجل آخر', fmtDay(ov.date) + ' ' + ltr(ov.start + ' – ' + ov.end), { ok: 'احفظ رغم ذلك' }))) return;
+      if (ov && !(await ask(ov.arc ? 'الوقت يتداخل مع سجل في دفعة سابقة' : 'الوقت يتداخل مع سجل آخر', fmtDay(ov.date) + ' ' + ltr(ov.start + ' – ' + ov.end) + (ov.arc ? ' • دفعة ' + fmtShort(ov.arc) : ''), { ok: 'احفظ رغم ذلك' }))) return;
       const same = $('fStart').value === $('fEnd').value;
       if (same) { if (!(await ask('البداية تساوي النهاية', 'ستُحسب المدة 24 ساعة.', { ok: 'متابعة' }))) return; }
       else if (m > LONG_MIN && !(await ask('مدة الوردية طويلة', 'مدتها ' + fmtDur(m) + '. هل هي صحيحة؟', { ok: 'نعم، صحيحة', cancel: 'تعديل' }))) return;
@@ -1078,6 +1088,7 @@ $('pCancel').onclick = () => $('payDlg').close();
 $('pOk').onclick = async () => {
   const r = parseFloat($('pRecv').value), paidAt = $('pDate').value;
   if (isNaN(r) || r < 0 || !paidAt) return toast('أدخل التاريخ والمبلغ');
+  if (!(await chkPayDate(paidAt, state.items))) return;
   if (!(await ask('تأكيد الاستلام', 'استلام ' + num(r) + cur() + '. ستنتقل الفترة الحالية إلى الأرشيف.', { ok: 'تأكيد' }))) return;
   const c = calc(state.items), d = due();
   const nid = Date.now();
@@ -1100,10 +1111,14 @@ $('arch').onclick = async e => {
   if (!(await ask('التراجع عن آخر دفعة؟', 'ستعود أيامها إلى الفترة الحالية.' + (np > 1 ? ' وتُحذف معها ' + np + ' دفعات مستلمة.' : ''), { ok: 'تراجع عن الدفعة', danger: true }))) return;
   const a = state.archive.pop();
   state.items = [...a.items, ...state.items];
-  state.carry = a.carryIn || 0;
+  state.carry = round2((a.carryIn || 0) + (a.adj || 0));
   save(); setView('list'); toast('تم التراجع عن الدفعة');
 };
 
+async function chkPayDate(d, items) { // تاريخ الاستلام قبل آخر يوم عمل في الدفعة غالبًا خطأ إدخال
+  const lw = items.filter(i => i.type === 'work').reduce((m, i) => i.date > m ? i.date : m, '');
+  return !lw || d >= lw || ask('تاريخ الاستلام قبل آخر يوم عمل', 'آخر يوم عمل في هذه الدفعة: ' + fmtDay(lw) + '. هل تاريخ الاستلام صحيح؟', { ok: 'نعم، صحيح', cancel: 'تعديل' });
+}
 let apEdit = null, apPay = null;
 function openAp(a, p) { // p = دفعة موجودة للتعديل، أو null لإضافة دفعة جديدة
   apEdit = a; apPay = p || null;
@@ -1111,7 +1126,7 @@ function openAp(a, p) { // p = دفعة موجودة للتعديل، أو null 
   $('aDate').value = p ? (p.d || '') : today(); $('aRecv').value = p ? p.a : round2(Math.max(0, a.remain || 0)); $('aNote').value = p ? (p.n || '') : '';
   $('aInfo').textContent = 'المستحق: ' + signed(a.due) + ' • المستلم: ' + money(a.received);
   const later = state.archive.length - state.archive.findIndex(x => x.id === a.id) - 1;
-  $('aWarn').textContent = 'أي تغيير في مجموع المستلم يغيّر المرحَّل إلى الفترة الحالية' + (later ? ' وأرقام الدفعات اللاحقة' : '') + ' بالفرق نفسه.';
+  $('aWarn').textContent = 'أي تغيير في مجموع المستلم يغيّر المرحَّل إلى الفترة الحالية بالفرق نفسه' + (later ? '، وتظهر في الدفعات اللاحقة كسطر «تسوية من دفعة سابقة» دون تغيير مستحقها.' : '.');
   let del = $('aDel');
   if (!del) { del = document.createElement('button'); del.id = 'aDel'; del.type = 'button'; del.className = 'del'; del.textContent = 'حذف'; $('aCancel').before(del); del.onclick = delPay; }
   del.hidden = !p;
@@ -1133,7 +1148,8 @@ function setPays(a, arr) { // يحفظ قائمة الدفعات ويعيد حس
   if (delta) {
     for (let j = idx + 1; j < state.archive.length; j++) {
       const b = state.archive[j];
-      b.carryIn = round2((b.carryIn || 0) - delta); b.due = round2(b.due - delta); b.remain = round2((b.remain || 0) - delta);
+      b.adj = round2((b.adj || 0) - delta); if (!b.adj) delete b.adj; // تسوية من دفعة سابقة: المستحق والمرحَّل المسجّلان لا يتغيران
+      b.remain = round2((b.remain || 0) - delta);
     }
     state.carry = round2(state.carry - delta);
   }
@@ -1147,6 +1163,7 @@ $('aOk').onclick = async () => {
   const a = apEdit, r = parseFloat($('aRecv').value), d = $('aDate').value;
   if (!a || isNaN(r) || r < 0 || !d) return toast('أدخل التاريخ والمبلغ');
   const cur0 = pays(a), p = apPay, n = $('aNote').value.trim();
+  if (!(p && p.d === d) && !(await chkPayDate(d, a.items))) return;
   const arr = p ? cur0.map(x => x.id === p.id ? { ...x, d, a: r, n } : x) : [...cur0, { id: Date.now(), d, a: r, n }];
   if (!(await confirmPays(a, arr, p ? 'تعديل الدفعة؟' : 'إضافة الدفعة؟'))) return;
   setPays(a, arr);
@@ -1734,10 +1751,11 @@ async function pullWidget() { // يستلم ما سجّله الودجت وهو 
           let brkWarn = false;
           if (o0 && o0.bs) brkWarn = true;
           if (brk >= mins) { brk = Math.round(o0 ? (o0.brk || 0) : 0); if (brk >= mins) brk = 0; brkWarn = true; }
-          const net = mins - brk;
+          const net = mins - brk, wov = findOverlap(ev.date, ev.start, ev.end, null);
           state.items.push({ id: Date.now() + (n++), type: 'work', date: ev.date, note: '', remote: false, start: ev.start, end: ev.end, brk, mins: net, rate: state.rate, amount: net / 60 * state.rate });
           state.open = null;
           msg = brkWarn ? 'سُجّل اليوم من الودجت (كانت الاستراحة مفتوحة، راجع السجل)' : 'سُجّل يوم العمل من الودجت';
+          if (wov) msg = 'سُجّل من الودجت لكنه يتداخل مع سجل ' + (wov.arc ? 'في دفعة سابقة' : 'آخر') + '. راجعه';
         }
       }
     });
@@ -2062,7 +2080,7 @@ async function wfRcApply(day, edit) {
   }
   if (!(x.mins > 0)) return toast('الناتج غير صالح. راجع الاستراحة');
   const ov = findOverlap(date, st, en, r.it.id);
-  if (ov && !(await ask('الوقت يتداخل مع سجل آخر', fmtDay(ov.date) + ' ' + ltr(ov.start + ' – ' + ov.end), { ok: 'طبّق رغم ذلك' }))) return;
+  if (ov && !(await ask(ov.arc ? 'الوقت يتداخل مع سجل في دفعة سابقة' : 'الوقت يتداخل مع سجل آخر', fmtDay(ov.date) + ' ' + ltr(ov.start + ' – ' + ov.end) + (ov.arc ? ' • دفعة ' + fmtShort(ov.arc) : ''), { ok: 'طبّق رغم ذلك' }))) return;
   if (x.mins > LONG_MIN && !(await ask('مدة الوردية طويلة', 'مدتها ' + fmtDur(x.mins) + '. هل هي صحيحة؟', { ok: 'نعم، صحيحة', cancel: 'رجوع' }))) return;
   const rate = r.it.rate || state.rate, rec = { ...r.it, date, start: st, end: en, brk: x.rb, mins: x.mins, rate, amount: x.mins / 60 * rate };
   state.items = state.items.map(i => i.id === rec.id ? rec : i);
