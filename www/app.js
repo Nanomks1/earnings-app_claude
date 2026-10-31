@@ -981,7 +981,7 @@ $('list').onclick = e => {
   const it = state.items.find(i => i.id == b.dataset.id);
   if (it) openForm(modeOf(it), it);
 };
-function findOverlap(date, s, e, skipId) {
+function findOverlap(date, s, e, skipId, skipOpen) {
   const t0 = new Date(date + 'T' + s).getTime(); let t1 = new Date(date + 'T' + e).getTime();
   if (isNaN(t0) || isNaN(t1)) return null;
   if (t1 <= t0) t1 += 864e5;
@@ -994,8 +994,14 @@ function findOverlap(date, s, e, skipId) {
   };
   const cur = state.items.find(chk); if (cur) return cur;
   for (const a of state.archive) { const h = a.items.find(chk); if (h) return { ...h, arc: a.paidAt }; } // سجل في دفعة مؤرشفة
+  const o = state.open; // وردية جارية: من وقت دخولها حتى الآن (ما لم يكن الحفظ هو إنهاءها)
+  if (!skipOpen && o && o.date && o.start) {
+    const a = new Date(o.date + 'T' + o.start).getTime();
+    if (!isNaN(a) && t0 < Math.max(Date.now(), a + 6e4) && a < t1) return { date: o.date, start: o.start, end: 'الآن', open: true };
+  }
   return null;
 }
+const ovTitle = ov => ov.arc ? 'الوقت يتداخل مع سجل في دفعة سابقة' : ov.open ? 'الوقت يتداخل مع وردية جارية' : 'الوقت يتداخل مع سجل آخر';
 $('fSave').onclick = async () => {
   const date = $('fDate').value;
   if (!date) return toast('أدخل التاريخ');
@@ -1011,8 +1017,8 @@ $('fSave').onclick = async () => {
         Object.assign(rec, { mins: editing.mins, rate: editing.rate, remote: false });
       } else return toast('أدخل البداية والنهاية (والاستراحة أقل من المدة)');
     } else {
-      const ov = findOverlap(date, $('fStart').value, $('fEnd').value, editing ? editing.id : null);
-      if (ov && !(await ask(ov.arc ? 'الوقت يتداخل مع سجل في دفعة سابقة' : 'الوقت يتداخل مع سجل آخر', fmtDay(ov.date) + ' ' + ltr(ov.start + ' – ' + ov.end) + (ov.arc ? ' • دفعة ' + fmtShort(ov.arc) : ''), { ok: 'احفظ رغم ذلك' }))) return;
+      const ov = findOverlap(date, $('fStart').value, $('fEnd').value, editing ? editing.id : null, fromShift);
+      if (ov && !(await ask(ovTitle(ov), fmtDay(ov.date) + ' ' + ltr(ov.start + ' – ' + ov.end) + (ov.arc ? ' • دفعة ' + fmtShort(ov.arc) : ''), { ok: 'احفظ رغم ذلك' }))) return;
       const same = $('fStart').value === $('fEnd').value;
       if (same) { if (!(await ask('البداية تساوي النهاية', 'ستُحسب المدة 24 ساعة.', { ok: 'متابعة' }))) return; }
       else if (m > LONG_MIN && !(await ask('مدة الوردية طويلة', 'مدتها ' + fmtDur(m) + '. هل هي صحيحة؟', { ok: 'نعم، صحيحة', cancel: 'تعديل' }))) return;
@@ -1751,7 +1757,7 @@ async function pullWidget() { // يستلم ما سجّله الودجت وهو 
           let brkWarn = false;
           if (o0 && o0.bs) brkWarn = true;
           if (brk >= mins) { brk = Math.round(o0 ? (o0.brk || 0) : 0); if (brk >= mins) brk = 0; brkWarn = true; }
-          const net = mins - brk, wov = findOverlap(ev.date, ev.start, ev.end, null);
+          const net = mins - brk, wov = findOverlap(ev.date, ev.start, ev.end, null, true);
           state.items.push({ id: Date.now() + (n++), type: 'work', date: ev.date, note: '', remote: false, start: ev.start, end: ev.end, brk, mins: net, rate: state.rate, amount: net / 60 * state.rate });
           state.open = null;
           msg = brkWarn ? 'سُجّل اليوم من الودجت (كانت الاستراحة مفتوحة، راجع السجل)' : 'سُجّل يوم العمل من الودجت';
@@ -2080,7 +2086,7 @@ async function wfRcApply(day, edit) {
   }
   if (!(x.mins > 0)) return toast('الناتج غير صالح. راجع الاستراحة');
   const ov = findOverlap(date, st, en, r.it.id);
-  if (ov && !(await ask(ov.arc ? 'الوقت يتداخل مع سجل في دفعة سابقة' : 'الوقت يتداخل مع سجل آخر', fmtDay(ov.date) + ' ' + ltr(ov.start + ' – ' + ov.end) + (ov.arc ? ' • دفعة ' + fmtShort(ov.arc) : ''), { ok: 'طبّق رغم ذلك' }))) return;
+  if (ov && !(await ask(ovTitle(ov), fmtDay(ov.date) + ' ' + ltr(ov.start + ' – ' + ov.end) + (ov.arc ? ' • دفعة ' + fmtShort(ov.arc) : ''), { ok: 'طبّق رغم ذلك' }))) return;
   if (x.mins > LONG_MIN && !(await ask('مدة الوردية طويلة', 'مدتها ' + fmtDur(x.mins) + '. هل هي صحيحة؟', { ok: 'نعم، صحيحة', cancel: 'رجوع' }))) return;
   const rate = r.it.rate || state.rate, rec = { ...r.it, date, start: st, end: en, brk: x.rb, mins: x.mins, rate, amount: x.mins / 60 * rate };
   state.items = state.items.map(i => i.id === rec.id ? rec : i);
