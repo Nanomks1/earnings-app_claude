@@ -56,7 +56,13 @@ public class WifiWatchService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        startFg();
+        try {
+            startFg();
+        } catch (Throwable e) { // رفض النظام بدء الخدمة الأمامية: لا نترك الحالة "تعمل" زورًا
+            running = false;
+            stopSelf();
+            return START_NOT_STICKY;
+        }
         if (!WifiTracker.isOn(this)) {
             stopSelf();
             return START_NOT_STICKY;
