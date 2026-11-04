@@ -47,6 +47,8 @@ public class WifiTrackPlugin extends Plugin {
         o.put("state", s.getString("state", "d"));
         o.put("cbN", s.getInt("cb_n", 0));
         o.put("cbT", (double) s.getLong("cb_t", 0));
+        o.put("pollT", (double) s.getLong("poll_t", 0));
+        o.put("startT", (double) s.getLong("start_t", 0));
         call.resolve(o);
     }
 
@@ -127,7 +129,7 @@ public class WifiTrackPlugin extends Plugin {
                     call.reject("root-off");
                     return;
                 }
-                String[] r = WifiTracker.readWifiRoot();
+                String[] r = WifiTracker.readWifiRootFresh();
                 if (r == null) {
                     call.reject("no-wifi");
                     return;

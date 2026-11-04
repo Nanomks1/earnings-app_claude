@@ -98,6 +98,8 @@ public class WorkWidgetProvider extends AppWidgetProvider {
                     int mins = (sMin >= 0 && eMin >= 0)
                             ? (eMin >= sMin ? (eMin - sMin) : (eMin + 1440 - sMin))
                             : (int) Math.round((now - startTs) / 60000.0);
+                    int tsMins = (int) Math.round((now - startTs) / 60000.0);
+                    if (tsMins > 16 * 60) mins = tsMins; // وردية طويلة جدًا (قد تتجاوز 24 ساعة): النص وحده يُخطئ المدة، فلا يُضاف شيء للمجموع
                     int brk = p.getInt("openBrk", 0);
                     if (brk >= mins || brk < 0) brk = 0;
                     int netMins = mins - brk;

@@ -233,7 +233,7 @@ public class WifiWatchService extends Service {
 
     private void available(Network n, long t) {
         try {
-            WifiTracker.count(this, t);
+            if (t - regT >= 4000) WifiTracker.count(this, t); // أول نداء بعد التسجيل ناتج عن فتح الخدمة لا عن النظام
             boolean root = WifiTracker.useRoot(this);
             String[] r = root ? WifiTracker.readWifiRoot() : null;
             SharedPreferences p = WifiTracker.prefs(this);

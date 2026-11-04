@@ -64,6 +64,7 @@ final class WifiTracker {
     // تشغيل التتبع: تسجيل استيقاظ النظام عند اتصال الواي فاي، وبدء الخدمة إن كان الواي فاي متصلًا الآن
     static void start(final Context c) {
         if (!isOn(c)) return;
+        prefs(c).edit().putLong("start_t", System.currentTimeMillis()).apply();
         registerWake(c);
         schedulePoll(c);
         new Thread(new Runnable() {
@@ -73,7 +74,7 @@ final class WifiTracker {
                     exemptBattery(c);
                 }
                 if (wifiUp(c)) {
-                    onWake(c);
+                    onWake(c, false);
                 } else if ("c".equals(state(c))) {
                     try {
                         onDisconnected(c, System.currentTimeMillis(), 1);
@@ -188,6 +189,7 @@ final class WifiTracker {
             if (!isOn(c)) return;
             SharedPreferences p = prefs(c);
             long t = System.currentTimeMillis();
+            p.edit().putLong("poll_t", t).apply();
             if (quiet(t)) return;
             boolean up = wifiUp(c);
             if (up) {
@@ -284,7 +286,10 @@ final class WifiTracker {
     static void onWake(Context c, boolean cnt) {
         if (!isOn(c)) return;
         long t = System.currentTimeMillis();
-        if (cnt) count(c, t);
+        if (cnt) {
+            count(c, t);
+            schedulePoll(c); // استيقاظ حقيقي من النظام: نعيد ضبط منبّه الفحص الدوري إن كان قد انقطع
+        }
 
         if (wifiUp(c)) {
             SharedPreferences p = prefs(c);
@@ -386,17 +391,25 @@ final class WifiTracker {
                     } catch (InterruptedException e) {
                         return;
                     }
-                    p.destroy();
+                    p.destroyForcibly();
                 }
             });
             k.setDaemon(true);
             k.start();
             StringBuilder sb = new StringBuilder();
             BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
-            String line;
-            while ((line = r.readLine()) != null && sb.length() < 4000) sb.append(line).append('\n');
-            k.interrupt();
-            p.destroy();
+            try {
+                String line;
+                while ((line = r.readLine()) != null && sb.length() < 4000) sb.append(line).append('\n');
+            } finally {
+                try {
+                    r.close();
+                } catch (Exception e) {
+                    // تجاهل
+                }
+                k.interrupt();
+                p.destroyForcibly();
+            }
             return sb.toString();
         } catch (Exception e) {
             return null;
@@ -410,7 +423,22 @@ final class WifiTracker {
     }
 
     // يرجع {الاسم, BSSID} للشبكة المتصلة الآن، متوافق مع أندرويد 16 و17
+    private static volatile String[] lastRead;
+    private static volatile long lastReadT;
+
+    // قراءة حديثة (أقل من 6 ثوانٍ) تُعاد كما هي حتى لا يُستدعى الروت مرتين عند كل اتصال
     static String[] readWifiRoot() {
+        String[] c = lastRead;
+        if (c != null && System.currentTimeMillis() - lastReadT < 6000) return c.clone();
+        String[] r = readWifiRootFresh();
+        if (r != null) {
+            lastRead = r.clone();
+            lastReadT = System.currentTimeMillis();
+        }
+        return r;
+    }
+
+    static String[] readWifiRootFresh() {
         for (int i = 0; i < 4; i++) {
             String out = su("cmd wifi status 2>/dev/null; dumpsys wifi | grep -E -m2 'mWifiInfo|WifiInfo'", 3500);
             if (out != null) {
