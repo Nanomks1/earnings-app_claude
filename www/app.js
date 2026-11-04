@@ -115,7 +115,6 @@ const iso = d => d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.g
 const today = () => iso(new Date());
 const nowTime = () => { const d = new Date(); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); };
 const dt = s => new Date(s + 'T00:00');
-const fmtDate = s => dt(s).toLocaleDateString('ar-u-nu-latn', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 const fmtShort = s => dt(s).toLocaleDateString('ar-u-nu-latn', { day: 'numeric', month: 'long', year: 'numeric' });
 const fmtDay = s => dt(s).toLocaleDateString('ar-u-nu-latn', dt(s).getFullYear() === new Date().getFullYear() ? { weekday: 'long', day: 'numeric', month: 'long' } : { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 const unit = (n, one, two, few) => n === 1 ? one : n === 2 ? two : n + ' ' + (n <= 10 ? few : one);
@@ -265,7 +264,7 @@ function emptyBox(icon, text) { return `<div class="empty"><span class="bub">${i
 
 function renderFltRes() {
   const box = $('fRes');
-  $('flt').hidden = state.search === false || view === 'sum';
+  $('flt').hidden = state.search === false || view === 'sum' || view === 'cal';
   $('qClr').hidden = !fq;
   if (!isFlt()) { box.hidden = true; return; }
   const m = (view === 'arc' ? state.archive.flatMap(a => a.items) : state.items).filter(match), c = calc(m);
@@ -325,7 +324,7 @@ let cntRaf = 0, cntVal = null;
 function countTo(el, v) { // عدّاد ناعم للمجموع (الحركات الكاملة فقط)
   cancelAnimationFrame(cntRaf);
   const from = cntVal; cntVal = v;
-  if (from === null || from === v || state.prefs.mo !== 2) { el.textContent = signed(v); return; }
+  if (from === null || from === v || state.prefs.mo !== 2 || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { el.textContent = signed(v); return; }
   const t0 = performance.now(), D = 450;
   const step = t => {
     const k = Math.min(1, (t - t0) / D), e = 1 - Math.pow(1 - k, 3);
@@ -1229,8 +1228,9 @@ function drawDots() {
   [...box.children].forEach((s, i) => s.classList.toggle('on', i < entered.length));
 }
 function showLock() { if (!state.pin) return; entered = ''; drawDots(); bioKeyShow(); $('lock').hidden = false; tryBio(); }
+let pinBusy = false;
 $('pad').onclick = async e => {
-  const b = e.target.closest('button'); if (!b) return;
+  const b = e.target.closest('button'); if (!b || pinBusy) return;
   const k = b.dataset.k;
   if (k === 'bio') return tryBio();
   if (Date.now() < (pinFail.until || 0)) return toast('محاولات كثيرة. انتظر ' + Math.ceil((pinFail.until - Date.now()) / 1000) + ' ثانية');
@@ -1238,7 +1238,10 @@ $('pad').onclick = async e => {
   drawDots();
   if (entered.length === pinLen()) {
     const tried = entered;
-    if (await verifyPin(tried, state.pin)) {
+    pinBusy = true;
+    let okPin = false;
+    try { okPin = await verifyPin(tried, state.pin); } finally { pinBusy = false; }
+    if (okPin) {
       if (!state.pin.startsWith('p2$') && window.crypto && crypto.subtle) { try { state.pin = await makePin(tried); save(); } catch (e) {} }
       $('lock').hidden = true; setTimeout(checkForgot, 400); entered = ''; pinFail = {}; savePinFail(); }
     else {
@@ -1746,7 +1749,8 @@ async function pullWidget() { // يستلم ما سجّله الودجت وهو 
       else if (ev.t === 'out') {
         const d0 = new Date(ev.date + 'T' + ev.start).getTime(), d1 = new Date(ev.date + 'T' + ev.end).getTime();
         let mins = Math.round(((d1 - d0) < 0 ? d1 - d0 + 864e5 : d1 - d0) / 60000); // من نصّي البداية والنهاية كما في النموذج
-        if (isNaN(mins)) mins = Math.round((ev.endTs - ev.startTs) / 60000);
+        const tsm = Math.round((ev.endTs - ev.startTs) / 60000); // المدة الفعلية بالطابع الزمني: تكشف وردية تجاوزت 24 ساعة
+        if (isNaN(mins) || tsm > OPEN_WARN) mins = tsm;
         changed = true;
         if (state.items.some(i => i.type === 'work' && i.date === ev.date && i.start === ev.start && i.end === ev.end)) state.open = null; // أُضيف سابقًا
         else if (!(mins > 0)) { state.open = null; msg = 'تجاهلتُ خروجًا من الودجت: المدة أقل من دقيقة'; }
@@ -1832,6 +1836,7 @@ var wfChk = false;
 const WF_GAP = 10 * 60000;
 const WF_DAYS = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const wfHM = t => { const d = new Date(t); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); };
+const wfDT = t => { if (!t) return 'لا شيء'; const d = new Date(t), n = new Date(); return (wfYMD(t) === wfYMD(n.getTime()) ? '' : d.getDate() + '/' + (d.getMonth() + 1) + ' ') + wfHM(t); };
 const wfYMD = t => { const d = new Date(t); return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); };
 const wfDoneSet = () => { try { return new Set(JSON.parse(localStorage.getItem('earnings_wf_done')) || []); } catch (e) { return new Set(); } };
 const wfMarkDone = keys => { const s = wfDoneSet(); keys.forEach(k => s.add(k)); try { localStorage.setItem('earnings_wf_done', JSON.stringify([...s].slice(-400))); } catch (e) {} };
@@ -1848,7 +1853,7 @@ async function wfCfgShow() {
   $('wfOn').checked = !!c.on; $('wfRootChk').checked = !!c.root;
   $('wfRootChk').disabled = !c.on; $('wfRootRow').style.opacity = c.on ? '' : '.5';
   const wl = [...wfSet(c)], ws = wl.length;
-  $('wfInfo').innerHTML = 'شبكات العمل: ' + (ws ? wl.map(n => '<span style="display:inline-flex;align-items:center;gap:6px;border:1px solid var(--bd);border-radius:14px;padding:2px 10px;margin:2px">' + esc(n) + '<button type="button" class="wfx" data-ws="' + esc(n) + '" aria-label="حذف" style="background:none;border:0;color:inherit;padding:0 2px;font-size:14px">✕</button></span>').join(' ') : 'غير محدّدة') + (c.on && !c.root ? '<br>الروت مطفأ: لا يمكن معرفة اسم الشبكة، فتُسجَّل الأحداث بلا اسم.' : '') + (c.on && c.root && !ws ? '<br>اتصل بشبكة العمل ثم اضغط «أضف الشبكة الحالية».' : '') + (c.on ? '<br><small>آخر حدث من النظام: ' + (c.cbT ? wfHM(c.cbT) + ' (' + c.cbN + ')' : 'لا شيء') + '</small>' : '');
+  $('wfInfo').innerHTML = 'شبكات العمل: ' + (ws ? wl.map(n => '<span style="display:inline-flex;align-items:center;gap:6px;border:1px solid var(--bd);border-radius:14px;padding:2px 10px;margin:2px">' + esc(n) + '<button type="button" class="wfx" data-ws="' + esc(n) + '" aria-label="حذف" style="background:none;border:0;color:inherit;padding:0 2px;font-size:14px">✕</button></span>').join(' ') : 'غير محدّدة') + (c.on && !c.root ? '<br>الروت مطفأ: لا يمكن معرفة اسم الشبكة، فتُسجَّل الأحداث بلا اسم.' : '') + (c.on && c.root && !ws ? '<br>اتصل بشبكة العمل ثم اضغط «أضف الشبكة الحالية».' : '') + (c.on ? '<br><small>آخر استيقاظ من النظام: ' + wfDT(c.cbT) + (c.cbT ? ' (' + c.cbN + ')' : '') + '<br>آخر فحص دوري: ' + wfDT(c.pollT) + '<br>آخر فتح أو إقلاع: ' + wfDT(c.startT) + '</small>' : '');
 }
 $('wfOn').onchange = async () => {
   const W = nplug('WifiTrack'), v = $('wfOn').checked;
@@ -1920,7 +1925,7 @@ function wfBlock(list, done, rcOn) {
     const ok = !rc && L.length >= 2 && L.every(x => !x.open && !x.pend && !wfIsDone(x, done) && !wfIsSkip(x));
     let mg = '';
     if (ok) {
-      let brk = 0; for (let i = 1; i < L.length; i++) brk += L[i].s - L[i - 1].e;
+      let brk = 0; for (let i = 1; i < L.length; i++) brk += Math.max(0, L[i].s - L[i - 1].e);
       brk = Math.round(brk / 60000);
       wfMerge[day] = { s: L[0].s, e: L[L.length - 1].e, brk, keys: L.flatMap(x => x.keys) };
       mg = '<div class="acts" style="margin-top:6px"><button type="button" data-wfd="' + day + '">ادمج الفترات وأضف (استراحة ' + brk + ' د)</button></div>';
@@ -2055,7 +2060,7 @@ function wfRecon(day, L, done) { // يقارن سجلًا يدويًا واحد�
   if (c.length !== 1) return null;
   const it = c[0], [ms, me] = span(it);
   if (isNaN(ms) || isNaN(me)) return null;
-  let wb = 0; for (let i = 1; i < S.length; i++) wb += (S[i].s - S[i - 1].e) / 60000;
+  let wb = 0; for (let i = 1; i < S.length; i++) wb += Math.max(0, S[i].s - S[i - 1].e) / 60000;
   wb = Math.round(wb); const mb = Math.round(it.brk || 0);
   const nS = Math.abs(ws - ms) > WF_GAP, nE = Math.abs(we - me) > WF_GAP, nB = S.length >= 2 && Math.abs(wb - mb) > 10;
   if (!nS && !nE && !nB) return null; // الأوقات متقاربة: لا شيء يظهر
