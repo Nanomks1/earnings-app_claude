@@ -42,7 +42,7 @@ const JOB_RE = /^\d{4}-\d{2}-\d{2}$/;
 function normJobsCfg(c) {
   c = c && typeof c === 'object' ? c : {};
   const tags = a => [...new Set((Array.isArray(a) ? a : []).map(x => String(x || '').trim().toLowerCase().replace(/\s+/g, ' ')).filter(Boolean))].slice(0, 300);
-  return { on: c.on === true, sd: c.sd !== false, sp: c.sp !== false, n: [3, 5, 8].includes(Number(c.n)) ? Number(c.n) : 5, sj: c.sj !== false, sc: c.sc !== false, lp: c.lp !== false, hd: tags(c.hd), hp: tags(c.hp) };
+  return { on: c.on === true, sd: c.sd !== false, sp: c.sp !== false, n: [3, 5, 8].includes(Number(c.n)) ? Number(c.n) : 5, sj: c.sj !== false, sc: c.sc !== false, lp: c.lp !== false, sq: c.sq !== false, hd: tags(c.hd), hp: tags(c.hp) };
 }
 function normJobs(a) {
   const seen = new Set(), out = [];

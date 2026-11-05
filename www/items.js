@@ -37,8 +37,8 @@
   $('jView').onclick = e => { const b = e.target.closest('button'); if (!b) return; jv = b.dataset.v === 'stats' ? 'stats' : 'list'; render(); };
 
   function renderList() {
-    const box = $('jList'), q = k1(query), have = ids();
-    $('jqClr').hidden = !query;
+    const box = $('jList'), srch = cfg().sq !== false, q = srch ? k1(query) : '', have = ids();
+    $('jqBox').hidden = !srch; $('jqClr').hidden = !query;
     const all = state.jobs.filter(j => !q || k1(j.dev + ' ' + j.pr).includes(q));
     if (!all.length) {
       $('jSum').textContent = '';
@@ -269,12 +269,13 @@
   }
   function cfgShow() {
     const c = cfg();
-    $('jOn').checked = c.on; $('jSet').hidden = !c.on;
+    $('jOn').checked = c.on; $('jSet').hidden = !c.on; $('jSearch').checked = c.sq !== false;
     $('jSugD').checked = c.sd; $('jSugP').checked = c.sp; $('jLastP').checked = c.lp;
     [...$('jNum').children].forEach(b => b.classList.toggle('on', Number(b.dataset.n) === c.n));
     manage();
   }
   $('jOn').onchange = () => { cfg().on = $('jOn').checked; savePrefs(); $('jSet').hidden = !cfg().on; apply(); };
+  $('jSearch').onchange = () => { cfg().sq = $('jSearch').checked; if (!cfg().sq) { query = ''; $('jq').value = ''; showDays = 31; } savePrefs(); render(); };
   $('jSugD').onchange = () => { cfg().sd = $('jSugD').checked; savePrefs(); };
   $('jSugP').onchange = () => { cfg().sp = $('jSugP').checked; savePrefs(); };
   $('jLastP').onchange = () => { cfg().lp = $('jLastP').checked; savePrefs(); };

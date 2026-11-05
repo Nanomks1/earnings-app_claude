@@ -45,7 +45,7 @@
 <main class="list" id="jobs" hidden>
   <div class="seg" id="jView"><button type="button" data-v="list" class="on">القائمة</button><button type="button" data-v="stats">الإحصاءات</button></div>
   <div id="jListWrap">
-    <div class="sbox"><svg class="ic"><use href="#i-search"/></svg><input type="text" id="jq" placeholder="بحث في العناصر" autocomplete="off" enterkeyhint="search"><button id="jqClr" type="button" aria-label="مسح" hidden><svg class="ic"><use href="#i-x"/></svg></button></div>
+    <div class="sbox" id="jqBox"><svg class="ic"><use href="#i-search"/></svg><input type="text" id="jq" placeholder="بحث في العناصر" autocomplete="off" enterkeyhint="search"><button id="jqClr" type="button" aria-label="مسح" hidden><svg class="ic"><use href="#i-x"/></svg></button></div>
     <div class="jsum" id="jSum"></div>
     <div id="jList"></div>
   </div>
@@ -186,6 +186,7 @@
   </div>
   <div id="jSet">
     <div class="grp">
+      <div class="tg"><span>البحث في العناصر</span><input type="checkbox" id="jSearch"></div>
       <div class="tg"><span>اقتراحات الجهاز</span><input type="checkbox" id="jSugD"></div>
       <div class="tg"><span>اقتراحات المشكلة</span><input type="checkbox" id="jSugP"></div>
       <div class="tg"><span>تلميح «آخر مرة» للثمن</span><input type="checkbox" id="jLastP"></div>
