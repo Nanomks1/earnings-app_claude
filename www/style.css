@@ -257,3 +257,32 @@ dialog:not([open])::backdrop{opacity:0}
 .asks button{flex:1;height:46px;border-radius:12px;font-weight:700;border:1px solid var(--bd);background:var(--card2);color:var(--text)}
 .asks button.ok{background:var(--pri);color:var(--onpri);border:0}
 .asks button.dg{background:var(--ntint);color:var(--neg);border:0}
+
+/* ---------- العناصر ---------- */
+.tabs.five button{font-size:calc(13px*var(--fs,1))}
+.tabs.five button .ic{display:none}
+#jList{display:flex;flex-direction:column;gap:10px}
+.jsum{padding:2px 6px;font-size:calc(13px*var(--fs,1));color:var(--mut)}
+.jsum:empty{display:none}
+.jcard{background:var(--card);border:1px solid var(--bd);border-radius:16px;box-shadow:var(--sh);overflow:hidden}
+.jh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:10px 14px 6px;font-size:calc(14px*var(--fs,1))}
+.jh b{font-weight:700;white-space:nowrap}
+.jc{font-size:calc(12px*var(--fs,1));color:var(--mut);text-align:end;line-height:1.5}
+.jc b{color:var(--pritx);font-weight:700}
+.jrow{display:flex;align-items:center;gap:10px;width:100%;min-height:46px;padding:6px 14px;border:0;border-top:1px solid var(--bd);background:none;text-align:start;font-size:calc(15px*var(--fs,1))}
+.jt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.jt b{font-weight:700}
+.jm{color:var(--mut);font-size:calc(13px*var(--fs,1))}
+.jp{font-weight:800;direction:ltr;white-space:nowrap}
+.jmore{height:44px;border-radius:14px;border:1px solid var(--bd);background:var(--card2);font-weight:600}
+.sug{display:flex;gap:6px;overflow-x:auto;padding:6px 0 0;scrollbar-width:none}
+.sug::-webkit-scrollbar{display:none}
+.sug:empty{display:none}
+.sg{flex:none;height:32px;padding:0 12px;border-radius:16px;border:1px solid var(--bd);background:var(--card2);color:var(--text);font-size:calc(13px*var(--fs,1));white-space:nowrap}
+.mh{font-size:calc(13px*var(--fs,1));font-weight:700;margin:12px 0 2px}
+.mrow{display:flex;align-items:center;gap:8px;min-height:40px;border-bottom:1px solid var(--bd);font-size:calc(14px*var(--fs,1))}
+.mrow:last-of-type{border-bottom:0}
+.mrow span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mrow small{color:var(--mut)}
+.mrow button{width:36px;height:36px;border:0;background:none;color:var(--mut);font-size:18px;line-height:1}
+.mlink{display:block;width:100%;height:44px;margin-top:8px;border:0;background:none;color:var(--pritx);font-weight:600}

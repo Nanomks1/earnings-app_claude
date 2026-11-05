@@ -32,6 +32,7 @@
   <button id="tabCal"><svg class="ic"><use href="#i-calendar"/></svg>التقويم</button>
   <button id="tabArc"><svg class="ic"><use href="#i-archive"/></svg>الأرشيف</button>
   <button id="tabSum"><svg class="ic"><use href="#i-bars"/></svg>الملخص</button>
+  <button id="tabJobs" hidden><svg class="ic"><use href="#i-list"/></svg>العناصر</button>
 </nav>
 <div class="flt" id="flt">
   <div class="sbox"><svg class="ic"><use href="#i-search"/></svg><input type="text" id="q" placeholder="بحث في الملاحظات" autocomplete="off" enterkeyhint="search"><button id="qClr" type="button" aria-label="مسح البحث" hidden><svg class="ic"><use href="#i-x"/></svg></button></div>
@@ -41,6 +42,11 @@
 <main class="list" id="list"></main>
 <main class="list" id="cal" hidden></main>
 <main class="list" id="arch" hidden></main>
+<main class="list" id="jobs" hidden>
+  <div class="sbox"><svg class="ic"><use href="#i-search"/></svg><input type="text" id="jq" placeholder="بحث في العناصر" autocomplete="off" enterkeyhint="search"><button id="jqClr" type="button" aria-label="مسح" hidden><svg class="ic"><use href="#i-x"/></svg></button></div>
+  <div class="jsum" id="jSum"></div>
+  <div id="jList"></div>
+</main>
 <main class="list" id="summary" hidden>
   <div class="card">
     <div class="seg" id="sSeg">
@@ -62,7 +68,7 @@
   <div class="card chart" id="chartWd"></div>
 </main>
 
-<div class="bar">
+<div class="bar" id="mainBar">
   <button class="add" id="addWork"><svg class="ic"><use href="#i-plus"/></svg>يوم عمل</button>
   <button class="rem" id="addRemote"><svg class="ic"><use href="#i-home"/></svg>عن بعد</button>
   <button class="adv" id="addAdv"><svg class="ic"><use href="#i-minus"/></svg>كريدي</button>
@@ -153,6 +159,7 @@
     <button class="rb" data-go="bk"><span class="bub"><svg class="ic"><use href="#i-save"/></svg></span><span class="t">النسخ الاحتياطي والتصدير<small>النسخ التلقائي والاستعادة وCSV</small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
     <button class="rb" data-go="sync"><span class="bub"><svg class="ic"><use href="#i-restore"/></svg></span><span class="t">المزامنة<small id="sySt">غير مفعّلة</small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
     <button class="rb" data-go="wifi"><span class="bub"><svg class="ic"><use href="#i-wifi"/></svg></span><span class="t">الواي فاي<small>تتبع الحضور وتأكيد الدخول والخروج</small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
+    <button class="rb" data-go="jobs"><span class="bub"><svg class="ic"><use href="#i-list"/></svg></span><span class="t">العناصر<small>الأجهزة المنفَّذة وأثمنتها والاقتراحات</small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
   </div>
   <div class="note" id="appVer" style="text-align:center" hidden></div>
   </div>
@@ -166,6 +173,22 @@
     <div class="fld"><label for="forgetH">تنبيه نسيان الخروج بعد (ساعات)</label><input type="number" id="forgetH" inputmode="numeric" min="0" max="48" step="1"></div>
     <div class="hint">0 = بلا تنبيه. يظهر عند فتح التطبيق إن بقي الدخول مفتوحًا أكثر من هذه المدة</div>
     <div class="rb" style="border-top:1px solid var(--bd)"><span class="bub"><svg class="ic"><use href="#i-search"/></svg></span><span class="t">البحث والفلتر<small>يظهر فوق السجلات والأرشيف</small></span><input type="checkbox" id="srchChk"></div>
+  </div>
+  </div>
+  <div class="pg" id="pg-jobs">
+  <div class="grp">
+    <div class="tg"><span>تفعيل العناصر</span><input type="checkbox" id="jOn"></div>
+    <div class="hint">يظهر تبويب «العناصر» لتسجيل ما نفّذته وثمنه ومقارنته بأجر اليوم. عند الإيقاف تبقى بياناتك محفوظة.</div>
+  </div>
+  <div id="jSet">
+    <div class="grp">
+      <div class="tg"><span>اقتراحات الجهاز</span><input type="checkbox" id="jSugD"></div>
+      <div class="tg"><span>اقتراحات المشكلة</span><input type="checkbox" id="jSugP"></div>
+      <label>عدد الاقتراحات</label>
+      <div class="seg" id="jNum"><button type="button" data-n="3">3</button><button type="button" data-n="5">5</button><button type="button" data-n="8">8</button></div>
+      <div class="hint" style="margin-top:8px">الاقتراحات تُبنى من إدخالاتك السابقة وتظهر سطرًا واحدًا تحت الخانة.</div>
+    </div>
+    <div class="grp" id="jManage"></div>
   </div>
   </div>
   <div class="pg" id="pg-wifi">
@@ -363,6 +386,8 @@
 <dialog id="shDlg">
   <h2 id="shTitle">مشاركة</h2>
   <div class="tg"><span>تضمين تفاصيل الأيام</span><input type="checkbox" id="shDetail" checked></div>
+  <div class="tg" id="shJobsRow" hidden><span>أرفق ما تم تنفيذه</span><input type="checkbox" id="shJobs" checked></div>
+  <div class="tg" id="shJobsPrRow" hidden><span>مع الأثمنة</span><input type="checkbox" id="shJobsPr" checked></div>
   <div class="acts">
     <button class="ok" id="shGo" type="button"><svg class="ic"><use href="#i-share"/></svg>مشاركة نص</button>
     <button id="shPdf" type="button"><svg class="ic"><use href="#i-file"/></svg>مشاركة PDF</button>
@@ -405,10 +430,35 @@
   <div class="asks"><button id="askYes" type="button"></button><button id="askNo" type="button"></button></div>
 </dialog>
 
+<div class="bar" id="jobBar" hidden>
+  <button class="add" id="addJob" type="button"><svg class="ic"><use href="#i-plus"/></svg>عنصر</button>
+</div>
+
+<dialog id="jobDlg">
+  <h2 id="jobTitle">عنصر جديد</h2>
+  <label for="jDev" style="margin-top:4px">الجهاز</label>
+  <input type="text" id="jDev" placeholder="مثال: Samsung A12" autocomplete="off" maxlength="80">
+  <div class="sug" id="jDevSug"></div>
+  <label for="jPr">المشكلة</label>
+  <input type="text" id="jPr" placeholder="مثال: فك حساب" autocomplete="off" maxlength="160">
+  <div class="sug" id="jPrSug"></div>
+  <div class="row">
+    <div><label for="jAmt">الثمن</label><input type="number" id="jAmt" inputmode="decimal" min="0" step="any" placeholder="0"></div>
+    <div><label for="jDate">التاريخ</label><input type="date" id="jDate"></div>
+  </div>
+  <div class="tg"><span>عن بعد</span><input type="checkbox" id="jRemote"></div>
+  <div class="acts">
+    <button class="del" id="jDel" type="button">حذف</button>
+    <button id="jCancel" type="button">إلغاء</button>
+    <button class="ok" id="jSave" type="button">حفظ</button>
+  </div>
+</dialog>
+
 <div id="toast" popover="manual"></div>
 <div id="undoBar" popover="manual"><span id="undoMsg"></span><button id="undoBtn" type="button">تراجع</button></div>
 
 <script src="app.js"></script>
 <script src="sync.js"></script>
+<script src="items.js"></script>
 </body>
 </html>

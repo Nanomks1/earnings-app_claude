@@ -37,13 +37,33 @@ function normPrefs(p) {
   o.hp = p.hp !== false;
   return o;
 }
+// عناصر العمل المنفَّذة (جهاز + مشكلة + ثمن): بيانات مستقلة عن السجل المالي ولا تدخل في حساب الأجر
+const JOB_RE = /^\d{4}-\d{2}-\d{2}$/;
+function normJobsCfg(c) {
+  c = c && typeof c === 'object' ? c : {};
+  const tags = a => [...new Set((Array.isArray(a) ? a : []).map(x => String(x || '').trim().toLowerCase().replace(/\s+/g, ' ')).filter(Boolean))].slice(0, 300);
+  return { on: c.on === true, sd: c.sd !== false, sp: c.sp !== false, n: [3, 5, 8].includes(Number(c.n)) ? Number(c.n) : 5, sj: c.sj !== false, sc: c.sc !== false, hd: tags(c.hd), hp: tags(c.hp) };
+}
+function normJobs(a) {
+  const seen = new Set(), out = [];
+  (Array.isArray(a) ? a : []).forEach(j => {
+    if (!j || typeof j !== 'object') return;
+    const id = Number(j.id), dev = String(j.dev || '').trim().slice(0, 80), pr = String(j.pr || '').trim().slice(0, 160);
+    if (!isFinite(id) || id <= 0 || seen.has(id) || !JOB_RE.test(String(j.date || '')) || !(dev || pr)) return;
+    seen.add(id);
+    const amt = Number(j.amt);
+    out.push({ id, date: j.date, t: Number(j.t) > 0 ? Number(j.t) : id, dev, pr, amt: isFinite(amt) && amt > 0 ? Math.round(amt * 100) / 100 : 0, remote: j.remote === true });
+  });
+  return out;
+}
 function norm(d) {
-  const s = { v: 5, items: [], archive: [], trash: [], carry: 0, open: null, prefs: normPrefs(d && d.prefs) };
+  const s = { v: 5, items: [], archive: [], trash: [], carry: 0, open: null, prefs: normPrefs(d && d.prefs), jobs: [], jobsCfg: normJobsCfg() };
   for (const k in SETTINGS) s[k] = SETTINGS[k].def;
   if (!d || typeof d !== 'object') return s;
   for (const k in SETTINGS) s[k] = SETTINGS[k].fix(d[k]);
   if (d.fsv === undefined && [1, 2].includes(Number(d.fs))) s.fsv = Number(d.fs) === 1 ? 113 : 116; // ترحيل من الخطوات القديمة
   s.carry = Number(d.carry) || 0;
+  s.jobs = normJobs(d.jobs); s.jobsCfg = normJobsCfg(d.jobsCfg);
   if (d.open && d.open.date && d.open.start) {
     s.open = { date: d.open.date, start: d.open.start };
     const b = Math.round((Number(d.open.brk) || 0) * 100) / 100, bs = Number(d.open.bs) || 0;
@@ -264,7 +284,7 @@ function emptyBox(icon, text) { return `<div class="empty"><span class="bub">${i
 
 function renderFltRes() {
   const box = $('fRes');
-  $('flt').hidden = state.search === false || view === 'sum' || view === 'cal';
+  $('flt').hidden = state.search === false || view === 'sum' || view === 'cal' || view === 'jobs';
   $('qClr').hidden = !fq;
   if (!isFlt()) { box.hidden = true; return; }
   const m = (view === 'arc' ? state.archive.flatMap(a => a.items) : state.items).filter(match), c = calc(m);
@@ -345,6 +365,7 @@ function renderView() { // يرسم فقط التبويبات الظاهرة؛ �
   if (view === 'sum') { renderSummary(); dirty.sum = false; } else dirty.sum = true;
 }
 function render() {
+  if (window.Jobs) Jobs.apply();
   const c = calc(state.items);
   countTo($('total'), due());
   const cells = [['الأجور', money(c.work)], ['الكريدي', signed(-c.adv)]];
@@ -361,6 +382,7 @@ function render() {
   }).join('') : isFlt() ? emptyBox('search', 'لا توجد نتائج مطابقة.') : emptyBox('clock', 'لا توجد سجلات في الفترة الحالية.<br>سجّل دخول العمل أو أضف يومًا.');
   renderFltRes();
   renderView();
+  if (view === 'jobs' && window.Jobs) Jobs.render();
 }
 
 // ---------- دخول / خروج ----------
@@ -526,11 +548,22 @@ function dayGroups(list) {
   const out = []; let last = null;
   const days = [];
   list.forEach(i => { if (i.date !== last) { days.push([]); last = i.date; } days[days.length - 1].push(i); });
-  days.forEach((g, k) => {
+  const J = window.Jobs && Jobs.shareOn() ? Jobs : null; // «ما تم تنفيذه» تحت كل يوم عند تفعيله في نافذة المشاركة
+  const blocks = days.map(g => ({ d: g[0].date, g }));
+  if (J && blocks.length) {
+    const have = new Set(blocks.map(b => b.d));
+    J.datesIn(blocks[0].d, blocks[blocks.length - 1].d).forEach(d => { if (!have.has(d)) blocks.push({ d, g: [] }); });
+    blocks.sort((a, b) => a.d.localeCompare(b.d));
+  }
+  blocks.forEach((b, k) => {
+    const g = b.g;
     if (k) out.push('');
-    const net = g.reduce((t, i) => t + (i.type === 'work' ? i.amount : -i.amount), 0);
-    out.push('📌 ' + bold(fmtDay(g[0].date)) + (g.length > 1 ? ' • ' + ltr(signedP(round2(net))) : ''));
-    [...g].sort((a, b) => (a.type === 'adv') - (b.type === 'adv')).forEach(i => out.push(itemLine(i)));
+    if (g.length) {
+      const net = g.reduce((t, i) => t + (i.type === 'work' ? i.amount : -i.amount), 0);
+      out.push('📌 ' + bold(fmtDay(b.d)) + (g.length > 1 ? ' • ' + ltr(signedP(round2(net))) : ''));
+      [...g].sort((a, b) => (a.type === 'adv') - (b.type === 'adv')).forEach(i => out.push(itemLine(i)));
+    } else out.push('📌 ' + bold(fmtDay(b.d)));
+    if (J) out.push(...J.lines(b.d));
   });
   return out;
 }
@@ -630,11 +663,17 @@ function askShare(title, build, pdf) {
   $('shPdf').style.display = pdf ? '' : 'none';
   $('shTitle').textContent = title;
   $('shDetail').checked = state.prefs.sd !== false;
+  const noJ = !(window.Jobs && Jobs.canShare());
+  $('shJobsRow').hidden = noJ;
+  if (!noJ) { $('shJobs').checked = state.jobsCfg.sj; $('shJobsPr').checked = state.jobsCfg.sc; }
+  $('shJobsPrRow').hidden = noJ || !$('shJobs').checked;
   $('shDlg').showModal();
 }
+$('shJobs').onchange = () => { $('shJobsPrRow').hidden = !$('shJobs').checked; };
+const jobsShareSync = () => { if (window.Jobs) Jobs.setShare(!$('shJobsRow').hidden && $('shJobs').checked, $('shJobsPr').checked, !$('shJobsRow').hidden); };
 $('shCancel').onclick = () => $('shDlg').close();
 $('shGo').onclick = async () => {
-  const d = $('shDetail').checked; setSd(d);
+  const d = $('shDetail').checked; setSd(d); jobsShareSync();
   const text = pendingShare(d); $('shDlg').close(); await doShare(text);
 };
 $('shPdf').onclick = async () => {
@@ -642,7 +681,7 @@ $('shPdf').onclick = async () => {
   const p = pendingPdf(d); $('shDlg').close(); await sharePdf(p.cfg, p.name);
 };
 $('shCopy').onclick = async () => {
-  const d = $('shDetail').checked; setSd(d);
+  const d = $('shDetail').checked; setSd(d); jobsShareSync();
   const text = pendingShare(d); $('shDlg').close();
   try { await navigator.clipboard.writeText(text); toast('تم نسخ النص'); } catch (e) { toast('تعذر النسخ'); }
 };
@@ -750,16 +789,19 @@ $('sShare').onclick = () => askShare('مشاركة الملخص', d => summaryTe
 
 function setView(v) {
   view = v;
-  $('list').hidden = v !== 'list'; $('arch').hidden = v !== 'arc'; $('cal').hidden = v !== 'cal'; $('summary').hidden = v !== 'sum'; $('flt').hidden = v === 'sum' || v === 'cal'; renderFltRes();
+  $('list').hidden = v !== 'list'; $('arch').hidden = v !== 'arc'; $('cal').hidden = v !== 'cal'; $('summary').hidden = v !== 'sum'; $('jobs').hidden = v !== 'jobs'; $('flt').hidden = v === 'sum' || v === 'cal' || v === 'jobs'; renderFltRes();
+  $('mainBar').hidden = v === 'jobs'; $('jobBar').hidden = v !== 'jobs';
+  $('tabJobs').classList.toggle('on', v === 'jobs');
+  if (v === 'jobs' && window.Jobs) Jobs.render();
   $('tabList').classList.toggle('on', v === 'list');
   $('tabArc').classList.toggle('on', v === 'arc'); $('tabCal').classList.toggle('on', v === 'cal');
   $('tabSum').classList.toggle('on', v === 'sum');
   if ((v === 'arc' && dirty.arc) || (v === 'cal' && dirty.cal) || (v === 'sum' && dirty.sum)) renderView();
-  playIn({ list: $('list'), arc: $('arch'), cal: $('cal'), sum: $('summary') }[v]);
+  playIn({ list: $('list'), arc: $('arch'), cal: $('cal'), sum: $('summary'), jobs: $('jobs') }[v]);
 }
 $('tabList').onclick = () => setView('list');
 $('tabArc').onclick = () => setView('arc'); $('tabCal').onclick = () => setView('cal');
-$('tabSum').onclick = () => setView('sum');
+$('tabSum').onclick = () => setView('sum'); $('tabJobs').onclick = () => setView('jobs');
 
 // ---------- التقويم الشهري وتقرير PDF ----------
 let calM = today().slice(0, 7), calDay = '';
@@ -1326,13 +1368,14 @@ function updBkWhere() {
   $('bkWhere').innerHTML = 'مكان النسخ: ' + esc(bk.tree ? (bk.name || 'المجلد المختار') : 'Documents/EarningsBackup (الافتراضي)') + st;
   $('bkReset').hidden = !bk.tree;
 }
-const MT = { work: 'العمل', look: 'المظهر', wg: 'الودجت', sec: 'الأمان', bk: 'النسخ الاحتياطي والتصدير', wifi: 'الواي فاي' };
+const MT = { work: 'العمل', look: 'المظهر', wg: 'الودجت', sec: 'الأمان', bk: 'النسخ الاحتياطي والتصدير', wifi: 'الواي فاي', jobs: 'العناصر' };
 let mPage = '';
 function mGo(p) {
   mPage = p; $('mHome').hidden = !!p;
   document.querySelectorAll('#menu .pg').forEach(x => x.classList.toggle('on', x.id === 'pg-' + p));
   $('menuTitle').textContent = p ? MT[p] : 'الإعدادات'; $('menuClose').textContent = p ? 'رجوع' : 'تم'; $('menu').scrollTop = 0;
   if (p === 'wifi') wfCfgShow();
+  if (p === 'jobs' && window.Jobs) Jobs.cfgShow();
 }
 $('mHome').onclick = e => { const b = e.target.closest('[data-go]'); if (b) mGo(b.dataset.go); };
 $('menuBtn').onclick = () => {
@@ -1502,7 +1545,7 @@ const payload = () => { const { pin, bio, ...rest } = state; return JSON.stringi
 const fsWrite = (FS, path, data) => FS.writeFile({ path, data, directory: 'DOCUMENTS', encoding: 'utf8', recursive: true });
 const docsAlt = {};
 let warned = false, warnedAuto = false;
-const isEmpty = s => !s.items.length && !s.archive.length && !s.carry;
+const isEmpty = s => !s.items.length && !s.archive.length && !s.carry && !(s.jobs && s.jobs.length);
 let lastBk = {};
 try { lastBk = JSON.parse(localStorage.getItem('earnings_lastbk')) || {}; } catch (e) {}
 function markBk(ok) {
@@ -1538,7 +1581,7 @@ function validBackup(t) {
     const d = JSON.parse(t);
     if (!d) return false;
     if (d.enc) return !!d.data;
-    return Array.isArray(d.items) && (d.items.length > 0 || (Array.isArray(d.archive) && d.archive.length > 0));
+    return Array.isArray(d.items) && (d.items.length > 0 || (Array.isArray(d.archive) && d.archive.length > 0) || (Array.isArray(d.jobs) && d.jobs.length > 0));
   } catch (e) { return false; }
 }
 // آخر 3 نسخ تلقائية سابقة: تدور مرة في اليوم قبل أن تُستبدل النسخة التلقائية
