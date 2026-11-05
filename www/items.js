@@ -97,7 +97,7 @@
       cmp += kv('عناصر المحل', money(shop)) + kv('أجر نفس الأيام', money(wage));
       if (wage > 0 && shop > 0) cmp += kv('النسبة', num(Math.round(shop / wage * 10) / 10) + '×');
       if (hrs > 0) cmp += kv('الثمن لكل ساعة عمل', money(round2(shop / hrs)));
-      cmp += kv('أفضل يوم', fmtShort(best) + ' • ' + money(sd[best]));
+      cmp += kv('أفضل يوم', money(sd[best]) + ' • <bdi dir="rtl">' + fmtShort(best) + '</bdi>');
     }
     const remJ = J.filter(j => j.remote);
     if (remJ.length) {

@@ -496,9 +496,9 @@ function renderArchive() {
     const lines = [...a.items].sort((x, y) => x.date.localeCompare(y.date)).map(i =>
       `${fmtShort(i.date)}: ${i.type === 'work' ? (i.remote ? 'عن بعد = ' : fmtDur(i.mins) + ' = ') + money(i.amount) : 'كريدي ' + signed(-i.amount)}${i.note ? ' • ' + esc(i.note) : ''}`).join('<br>');
     const rem = round2(a.remain || 0), ps = paysSorted(a);
-    const badge = rem === 0 ? `<span style="color:var(--pos)">مسدّدة</span>` : rem > 0 ? `<span style="color:var(--neg)">بقي ${money(rem)}</span>` : `<span style="color:var(--pos)">زيادة ${money(-rem)}</span>`;
+    const badge = rem === 0 ? `<span class="pill pos">مسدّدة</span>` : rem > 0 ? `<span class="pill neg">بقي ${money(rem)}</span>` : `<span class="pill pos">زيادة ${money(-rem)}</span>`;
     const payRows = ps.map(p => `<div class="kv" style="align-items:center;padding:0 0 0 0"><span>${fmtShort(p.d)}${p.n ? ' • ' + esc(p.n) : ''}</span><span style="display:flex;align-items:center;gap:6px"><b>${money(p.a)}</b><button class="pe" type="button" data-id="${a.id}" data-p="${p.id}" aria-label="تعديل الدفعة" style="background:none;border:0;color:var(--mut);width:36px;height:36px;display:grid;place-items:center">${ic('edit')}</button></span></div>`).join('');
-    return `<details class="card"><summary><span class="bub">${ic('tcircle')}</span><div><b>${fmtShort(a.paidAt)}</b><small>${range} • ${badge}</small></div><b class="num" style="direction:ltr">${money(a.received)}</b></summary>
+    return `<details class="card"><summary><span class="bub">${ic('tcircle')}</span><div><b>${fmtShort(a.paidAt)}</b><small>${range}</small><small>${badge}</small></div><b class="num${Number(a.received) ? '' : ' zero'}" style="direction:ltr">${money(a.received)}</b></summary>
       <div class="lines">
         <div class="kv"><span>أيام العمل</span><b>${a.days}</b></div>
         <div class="kv"><span>مجموع الساعات</span><b>${fmtHM(a.mins)}</b></div>
@@ -696,16 +696,17 @@ const mv = (n, neg) => `<span dir="ltr">${neg ? '−' : ''}${num(n)}<small>${esc
 function renderSummary() {
   if (sumMode === 'cur') curDates();
   const c = calc(inRange());
-  const dueN = due();
+  const cur = sumMode === 'cur';
+  // في «الفترة الحالية» يعرض الرأس أصلًا المستحق والأجور والكريدي، فلا نكرّرها هنا
   $('sumOut').innerHTML =
-    (sumMode === 'cur' ? stat('tcircle', 'net', mv(Math.abs(dueN), dueN < 0), 'المستحق الآن') + (state.carry ? stat('cash', '', mv(Math.abs(state.carry), state.carry < 0), 'مرحَّل من قبل') : '') : '') +
+    (cur && state.carry ? stat('cash', 'wide', mv(Math.abs(state.carry), state.carry < 0), 'مرحَّل من قبل') : '') +
     stat('calendar', '', c.days, 'أيام العمل') +
     stat('clock', '', `<span dir="ltr">${fmtHM(c.mins)}<small>س</small></span>`, 'مجموع الساعات') +
-    stat('cash', '', mv(c.work), 'الأجور' + (c.ramt ? `<small>منها عن بعد ${money(c.ramt)}</small>` : '')) +
-    stat('mcircle', 'cr', mv(c.adv, c.adv > 0), 'الكريدي') +
+    (cur ? (c.ramt ? stat('home', 'wide', mv(c.ramt), 'أجور عن بعد') : '')
+         : stat('cash', '', mv(c.work), 'الأجور' + (c.ramt ? `<small>منها عن بعد ${money(c.ramt)}</small>` : '')) + stat('mcircle', 'cr', mv(c.adv, c.adv > 0), 'الكريدي')) +
     stat('cash', '', mv(c.days ? Math.round(c.work / c.days * 10) / 10 : 0), 'متوسط أجر اليوم') +
     stat('clock', '', `<span dir="ltr">${fmtHM(c.wd ? c.mins / c.wd : 0)}<small>س</small></span>`, 'متوسط الساعات في اليوم') +
-    stat('tcircle', 'net', mv(Math.abs(c.work - c.adv), c.work - c.adv < 0), 'الصافي');
+    (cur && !state.carry ? '' : stat('tcircle', 'net', mv(Math.abs(c.work - c.adv), c.work - c.adv < 0), 'الصافي'));
   renderChart(); renderWeekday(); renderMonths(); renderBalance();
 }
 function renderChart() {

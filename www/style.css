@@ -307,3 +307,18 @@ dialog:not([open])::backdrop{opacity:0}
 .srow small{color:var(--mut);white-space:nowrap}
 .srow b{direction:ltr;white-space:nowrap}
 .mrow button+button{margin-inline-start:-6px}
+
+/* ---------- تحسينات الواجهة ---------- */
+/* التبويبات: أيقونة فوق الاسم بدل صف ضيق */
+.tabs button,.tabs.five button{flex-direction:column;gap:2px;height:52px;padding:0 1px;font-size:calc(11.5px*var(--fs,1));line-height:1.2;white-space:nowrap}
+.tabs button .ic,.tabs.five button .ic{display:block;width:19px;height:19px}
+/* حقول التاريخ: اتجاه يسار-يمين حتى لا يُقصّ أول رقم داخل الصفحة العربية */
+input[type=date]{direction:ltr;text-align:center}
+input[type=date]::-webkit-datetime-edit{padding:0;margin:0 auto}
+input[type=date]::-webkit-date-and-time-value{text-align:center;margin:0}
+/* الأرشيف: شارة الحالة بارزة، والمستلم الصفري خافت */
+.pill{display:inline-block;padding:2px 10px;border-radius:10px;font-weight:700;font-size:calc(13px*var(--fs,1));margin-top:3px}
+.pill.pos{color:var(--pos);background:color-mix(in srgb,var(--pos) 16%,transparent)}
+.pill.neg{color:var(--neg);background:color-mix(in srgb,var(--neg) 16%,transparent)}
+details.card summary b.zero{color:var(--mut);font-weight:600}
+.stat.wide{grid-column:1/-1}
