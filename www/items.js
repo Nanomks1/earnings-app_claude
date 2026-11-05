@@ -1,4 +1,4 @@
-// عناصر العمل: سجل بما نفّذته (جهاز + مشكلة + ثمن)، مقارنته بأجر اليوم، واقتراحات إدخال سريعة.
+// عناصر العمل: سجل بما نفّذته (جهاز + مشكلة + ثمن)، مقارنته بأجر اليوم، إحصاءات، وتحويل عناصر «عن بعد» إلى أجرة.
 // يُحمَّل بعد app.js ويستعمل دوالّه ومتغيراته العامة (state, save, savePrefs, esc, num, money, fmtDay, undoBar ...).
 // لا يمسّ حساب الأجر: البيانات في state.jobs والإعدادات في state.jobsCfg (تدخل النسخ الاحتياطية والمزامنة تلقائيًا).
 (function () {
@@ -8,11 +8,18 @@
   const k1 = s => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
   const SEP = /\s*(?:،|,|\+|\/|\n)\s*/;
   const splitPr = s => String(s || '').split(SEP).map(x => x.trim()).filter(Boolean);
+  const prKey = s => splitPr(s).map(k1).sort().join('|');
   const tailSplit = v => { const m = /^([\s\S]*(?:،|,|\+|\/)\s*)([^،,+\/]*)$/.exec(v); return m ? { head: m[1], tail: m[2] } : { head: '', tail: v }; };
+  const clean1 = s => String(s || '').replace(/[،,+\/]/g, ' ').replace(/\s+/g, ' ').trim();
   const sum = a => round2(a.reduce((t, j) => t + j.amt, 0));
   const defDate = () => (state.open && state.open.date) || today();
-  const wageOf = d => round2(state.items.reduce((t, i) => t + (i.date === d && i.type === 'work' && !i.remote ? i.amount : 0), 0));
-  let editId = 0, showDays = 31, query = '';
+  const ids = () => new Set(allItems().map(i => i.id));
+  const settled = (j, have) => !!j.rid && have.has(j.rid);
+  const wageMap = () => { const m = {}; allItems().forEach(i => { if (i.type === 'work' && !i.remote) m[i.date] = round2((m[i.date] || 0) + i.amount); }); return m; };
+  const minsMap = () => { const m = {}; allItems().forEach(i => { if (i.type === 'work' && !i.remote) m[i.date] = (m[i.date] || 0) + (i.mins || 0); }); return m; };
+  const isoD = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  let editId = 0, showDays = 31, query = '', jv = 'list', per = 'm', renKind = '', renKey = '';
+  const remSel = new Set();
 
   // ---------- التبويب ----------
   function apply() { // يُستدعى من render(): إظهار التبويب أو إخفاؤه حسب الإعداد
@@ -22,8 +29,15 @@
     if (!o && view === 'jobs') setView('list');
   }
   function render() {
-    const box = $('jList'); if (!box) return;
-    const q = k1(query);
+    if (!$('jList')) return;
+    [...$('jView').children].forEach(b => b.classList.toggle('on', b.dataset.v === jv));
+    $('jListWrap').hidden = jv !== 'list'; $('jStats').hidden = jv !== 'stats';
+    if (jv === 'stats') renderStats(); else renderList();
+  }
+  $('jView').onclick = e => { const b = e.target.closest('button'); if (!b) return; jv = b.dataset.v === 'stats' ? 'stats' : 'list'; render(); };
+
+  function renderList() {
+    const box = $('jList'), q = k1(query), have = ids();
     $('jqClr').hidden = !query;
     const all = state.jobs.filter(j => !q || k1(j.dev + ' ' + j.pr).includes(q));
     if (!all.length) {
@@ -32,27 +46,74 @@
       return;
     }
     $('jSum').innerHTML = 'العدد: ' + all.length + ' • المجموع: ' + money(sum(all));
-    const days = {};
+    const wm = wageMap(), days = {};
     all.forEach(j => (days[j.date] = days[j.date] || []).push(j));
     const keys = Object.keys(days).sort().reverse(), shown = keys.slice(0, showDays);
-    box.innerHTML = shown.map(d => {
+    const pend = q ? [] : state.jobs.filter(j => j.remote && !settled(j, have));
+    const conv = pend.length ? '<div class="jcard"><div class="jh"><b>عن بعد · غير محسوبة</b><span class="jc"><b>' + pend.length + '</b> • <b>' + num(sum(pend)) + '</b></span></div><button class="jrow jconv" id="jConv" type="button">حوّل إلى أجرة عن بعد</button></div>' : '';
+    box.innerHTML = conv + shown.map(d => {
       const g = days[d].sort((a, b) => a.t - b.t || a.id - b.id);
-      const shopL = g.filter(j => !j.remote), shop = sum(shopL), rem = sum(g.filter(j => j.remote)), wage = wageOf(d), p = [];
-      if (wage > 0) p.push('أجر ' + num(wage));
-      if (shopL.length) p.push('عناصر <b>' + num(shop) + '</b>');
-      if (wage > 0 && shop > 0) p.push(num(Math.round(shop / wage * 10) / 10) + '×');
-      if (rem > 0) p.push('عن بعد ' + num(rem));
-      return '<div class="jcard"><div class="jh"><b>' + fmtDay(d) + '</b><span class="jc">' + p.join(' • ') + '</span></div>' +
+      const shopL = g.filter(j => !j.remote), shop = sum(shopL), rem = sum(g.filter(j => j.remote)), wage = wm[d] || 0, cells = [];
+      const cell = (k, v, hl) => '<div' + (hl ? ' class="hl"' : '') + '><small>' + k + '</small><b>' + v + '</b></div>';
+      if (wage > 0) cells.push(cell('الأجر', money(wage)));
+      if (shopL.length) cells.push(cell('العناصر', money(shop), true));
+      if (wage > 0 && shop > 0) cells.push(cell('النسبة', num(Math.round(shop / wage * 10) / 10) + '×'));
+      if (rem > 0) cells.push(cell('عن بعد', money(rem)));
+      return '<div class="jcard"><div class="jh"><b>' + fmtDay(d) + '</b></div><div class="jk">' + cells.join('') + '</div>' +
         g.map(j => '<button class="jrow" type="button" data-id="' + j.id + '"><span class="jt"><b><bdi>' + esc(j.dev) + '</bdi></b><span class="jm">' +
-          (j.pr ? ' · ' + esc(j.pr) : '') + (j.remote ? ' · عن بعد' : '') + '</span></span><span class="jp num">' + money(j.amt) + '</span></button>').join('') + '</div>';
+          (j.pr ? ' · ' + esc(j.pr) : '') + '</span>' + (j.remote ? '<span class="jx"> · عن بعد' + (settled(j, have) ? ' · محسوبة' : '') + '</span>' : '') +
+          '</span><span class="jp num">' + money(j.amt) + '</span></button>').join('') + '</div>';
     }).join('') + (keys.length > shown.length ? '<button class="jmore" id="jMore" type="button">عرض أيام أقدم</button>' : '');
   }
   $('jList').onclick = e => {
     if (e.target.closest('#jMore')) { showDays += 31; render(); return; }
-    const b = e.target.closest('.jrow'); if (b) openDlg(Number(b.dataset.id));
+    if (e.target.closest('#jConv')) { openRem(); return; }
+    const b = e.target.closest('.jrow'); if (b && b.dataset.id) openDlg(Number(b.dataset.id));
   };
   $('jq').oninput = () => { query = $('jq').value; showDays = 31; render(); };
   $('jqClr').onclick = () => { query = ''; $('jq').value = ''; render(); $('jq').focus(); };
+
+  // ---------- الإحصاءات ----------
+  function inRange(p) {
+    const t = today();
+    if (p === 'm') return d => d.slice(0, 7) === t.slice(0, 7);
+    if (p === 'w') { const x = new Date(t + 'T00:00:00'); x.setDate(x.getDate() - 6); const f = isoD(x); return d => d >= f && d <= t; }
+    return () => true;
+  }
+  function renderStats() {
+    const box = $('jStats'), rg = inRange(per), J = state.jobs.filter(j => rg(j.date));
+    const seg = '<div class="seg" id="jPer">' + [['m', 'هذا الشهر'], ['w', '7 أيام'], ['a', 'الكل']].map(p => '<button type="button" data-p="' + p[0] + '"' + (p[0] === per ? ' class="on"' : '') + '>' + p[1] + '</button>').join('') + '</div>';
+    if (!J.length) { box.innerHTML = seg + emptyBox('bars', 'لا توجد عناصر في هذه الفترة.'); return; }
+    const tot = sum(J), mx = J.reduce((m, j) => Math.max(m, j.amt), 0), g = (k, v) => '<div class="jg"><small>' + k + '</small><b>' + v + '</b></div>';
+    let html = seg + '<div class="jgrid">' + g('العدد', J.length) + g('المجموع', money(tot)) + g('متوسط الثمن', money(round2(tot / J.length))) + g('الأعلى', money(mx)) + '</div>';
+    // مقارنة بالأجر (أيام فيها عناصر في المحل)
+    const wm = wageMap(), mm = minsMap(), sd = {};
+    J.filter(j => !j.remote).forEach(j => { sd[j.date] = round2((sd[j.date] || 0) + j.amt); });
+    const dk = Object.keys(sd), shop = round2(dk.reduce((t, d) => t + sd[d], 0)), wage = round2(dk.reduce((t, d) => t + (wm[d] || 0), 0)), hrs = dk.reduce((t, d) => t + (mm[d] || 0), 0) / 60;
+    const kv = (k, v) => '<div class="srow"><span>' + k + '</span><b>' + v + '</b></div>';
+    let cmp = '';
+    if (dk.length) {
+      const best = dk.sort((a, b) => sd[b] - sd[a])[0];
+      cmp += kv('عناصر المحل', money(shop)) + kv('أجر نفس الأيام', money(wage));
+      if (wage > 0 && shop > 0) cmp += kv('النسبة', num(Math.round(shop / wage * 10) / 10) + '×');
+      if (hrs > 0) cmp += kv('الثمن لكل ساعة عمل', money(round2(shop / hrs)));
+      cmp += kv('أفضل يوم', fmtShort(best) + ' • ' + money(sd[best]));
+    }
+    const remJ = J.filter(j => j.remote);
+    if (remJ.length) {
+      const rw = round2(allItems().reduce((t, i) => t + (i.type === 'work' && i.remote && rg(i.date) ? i.amount : 0), 0));
+      cmp += kv('عناصر عن بعد', money(sum(remJ))) + kv('أجور عن بعد في الفترة', money(rw));
+    }
+    if (cmp) html += '<div class="jbox"><div class="mh">مقارنة بالأجر</div>' + cmp + '</div>';
+    // حسب الماركة (أول كلمة من اسم الجهاز) وحسب المشكلة
+    const grp = fn => { const m = new Map(); J.forEach(j => fn(j).forEach(p => { const o = m.get(p[0]) || { s: p[1], n: 0, t: 0 }; o.n++; o.t = round2(o.t + j.amt); m.set(p[0], o); })); return [...m.values()]; };
+    const brands = grp(j => { const w = j.dev.trim().split(/\s+/)[0]; return w ? [[k1(w), w]] : []; }).sort((a, b) => b.t - a.t || b.n - a.n).slice(0, 8);
+    const probs = grp(j => splitPr(j.pr).map(p => [k1(p), p])).sort((a, b) => b.n - a.n || b.t - a.t).slice(0, 8);
+    if (brands.length) html += '<div class="jbox"><div class="mh">حسب الماركة</div>' + brands.map(o => '<div class="srow"><span><bdi>' + esc(o.s) + '</bdi></span><small>' + o.n + ' • متوسط ' + num(round2(o.t / o.n)) + '</small><b>' + num(o.t) + '</b></div>').join('') + '</div>';
+    if (probs.length) html += '<div class="jbox"><div class="mh">حسب المشكلة</div>' + probs.map(o => '<div class="srow"><span><bdi>' + esc(o.s) + '</bdi></span><small>متوسط ' + num(round2(o.t / o.n)) + '</small><b>' + o.n + '</b></div>').join('') + '</div>';
+    box.innerHTML = html;
+  }
+  $('jStats').onclick = e => { const b = e.target.closest('button[data-p]'); if (!b) return; per = b.dataset.p; render(); };
 
   // ---------- الاقتراحات (من إدخالاتك السابقة) ----------
   function tally(kind) {
@@ -68,13 +129,27 @@
   const hiddenSet = kind => new Set(kind === 'd' ? cfg().hd : cfg().hp);
   function fillSug(kind) {
     const el = $(kind === 'd' ? 'jDevSug' : 'jPrSug'), v = $(kind === 'd' ? 'jDev' : 'jPr').value;
-    if (!(kind === 'd' ? cfg().sd : cfg().sp)) { el.innerHTML = ''; return; }
-    const hid = hiddenSet(kind), ts = kind === 'p' ? tailSplit(v) : { head: '', tail: v };
-    const q = k1(ts.tail), before = new Set(splitPr(ts.head).map(k1));
-    let list = tally(kind).filter(o => !hid.has(o.k) && !before.has(o.k) && (!q || (o.k.includes(q) && o.k !== q)));
-    if (q) list.sort((a, b) => b.k.startsWith(q) - a.k.startsWith(q));
-    el.innerHTML = list.slice(0, cfg().n).map(o => '<button type="button" class="sg" data-v="' + esc(o.s) + '">' + esc(o.s) + '</button>').join('');
+    if (!(kind === 'd' ? cfg().sd : cfg().sp)) el.innerHTML = '';
+    else {
+      const hid = hiddenSet(kind), ts = kind === 'p' ? tailSplit(v) : { head: '', tail: v };
+      const q = k1(ts.tail), before = new Set(splitPr(ts.head).map(k1));
+      const list = tally(kind).filter(o => !hid.has(o.k) && !before.has(o.k) && (!q || (o.k.includes(q) && o.k !== q)));
+      if (q) list.sort((a, b) => b.k.startsWith(q) - a.k.startsWith(q));
+      el.innerHTML = list.slice(0, cfg().n).map(o => '<button type="button" class="sg" data-v="' + esc(o.s) + '">' + esc(o.s) + '</button>').join('');
+    }
+    hint();
   }
+  function hint() { // «آخر مرة»: آخر ثمن لنفس الجهاز مع نفس المشكلة
+    const b = $('jLast'); b.hidden = true;
+    if (!cfg().lp) return;
+    const dk = k1($('jDev').value), pk = prKey($('jPr').value);
+    if (!dk) return;
+    let best = null;
+    state.jobs.forEach(j => { if (j.id !== editId && k1(j.dev) === dk && prKey(j.pr) === pk && (!best || j.t >= best.t)) best = j; });
+    if (!best || !best.amt) return;
+    b.textContent = 'آخر مرة: ' + num(best.amt); b.dataset.v = String(best.amt); b.hidden = false;
+  }
+  $('jLast').onclick = () => { $('jAmt').value = $('jLast').dataset.v; $('jAmt').focus(); };
   $('jDevSug').onclick = e => {
     const b = e.target.closest('.sg'); if (!b) return;
     $('jDev').value = b.dataset.v; fillSug('d'); $('jPr').focus();
@@ -109,7 +184,7 @@
     const amt = round2(a), remote = $('jRemote').checked;
     if (editId) {
       const j = state.jobs.find(x => x.id === editId);
-      if (j) Object.assign(j, { dev, pr, amt, date, remote });
+      if (j) { Object.assign(j, { dev, pr, amt, date, remote }); if (!remote) delete j.rid; }
     } else {
       const id = state.jobs.reduce((m, j) => Math.max(m, j.id + 1), Date.now());
       state.jobs.push({ id, date, t: Date.now(), dev, pr, amt, remote });
@@ -125,7 +200,37 @@
     undoBar('حُذف العنصر', () => { if (!state.jobs.some(x => x.id === j.id)) { state.jobs.push(j); save(); } });
   };
 
-  // ---------- المشاركة: «ما تم تنفيذه» تحت كل يوم ----------
+  // ---------- تحويل عناصر «عن بعد» إلى أجرة ----------
+  function remInfo() {
+    const s = state.jobs.filter(j => remSel.has(j.id));
+    $('jRemInfo').textContent = 'المحدّد: ' + s.length + ' • مجموع الأثمنة: ' + money(sum(s)) + ' — أدخل أجرتك أنت منها.';
+  }
+  function openRem() {
+    const have = ids(), list = state.jobs.filter(j => j.remote && !settled(j, have)).sort((a, b) => a.date.localeCompare(b.date) || a.t - b.t);
+    if (!list.length) return toast('لا توجد عناصر عن بعد غير محسوبة');
+    remSel.clear(); list.forEach(j => remSel.add(j.id));
+    $('jRemList').innerHTML = list.map(j => '<div class="tg"><span><bdi>' + esc(j.dev) + '</bdi>' + (j.pr ? ' · ' + esc(j.pr) : '') + ' • ' + num(j.amt) + '</span><input type="checkbox" data-id="' + j.id + '" checked></div>').join('');
+    $('jRemAmt').value = ''; $('jRemDate').value = today(); remInfo();
+    $('jRemDlg').showModal();
+  }
+  $('jRemList').onchange = e => {
+    const b = e.target; if (!b || !b.dataset || !b.dataset.id) return;
+    const id = Number(b.dataset.id); if (b.checked) remSel.add(id); else remSel.delete(id);
+    remInfo();
+  };
+  $('jRemCancel').onclick = () => $('jRemDlg').close();
+  $('jRemSave').onclick = () => {
+    const a = parseFloat($('jRemAmt').value), date = $('jRemDate').value;
+    if (!remSel.size) return toast('حدّد عنصرًا واحدًا على الأقل');
+    if (isNaN(a) || a <= 0) return toast('أدخل أجرة العمل عن بعد');
+    if (!date) return toast('أدخل التاريخ');
+    const have = ids(); let id = Date.now(); while (have.has(id)) id++;
+    state.items = [...state.items, { id, type: 'work', date, note: '', remote: true, mins: 0, amount: a }];
+    state.jobs.forEach(j => { if (remSel.has(j.id)) j.rid = id; });
+    $('jRemDlg').close(); save();
+  };
+
+  // ---------- المشاركة: «ما تم تنفيذه» ----------
   let shareFlag = false, sharePr = true;
   const isoName = s => '\u2068' + clean(s) + '\u2069'; // اتجاه تلقائي: اسم لاتيني أو عربي يظهر سليمًا
   function lines(d) {
@@ -142,6 +247,12 @@
     shareFlag = !!inc; sharePr = !!pr;
     if (persist && (cfg().sj !== !!inc || cfg().sc !== !!pr)) { cfg().sj = !!inc; cfg().sc = !!pr; savePrefs(); }
   }
+  function attachPdf(c) { // قسم «ما تم تنفيذه» في تقرير الـ PDF ضمن مدى تواريخ التقرير
+    if (!c || !shareOn() || !c.items || !c.items.length) return;
+    const ds = c.items.map(i => i.date).sort(), a = ds[0], z = ds[ds.length - 1];
+    const rows = state.jobs.filter(j => j.date >= a && j.date <= z).sort((x, y) => x.date.localeCompare(y.date) || x.t - y.t || x.id - y.id);
+    if (rows.length) { c.jobs = rows.map(j => ({ date: j.date, dev: j.dev, pr: j.pr, amt: j.amt, remote: j.remote })); c.jobsPr = sharePr; }
+  }
 
   // ---------- صفحة الإعدادات ----------
   function manage() {
@@ -149,23 +260,24 @@
     const sec = (kind, title) => {
       const hid = hiddenSet(kind), vis = tally(kind).filter(o => !hid.has(o.k)).slice(0, 40);
       return '<div class="mh">' + title + '</div>' + (vis.length
-        ? vis.map(o => '<div class="mrow"><span>' + esc(o.s) + '</span><small>' + o.n + '</small><button type="button" data-k="' + kind + '" data-v="' + esc(o.k) + '" aria-label="إخفاء من الاقتراحات">×</button></div>').join('')
+        ? vis.map(o => '<div class="mrow"><span>' + esc(o.s) + '</span><small>' + o.n + '</small><button type="button" data-r="' + kind + '" data-v="' + esc(o.k) + '" aria-label="إعادة تسمية">✎</button><button type="button" data-k="' + kind + '" data-v="' + esc(o.k) + '" aria-label="إخفاء من الاقتراحات">×</button></div>').join('')
         : '<div class="hint">لا توجد اقتراحات بعد.</div>');
     };
     const nh = c.hd.length + c.hp.length;
-    $('jManage').innerHTML = '<div class="hint" style="margin-top:8px">اضغط × لإخفاء اقتراح من الشريط. لا يُحذف أي عنصر مسجَّل.</div>' + sec('d', 'الأجهزة') + sec('p', 'المشاكل') +
+    $('jManage').innerHTML = '<div class="hint" style="margin-top:8px">✎ لإعادة التسمية أو الدمج في كل العناصر، و× لإخفاء اقتراح من الشريط فقط. لا يُحذف أي عنصر مسجَّل.</div>' + sec('d', 'الأجهزة') + sec('p', 'المشاكل') +
       (nh ? '<button class="mlink" type="button" data-reset="1">إظهار الاقتراحات المخفية (' + nh + ')</button>' : '');
   }
   function cfgShow() {
     const c = cfg();
     $('jOn').checked = c.on; $('jSet').hidden = !c.on;
-    $('jSugD').checked = c.sd; $('jSugP').checked = c.sp;
+    $('jSugD').checked = c.sd; $('jSugP').checked = c.sp; $('jLastP').checked = c.lp;
     [...$('jNum').children].forEach(b => b.classList.toggle('on', Number(b.dataset.n) === c.n));
     manage();
   }
   $('jOn').onchange = () => { cfg().on = $('jOn').checked; savePrefs(); $('jSet').hidden = !cfg().on; apply(); };
   $('jSugD').onchange = () => { cfg().sd = $('jSugD').checked; savePrefs(); };
   $('jSugP').onchange = () => { cfg().sp = $('jSugP').checked; savePrefs(); };
+  $('jLastP').onchange = () => { cfg().lp = $('jLastP').checked; savePrefs(); };
   $('jNum').onclick = e => {
     const b = e.target.closest('button'); if (!b) return;
     cfg().n = Number(b.dataset.n); savePrefs(); cfgShow();
@@ -173,13 +285,38 @@
   $('jManage').onclick = e => {
     const c = cfg();
     if (e.target.closest('[data-reset]')) { c.hd = []; c.hp = []; savePrefs(); manage(); return; }
+    const r = e.target.closest('button[data-r]'); if (r) { openRen(r.dataset.r, r.dataset.v); return; }
     const b = e.target.closest('button[data-k]'); if (!b) return;
     const arr = b.dataset.k === 'd' ? c.hd : c.hp;
     if (!arr.includes(b.dataset.v)) arr.push(b.dataset.v);
     savePrefs(); manage();
   };
 
-  window.Jobs = { apply, render, cfgShow, canShare, shareOn, setShare, lines, datesIn };
+  // ---------- إعادة تسمية / دمج وسم ----------
+  function openRen(kind, key) {
+    const o = tally(kind).find(x => x.k === key); if (!o) return;
+    renKind = kind; renKey = key;
+    $('jRenInfo').textContent = 'يُغيَّر في كل العناصر المسجَّلة. إن كان الاسم الجديد موجودًا فسيُدمج معه.';
+    $('jRenIn').value = o.s;
+    $('jRenDlg').showModal();
+    setTimeout(() => { try { $('jRenIn').focus(); $('jRenIn').select(); } catch (e) {} }, 60);
+  }
+  $('jRenCancel').onclick = () => $('jRenDlg').close();
+  $('jRenSave').onclick = () => {
+    const nv = clean1($('jRenIn').value).slice(0, 80);
+    if (!nv) return toast('اكتب الاسم الجديد');
+    if (renKind === 'd') state.jobs.forEach(j => { if (k1(j.dev) === renKey) j.dev = nv; });
+    else state.jobs.forEach(j => {
+      const parts = splitPr(j.pr);
+      if (!parts.some(p => k1(p) === renKey)) return;
+      const seen = new Set(), out = [];
+      parts.forEach(p => { const v = k1(p) === renKey ? nv : p, kk = k1(v); if (!seen.has(kk)) { seen.add(kk); out.push(v); } });
+      j.pr = out.join('، ').slice(0, 160);
+    });
+    $('jRenDlg').close(); save(); manage();
+  };
+
+  window.Jobs = { apply, render, cfgShow, canShare, shareOn, setShare, lines, datesIn, attachPdf };
   apply();
   if (view === 'jobs') render();
 })();

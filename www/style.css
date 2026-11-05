@@ -265,14 +265,14 @@ dialog:not([open])::backdrop{opacity:0}
 .jsum{padding:2px 6px;font-size:calc(13px*var(--fs,1));color:var(--mut)}
 .jsum:empty{display:none}
 .jcard{background:var(--card);border:1px solid var(--bd);border-radius:16px;box-shadow:var(--sh);overflow:hidden}
-.jh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:10px 14px 6px;font-size:calc(14px*var(--fs,1))}
+.jh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:10px 14px 8px;font-size:calc(15px*var(--fs,1))}
 .jh b{font-weight:700;white-space:nowrap}
 .jc{font-size:calc(12px*var(--fs,1));color:var(--mut);text-align:end;line-height:1.5}
 .jc b{color:var(--pritx);font-weight:700}
 .jrow{display:flex;align-items:center;gap:10px;width:100%;min-height:46px;padding:6px 14px;border:0;border-top:1px solid var(--bd);background:none;text-align:start;font-size:calc(15px*var(--fs,1))}
-.jt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.jt{flex:1;min-width:0;line-height:1.5;overflow-wrap:anywhere}
 .jt b{font-weight:700}
-.jm{color:var(--mut);font-size:calc(13px*var(--fs,1))}
+.jm{color:var(--text);opacity:.85;font-size:calc(15px*var(--fs,1))}
 .jp{font-weight:800;direction:ltr;white-space:nowrap}
 .jmore{height:44px;border-radius:14px;border:1px solid var(--bd);background:var(--card2);font-weight:600}
 .sug{display:flex;gap:6px;overflow-x:auto;padding:6px 0 0;scrollbar-width:none}
@@ -286,3 +286,24 @@ dialog:not([open])::backdrop{opacity:0}
 .mrow small{color:var(--mut)}
 .mrow button{width:36px;height:36px;border:0;background:none;color:var(--mut);font-size:18px;line-height:1}
 .mlink{display:block;width:100%;height:44px;margin-top:8px;border:0;background:none;color:var(--pritx);font-weight:600}
+#jListWrap,#jStats{display:flex;flex-direction:column;gap:10px}
+.jk{display:flex;gap:6px;padding:0 10px 10px}
+.jk>div{flex:1;min-width:0;background:var(--card2);border-radius:12px;padding:6px 4px;text-align:center}
+.jk small{display:block;font-size:calc(11.5px*var(--fs,1));color:var(--mut)}
+.jk b{display:block;font-size:calc(14.5px*var(--fs,1));direction:ltr;white-space:nowrap}
+.jk .hl b{color:var(--pritx)}
+.jx{color:var(--mut);font-size:calc(12.5px*var(--fs,1))}
+.jlast{display:block;margin-top:4px;padding:2px 0;border:0;background:none;color:var(--pritx);font-size:calc(12.5px*var(--fs,1));font-weight:700}
+.jconv{color:var(--pritx);font-weight:700;justify-content:center}
+.jgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.jg{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:10px 12px}
+.jg small{display:block;font-size:calc(12px*var(--fs,1));color:var(--mut)}
+.jg b{font-size:calc(17px*var(--fs,1));direction:ltr;display:block;text-align:start}
+.jbox{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:10px 14px;box-shadow:var(--sh)}
+.jbox .mh{margin-top:2px}
+.srow{display:flex;align-items:center;gap:8px;min-height:40px;border-top:1px solid var(--bd);font-size:calc(14.5px*var(--fs,1))}
+.srow:first-of-type{border-top:0}
+.srow span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.srow small{color:var(--mut);white-space:nowrap}
+.srow b{direction:ltr;white-space:nowrap}
+.mrow button+button{margin-inline-start:-6px}

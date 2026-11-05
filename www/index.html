@@ -43,9 +43,13 @@
 <main class="list" id="cal" hidden></main>
 <main class="list" id="arch" hidden></main>
 <main class="list" id="jobs" hidden>
-  <div class="sbox"><svg class="ic"><use href="#i-search"/></svg><input type="text" id="jq" placeholder="بحث في العناصر" autocomplete="off" enterkeyhint="search"><button id="jqClr" type="button" aria-label="مسح" hidden><svg class="ic"><use href="#i-x"/></svg></button></div>
-  <div class="jsum" id="jSum"></div>
-  <div id="jList"></div>
+  <div class="seg" id="jView"><button type="button" data-v="list" class="on">القائمة</button><button type="button" data-v="stats">الإحصاءات</button></div>
+  <div id="jListWrap">
+    <div class="sbox"><svg class="ic"><use href="#i-search"/></svg><input type="text" id="jq" placeholder="بحث في العناصر" autocomplete="off" enterkeyhint="search"><button id="jqClr" type="button" aria-label="مسح" hidden><svg class="ic"><use href="#i-x"/></svg></button></div>
+    <div class="jsum" id="jSum"></div>
+    <div id="jList"></div>
+  </div>
+  <div id="jStats" hidden></div>
 </main>
 <main class="list" id="summary" hidden>
   <div class="card">
@@ -184,6 +188,7 @@
     <div class="grp">
       <div class="tg"><span>اقتراحات الجهاز</span><input type="checkbox" id="jSugD"></div>
       <div class="tg"><span>اقتراحات المشكلة</span><input type="checkbox" id="jSugP"></div>
+      <div class="tg"><span>تلميح «آخر مرة» للثمن</span><input type="checkbox" id="jLastP"></div>
       <label>عدد الاقتراحات</label>
       <div class="seg" id="jNum"><button type="button" data-n="3">3</button><button type="button" data-n="5">5</button><button type="button" data-n="8">8</button></div>
       <div class="hint" style="margin-top:8px">الاقتراحات تُبنى من إدخالاتك السابقة وتظهر سطرًا واحدًا تحت الخانة.</div>
@@ -443,7 +448,7 @@
   <input type="text" id="jPr" placeholder="مثال: فك حساب" autocomplete="off" maxlength="160">
   <div class="sug" id="jPrSug"></div>
   <div class="row">
-    <div><label for="jAmt">الثمن</label><input type="number" id="jAmt" inputmode="decimal" min="0" step="any" placeholder="0"></div>
+    <div><label for="jAmt">الثمن</label><input type="number" id="jAmt" inputmode="decimal" min="0" step="any" placeholder="0"><button type="button" class="jlast" id="jLast" hidden></button></div>
     <div><label for="jDate">التاريخ</label><input type="date" id="jDate"></div>
   </div>
   <div class="tg"><span>عن بعد</span><input type="checkbox" id="jRemote"></div>
@@ -451,6 +456,31 @@
     <button class="del" id="jDel" type="button">حذف</button>
     <button id="jCancel" type="button">إلغاء</button>
     <button class="ok" id="jSave" type="button">حفظ</button>
+  </div>
+</dialog>
+
+<dialog id="jRemDlg">
+  <h2>أجرة عن بعد</h2>
+  <div class="hint" id="jRemInfo"></div>
+  <div id="jRemList" style="max-height:34vh;overflow-y:auto"></div>
+  <div class="row">
+    <div><label for="jRemAmt">أجرتي</label><input type="number" id="jRemAmt" inputmode="decimal" min="0" step="any" placeholder="0"></div>
+    <div><label for="jRemDate">التاريخ</label><input type="date" id="jRemDate"></div>
+  </div>
+  <div class="acts">
+    <button id="jRemCancel" type="button">إلغاء</button>
+    <button class="ok" id="jRemSave" type="button">حفظ</button>
+  </div>
+</dialog>
+
+<dialog id="jRenDlg">
+  <h2>إعادة تسمية</h2>
+  <div class="hint" id="jRenInfo"></div>
+  <label for="jRenIn">الاسم الجديد</label>
+  <input type="text" id="jRenIn" maxlength="80" autocomplete="off">
+  <div class="acts">
+    <button id="jRenCancel" type="button">إلغاء</button>
+    <button class="ok" id="jRenSave" type="button">حفظ</button>
   </div>
 </dialog>
 

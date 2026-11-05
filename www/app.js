@@ -42,7 +42,7 @@ const JOB_RE = /^\d{4}-\d{2}-\d{2}$/;
 function normJobsCfg(c) {
   c = c && typeof c === 'object' ? c : {};
   const tags = a => [...new Set((Array.isArray(a) ? a : []).map(x => String(x || '').trim().toLowerCase().replace(/\s+/g, ' ')).filter(Boolean))].slice(0, 300);
-  return { on: c.on === true, sd: c.sd !== false, sp: c.sp !== false, n: [3, 5, 8].includes(Number(c.n)) ? Number(c.n) : 5, sj: c.sj !== false, sc: c.sc !== false, hd: tags(c.hd), hp: tags(c.hp) };
+  return { on: c.on === true, sd: c.sd !== false, sp: c.sp !== false, n: [3, 5, 8].includes(Number(c.n)) ? Number(c.n) : 5, sj: c.sj !== false, sc: c.sc !== false, lp: c.lp !== false, hd: tags(c.hd), hp: tags(c.hp) };
 }
 function normJobs(a) {
   const seen = new Set(), out = [];
@@ -52,7 +52,9 @@ function normJobs(a) {
     if (!isFinite(id) || id <= 0 || seen.has(id) || !JOB_RE.test(String(j.date || '')) || !(dev || pr)) return;
     seen.add(id);
     const amt = Number(j.amt);
-    out.push({ id, date: j.date, t: Number(j.t) > 0 ? Number(j.t) : id, dev, pr, amt: isFinite(amt) && amt > 0 ? Math.round(amt * 100) / 100 : 0, remote: j.remote === true });
+    const o = { id, date: j.date, t: Number(j.t) > 0 ? Number(j.t) : id, dev, pr, amt: isFinite(amt) && amt > 0 ? Math.round(amt * 100) / 100 : 0, remote: j.remote === true };
+    if (o.remote && Number(j.rid) > 0) o.rid = Number(j.rid); // رقم سجل أجرة «عن بعد» الذي حُسب فيه هذا العنصر
+    out.push(o);
   });
   return out;
 }
@@ -677,8 +679,8 @@ $('shGo').onclick = async () => {
   const text = pendingShare(d); $('shDlg').close(); await doShare(text);
 };
 $('shPdf').onclick = async () => {
-  const d = $('shDetail').checked; setSd(d);
-  const p = pendingPdf(d); $('shDlg').close(); await sharePdf(p.cfg, p.name);
+  const d = $('shDetail').checked; setSd(d); jobsShareSync();
+  const p = pendingPdf(d); if (window.Jobs) Jobs.attachPdf(p.cfg); $('shDlg').close(); await sharePdf(p.cfg, p.name);
 };
 $('shCopy').onclick = async () => {
   const d = $('shDetail').checked; setSd(d); jobsShareSync();
@@ -882,10 +884,10 @@ function reportPages(cfg) {
     names.forEach((n, i) => i === 0 ? T(n, 28, '700', 'rtl', 'right', cols[i].r - 16, y + 43, P.GO) : T(n, 28, '700', 'rtl', 'center', cols[i].c, y + 43, P.GO));
     vlines(y, HH); y += HH;
   };
-  const newPage = first => {
+  const newPage = (first, nh) => {
     cv = document.createElement('canvas'); cv.width = W; cv.height = H; x = cv.getContext('2d');
     x.fillStyle = P.PG; x.fillRect(0, 0, W, H); x.fillStyle = P.ACC; x.fillRect(0, 0, W, 14);
-    pages.push(cv); y = first ? 130 : 90; if (!first) head();
+    pages.push(cv); y = first ? 130 : 90; if (!first && !nh) head();
   };
   newPage(true);
   T(cfg.title, 72, '700', 'rtl', 'right', R, y, P.INK); y += 60;
@@ -938,6 +940,38 @@ function reportPages(cfg) {
     T(hmAr(c.mins), 28, '700', 'rtl', 'center', cols[5].c, y + 44, P.GO);
     T((net < 0 ? '−' : '') + num(Math.abs(net)), 28, '700', 'ltr', 'center', cols[6].c, y + 44, net < 0 ? P.RD : P.GN);
     x.fillStyle = P.GD; x.fillRect(M, y + RH - 2, W - 2 * M, 2); vlines(y, RH); y += RH;
+  }
+  if (cfg.jobs && cfg.jobs.length) { // قسم «ما تم تنفيذه»: التاريخ، الجهاز، المشكلة، (الثمن)
+    const jw = cfg.jobsPr ? [250, 330, 360, 160] : [290, 410, 400], jc = []; let jcum = 0;
+    jw.forEach(w => { jc.push({ r: R - jcum, l: R - jcum - w, c: R - jcum - w / 2 }); jcum += w; });
+    const jv = (y0, h) => { x.fillStyle = P.GD; jc.forEach(k => x.fillRect(k.l - 1, y0, 2, h)); x.fillRect(R - 1, y0, 2, h); };
+    const jhead = () => {
+      x.fillStyle = P.HB; x.fillRect(M, y, W - 2 * M, HH);
+      ['التاريخ', 'الجهاز', 'المشكلة'].concat(cfg.jobsPr ? ['الثمن'] : []).forEach((n, i) => i === 3 ? T(n, 28, '700', 'rtl', 'center', jc[i].c, y + 43, P.GO) : T(n, 28, '700', 'rtl', 'right', jc[i].r - 16, y + 43, P.GO));
+      jv(y, HH); y += HH;
+    };
+    const fit = (s, w, px, wt) => { x.font = wt + ' ' + px + 'px sans-serif'; if (x.measureText(s).width <= w) return s; while (s.length > 1 && x.measureText(s + '…').width > w) s = s.slice(0, -1); return s + '…'; };
+    const dirOf = s => /[\u0600-\u06FF]/.test(s) ? 'rtl' : 'ltr';
+    if (y + 56 + HH + RH * 2 > H - 100) newPage(false, true); else y += 30;
+    T('ما تم تنفيذه', 40, '700', 'rtl', 'right', R, y + 30, P.INK); y += 56;
+    jhead();
+    cfg.jobs.forEach((j, k) => {
+      if (y + RH > H - 100) { newPage(false, true); jhead(); }
+      if (k % 2) { x.fillStyle = P.ZB; x.fillRect(M, y, W - 2 * M, RH); }
+      const by = y + 44, dv = j.dev + (j.remote ? ' (عن بعد)' : '');
+      T(fit(dt(j.date).toLocaleDateString('ar-u-nu-latn', { day: 'numeric', month: 'long' }), jw[0] - 32, 28, '400'), 28, '400', 'rtl', 'right', jc[0].r - 16, by, P.INK);
+      T(fit(dv, jw[1] - 32, 28, '700'), 28, '700', dirOf(dv), 'right', jc[1].r - 16, by, P.INK);
+      T(fit(j.pr || '—', jw[2] - 32, 28, '400'), 28, '400', dirOf(j.pr || ''), 'right', jc[2].r - 16, by, j.pr ? P.INK : P.GR);
+      if (cfg.jobsPr) T(num(j.amt), 28, '700', 'ltr', 'center', jc[3].c, by, P.INK);
+      x.fillStyle = P.GD; x.fillRect(M, y + RH - 2, W - 2 * M, 2); jv(y, RH); y += RH;
+    });
+    if (cfg.jobsPr) {
+      if (y + RH > H - 100) { newPage(false, true); jhead(); }
+      x.fillStyle = P.HB; x.fillRect(M, y, W - 2 * M, RH);
+      T('المجموع', 30, '700', 'rtl', 'right', jc[0].r - 16, y + 44, P.INK);
+      T(num(round2(cfg.jobs.reduce((t, j) => t + j.amt, 0))), 28, '700', 'ltr', 'center', jc[3].c, y + 44, P.GO);
+      x.fillStyle = P.GD; x.fillRect(M, y + RH - 2, W - 2 * M, 2); jv(y, RH); y += RH;
+    }
   }
   const stamp = new Date().toLocaleDateString('ar-u-nu-latn', { day: 'numeric', month: 'long', year: 'numeric' });
   pages.forEach((p, k) => { x = p.getContext('2d'); T('صفحة ' + (k + 1) + ' من ' + pages.length + ' • أُنشئ في ' + stamp, 24, '400', 'rtl', 'center', W / 2, H - 50, P.GR); });
