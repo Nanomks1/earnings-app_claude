@@ -112,11 +112,9 @@
     if (cmp) html += '<div class="jbox"><div class="mh">مقارنة بالأجر</div>' + cmp + '</div>';
     // حسب الماركة (أول كلمة من اسم الجهاز) وحسب المشكلة
     const grp = fn => { const m = new Map(); J.forEach(j => fn(j).forEach(p => { const o = m.get(p[0]) || { s: p[1], n: 0, t: 0 }; o.n++; o.t = round2(o.t + j.amt); m.set(p[0], o); })); return [...m.values()]; };
-    const brands = grp(j => { const w = j.dev.trim().split(/\s+/)[0]; return w ? [[k1(w), w]] : []; }).sort((a, b) => b.t - a.t || b.n - a.n).slice(0, 8);
     const probs = grp(j => splitPr(j.pr).map(p => [k1(p), p])).sort((a, b) => b.n - a.n || b.t - a.t).slice(0, 8);
     const hrow = (lb, sm, v, pc) => '<div class="hrow"><div class="hl"><span><bdi>' + esc(lb) + '</bdi></span><small>' + sm + '</small><b>' + v + '</b></div><div class="hbar"><i style="width:' + Math.max(3, Math.round(pc)) + '%"></i></div></div>';
-    const mxB = Math.max(1, ...brands.map(o => o.t)), mxP = Math.max(1, ...probs.map(o => o.n));
-    if (brands.length) html += '<div class="jbox"><div class="mh">حسب الماركة</div>' + brands.map(o => hrow(o.s, o.n + ' • متوسط ' + num(round2(o.t / o.n)), num(o.t), o.t / mxB * 100)).join('') + '</div>';
+    const mxP = Math.max(1, ...probs.map(o => o.n));
     if (probs.length) html += '<div class="jbox"><div class="mh">حسب النوع</div>' + probs.map(o => hrow(o.s, 'متوسط ' + num(round2(o.t / o.n)), o.n + ' • ' + num(o.t), o.n / mxP * 100)).join('') + '</div>';
     box.innerHTML = html;
   }

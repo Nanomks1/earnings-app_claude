@@ -371,7 +371,7 @@ function render() {
   if (window.Jobs) Jobs.apply();
   const c = calc(state.items);
   countTo($('total'), due());
-  const cells = [[ic('cash') + 'الأجور', amtH(c.work), ''], [ic('mcircle') + 'الكريدي', amtH(-c.adv, true), c.adv > 0 ? ' neg' : '']];
+  const cells = [[ic('tup') + 'الأجور', amtH(c.work), ''], [ic('tdown') + 'الكريدي', amtH(-c.adv, true), c.adv > 0 ? ' neg' : '']];
   if (state.carry) cells.push([ic('archive') + 'مرحَّل', amtH(state.carry, true), '']);
   $('mini').style.setProperty('--n', cells.length);
   $('mini').innerHTML = cells.map(([k, v, x]) => `<div><span class="k">${k}</span><span class="v num${x}">${v}</span></div>`).join('');
