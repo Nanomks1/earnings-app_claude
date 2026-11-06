@@ -166,14 +166,14 @@ for i, hexc in enumerate(PALETTE):
         leg.paste(full.crop((O, O, O + S0, O + S0)).resize((192, 192), Image.LANCZOS), (0, 0), mask)
         leg.save(f'{res}/mipmap-xxxhdpi/ic_{key}.png')
         open(f'{res}/mipmap-anydpi-v26/ic_{key}.xml', 'w').write(adaptive % (key, key))
-        if key == 'a0':
+        if key == 'b0':   # الأيقونة الافتراضية (المثبّت، نافذة البصمة، معلومات التطبيق) = شكل «وهج»
             for dpi, px_ in {'mdpi': 48, 'hdpi': 72, 'xhdpi': 96, 'xxhdpi': 144, 'xxxhdpi': 192}.items():
                 os.makedirs(f'{res}/mipmap-{dpi}', exist_ok=True)
                 small = leg.resize((px_, px_), Image.LANCZOS)
                 small.save(f'{res}/mipmap-{dpi}/ic_launcher.png')
                 small.save(f'{res}/mipmap-{dpi}/ic_launcher_round.png')
             for n in ('ic_launcher', 'ic_launcher_round'):
-                open(f'{res}/mipmap-anydpi-v26/{n}.xml', 'w').write(adaptive % ('a0', 'a0'))
+                open(f'{res}/mipmap-anydpi-v26/{n}.xml', 'w').write(adaptive % ('b0', 'b0'))
 
 # manifest: launcher entries move from MainActivity to switchable aliases (3 styles x 12 colours)
 M = 'android/app/src/main/AndroidManifest.xml'
