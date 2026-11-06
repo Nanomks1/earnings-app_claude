@@ -133,6 +133,7 @@ const signed = n => ltr((n < 0 ? '−' : '') + num(Math.abs(n)) + cur());
 const round2 = n => Math.round(n * 100) / 100;
 const esc = s => String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const pad2 = n => String(n).padStart(2, '0');
+const amtH = (n, sg) => ltr((sg && n < 0 ? '−' : '') + num(sg ? Math.abs(n) : n) + (state.currency ? ' <small>' + esc(state.currency) + '</small>' : '')); // مبلغ بعملة أصغر (للبطاقة العلوية)
 const iso = d => d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
 const today = () => iso(new Date());
 const nowTime = () => { const d = new Date(); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); };
@@ -346,11 +347,11 @@ let cntRaf = 0, cntVal = null;
 function countTo(el, v) { // عدّاد ناعم للمجموع (الحركات الكاملة فقط)
   cancelAnimationFrame(cntRaf);
   const from = cntVal; cntVal = v;
-  if (from === null || from === v || state.prefs.mo !== 2 || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { el.textContent = signed(v); return; }
+  if (from === null || from === v || state.prefs.mo !== 2 || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { el.innerHTML = amtH(v, true); return; }
   const t0 = performance.now(), D = 450;
   const step = t => {
     const k = Math.min(1, (t - t0) / D), e = 1 - Math.pow(1 - k, 3);
-    el.textContent = signed(k < 1 ? Math.round((from + (v - from) * e) * 100) / 100 : v);
+    el.innerHTML = amtH(k < 1 ? Math.round((from + (v - from) * e) * 100) / 100 : v, true);
     if (k < 1) cntRaf = requestAnimationFrame(step);
   };
   cntRaf = requestAnimationFrame(step);
@@ -370,10 +371,10 @@ function render() {
   if (window.Jobs) Jobs.apply();
   const c = calc(state.items);
   countTo($('total'), due());
-  const cells = [['الأجور', money(c.work)], ['الكريدي', signed(-c.adv)]];
-  if (state.carry) cells.push(['مرحَّل', signed(state.carry)]);
+  const cells = [[ic('cash') + 'الأجور', amtH(c.work), ''], [ic('mcircle') + 'الكريدي', amtH(-c.adv, true), c.adv > 0 ? ' neg' : '']];
+  if (state.carry) cells.push([ic('archive') + 'مرحَّل', amtH(state.carry, true), '']);
   $('mini').style.setProperty('--n', cells.length);
-  $('mini').innerHTML = cells.map(([k, v]) => `<div><span class="k">${k}</span><span class="v num">${v}</span></div>`).join('');
+  $('mini').innerHTML = cells.map(([k, v, x]) => `<div><span class="k">${k}</span><span class="v num${x}">${v}</span></div>`).join('');
   renderShift();
   const sorted = state.items.filter(match).sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
   const groups = {};

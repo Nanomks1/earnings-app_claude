@@ -322,3 +322,35 @@ input[type=date]::-webkit-date-and-time-value{text-align:center;margin:0}
 .pill.neg{color:var(--neg);background:color-mix(in srgb,var(--neg) 16%,transparent)}
 details.card summary b.zero{color:var(--mut);font-weight:600}
 .stat.wide{grid-column:1/-1}
+
+/* ---------- البطاقة العلوية ---------- */
+.total .tl{font-weight:600;opacity:.95}
+.total .big{font-size:calc(46px*var(--fs,1));margin:2px 0 14px}
+.total .big small{font-size:.43em;font-weight:600;opacity:.8;margin-inline-start:2px}
+.mini .k{font-weight:600;opacity:.95;font-size:calc(13px*var(--fs,1))}
+.mini .k .ic{width:15px;height:15px;vertical-align:-2px;margin-inline-end:4px}
+.mini .v{font-size:calc(18px*var(--fs,1))}
+.mini .v small{font-size:.72em;font-weight:600;opacity:.85}
+.mini .v.neg{color:color-mix(in srgb,#ff8a80 55%,var(--onpri))}
+
+/* ---------- رسوم العناصر ---------- */
+.hrow{padding:8px 0;border-top:1px solid var(--bd)}
+.mh+.hrow{border-top:0}
+.hl{display:flex;align-items:center;gap:8px;font-size:calc(14.5px*var(--fs,1))}
+.hl span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hl small{color:var(--mut);white-space:nowrap}
+.hl b{direction:ltr;white-space:nowrap}
+.hbar{height:6px;border-radius:3px;margin-top:6px;overflow:hidden;background:color-mix(in srgb,var(--pri) 14%,transparent)}
+.hbar i{display:block;height:100%;border-radius:3px;background:var(--pri)}
+.jleg{display:flex;gap:14px;font-size:calc(12px*var(--fs,1));color:var(--mut);margin:4px 0 8px}
+.jleg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-inline-end:5px;vertical-align:-1px}
+.jdb{display:flex;gap:4px;align-items:flex-end;padding:4px 0 2px}
+.jdb .d{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center}
+.jdb .p{display:flex;align-items:flex-end;gap:2px;height:88px}
+.jdb .p i{width:9px}
+.jdb .w,.jleg .w{background:var(--pri)}
+.jdb .it,.jleg .it{background:color-mix(in srgb,var(--pri) 35%,transparent)}
+.jdb .p i,.jleg i{border-radius:3px 3px 0 0}
+.jleg i{border-radius:3px}
+.jdb .n{font-size:calc(11px*var(--fs,1));color:var(--mut);margin-top:4px}
+

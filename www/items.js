@@ -99,6 +99,11 @@
       if (hrs > 0) cmp += kv('الثمن لكل ساعة عمل', money(round2(shop / hrs)));
       cmp += kv('أفضل يوم', money(sd[best]) + ' • <bdi dir="rtl">' + fmtShort(best) + '</bdi>');
     }
+    if (dk.length) { // أعمدة: الأجر مقابل عناصر المحل لكل يوم (آخر 10 أيام فيها عناصر)
+      const ds = Object.keys(sd).sort().slice(-10), mxv = Math.max(1, ...ds.map(d => Math.max(sd[d] || 0, wm[d] || 0))), ht = v => v > 0 ? Math.max(4, Math.round(v / mxv * 84)) : 2;
+      html += '<div class="jbox"><div class="mh">الأجر مقابل العناصر لكل يوم</div><div class="jleg"><span><i class="w"></i>الأجر</span><span><i class="it"></i>العناصر</span></div><div class="jdb">' +
+        ds.map(d => '<div class="d"><div class="p"><i class="w" style="height:' + ht(wm[d] || 0) + 'px"></i><i class="it" style="height:' + ht(sd[d] || 0) + 'px"></i></div><span class="n num">' + Number(d.slice(8)) + '</span></div>').join('') + '</div></div>';
+    }
     const remJ = J.filter(j => j.remote);
     if (remJ.length) {
       const rw = round2(allItems().reduce((t, i) => t + (i.type === 'work' && i.remote && rg(i.date) ? i.amount : 0), 0));
@@ -109,8 +114,10 @@
     const grp = fn => { const m = new Map(); J.forEach(j => fn(j).forEach(p => { const o = m.get(p[0]) || { s: p[1], n: 0, t: 0 }; o.n++; o.t = round2(o.t + j.amt); m.set(p[0], o); })); return [...m.values()]; };
     const brands = grp(j => { const w = j.dev.trim().split(/\s+/)[0]; return w ? [[k1(w), w]] : []; }).sort((a, b) => b.t - a.t || b.n - a.n).slice(0, 8);
     const probs = grp(j => splitPr(j.pr).map(p => [k1(p), p])).sort((a, b) => b.n - a.n || b.t - a.t).slice(0, 8);
-    if (brands.length) html += '<div class="jbox"><div class="mh">حسب الماركة</div>' + brands.map(o => '<div class="srow"><span><bdi>' + esc(o.s) + '</bdi></span><small>' + o.n + ' • متوسط ' + num(round2(o.t / o.n)) + '</small><b>' + num(o.t) + '</b></div>').join('') + '</div>';
-    if (probs.length) html += '<div class="jbox"><div class="mh">حسب المشكلة</div>' + probs.map(o => '<div class="srow"><span><bdi>' + esc(o.s) + '</bdi></span><small>متوسط ' + num(round2(o.t / o.n)) + '</small><b>' + o.n + '</b></div>').join('') + '</div>';
+    const hrow = (lb, sm, v, pc) => '<div class="hrow"><div class="hl"><span><bdi>' + esc(lb) + '</bdi></span><small>' + sm + '</small><b>' + v + '</b></div><div class="hbar"><i style="width:' + Math.max(3, Math.round(pc)) + '%"></i></div></div>';
+    const mxB = Math.max(1, ...brands.map(o => o.t)), mxP = Math.max(1, ...probs.map(o => o.n));
+    if (brands.length) html += '<div class="jbox"><div class="mh">حسب الماركة</div>' + brands.map(o => hrow(o.s, o.n + ' • متوسط ' + num(round2(o.t / o.n)), num(o.t), o.t / mxB * 100)).join('') + '</div>';
+    if (probs.length) html += '<div class="jbox"><div class="mh">حسب النوع</div>' + probs.map(o => hrow(o.s, 'متوسط ' + num(round2(o.t / o.n)), o.n + ' • ' + num(o.t), o.n / mxP * 100)).join('') + '</div>';
     box.innerHTML = html;
   }
   $('jStats').onclick = e => { const b = e.target.closest('button[data-p]'); if (!b) return; per = b.dataset.p; render(); };
