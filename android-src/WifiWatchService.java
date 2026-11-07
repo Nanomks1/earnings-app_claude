@@ -39,6 +39,7 @@ public class WifiWatchService extends Service {
     private HandlerThread ht;
     private Handler h;
     private final Set<Network> active = new HashSet<Network>(); // يُستعمل من خيط المعالجة فقط
+    private final Set<Network> others = new HashSet<Network>(); // شبكات واي فاي ليست للعمل (خيط المعالجة فقط)
     private Runnable stopTask; // يُستعمل من خيط المعالجة فقط
     private volatile String noteText = "جارٍ فحص الشبكة…";
     private long regT;
@@ -143,12 +144,22 @@ public class WifiWatchService extends Service {
         return new SimpleDateFormat("HH:mm", Locale.US).format(new Date(t));
     }
 
+    // التشغيل الدائم: لا تُغلق الخدمة نفسها بعد الانقطاع
+    private boolean keep() {
+        return WifiTracker.isOn(this) && WifiTracker.always(this);
+    }
+
+    private String idleNote() {
+        return others.isEmpty() ? "غير متصل بالواي فاي" : "متصل بشبكة ليست للعمل";
+    }
+
     private void scheduleStop(long ms) {
         cancelStop();
         stopTask = new Runnable() {
             @Override
             public void run() {
                 stopTask = null;
+                if (keep()) return;
                 stopSelf();
             }
         };
@@ -218,11 +229,19 @@ public class WifiWatchService extends Service {
                     if ("c".equals(WifiTracker.state(WifiWatchService.this))) {
                         long t = System.currentTimeMillis();
                         WifiTracker.onDisconnected(WifiWatchService.this, t, 1);
-                        note("انقطع الاتصال · يختفي هذا الإشعار قريبًا");
-                        scheduleStop(GRACE_MS);
+                        if (keep()) {
+                            note("انقطع الاتصال الساعة " + hm(t));
+                        } else {
+                            note("انقطع الاتصال · يختفي هذا الإشعار قريبًا");
+                            scheduleStop(GRACE_MS);
+                        }
                     } else if (stopTask == null) {
-                        note("غير متصل بالواي فاي");
-                        scheduleStop(15000);
+                        if (keep()) {
+                            note(idleNote());
+                        } else {
+                            note("غير متصل بالواي فاي");
+                            scheduleStop(15000);
+                        }
                     }
                 } catch (Exception e) {
                     // تجاهل
@@ -251,8 +270,13 @@ public class WifiWatchService extends Service {
                 }
             }
             if (r != null && other(r[0])) {
-                // شبكة ليست للعمل: لا تسجيل ولا إشعار، وتُغلق الخدمة بعد لحظات إن لم يكن هناك اتصال عمل
-                if (active.isEmpty() && stopTask == null) scheduleStop(3000);
+                // شبكة ليست للعمل: لا تسجيل، وتُغلق الخدمة بعد لحظات إن لم يكن هناك اتصال عمل (إلا في التشغيل الدائم)
+                others.add(n);
+                if (keep()) {
+                    if (active.isEmpty()) note(idleNote());
+                } else if (active.isEmpty() && stopTask == null) {
+                    scheduleStop(3000);
+                }
                 return;
             }
             active.add(n);
@@ -277,9 +301,11 @@ public class WifiWatchService extends Service {
                     String[] r = WifiTracker.readWifiRoot();
                     if (r != null) {
                         if (other(r[0])) {
+                            others.addAll(active);
                             active.clear();
                             WifiTracker.onDisconnected(WifiWatchService.this, System.currentTimeMillis(), 1);
-                            scheduleStop(1000);
+                            if (keep()) note(idleNote());
+                            else scheduleStop(1000);
                             return;
                         }
                         WifiTracker.onConnected(WifiWatchService.this, t, r[0], r[1], 0);
@@ -297,10 +323,13 @@ public class WifiWatchService extends Service {
     private void lost(Network n, long t) {
         try {
             boolean had = active.remove(n);
+            others.remove(n);
             WifiTracker.count(this, t);
             if (active.isEmpty()) {
                 WifiTracker.onDisconnected(this, t, 0);
-                if (had) {
+                if (keep()) {
+                    note(had ? "انقطع الاتصال الساعة " + hm(t) : idleNote());
+                } else if (had) {
                     note("انقطع الاتصال الساعة " + hm(t) + " · يختفي هذا الإشعار قريبًا");
                     scheduleStop(GRACE_MS);
                 } else if (stopTask == null) {

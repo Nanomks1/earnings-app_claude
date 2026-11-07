@@ -49,6 +49,11 @@ final class WifiTracker {
         return prefs(c).getBoolean("root", false);
     }
 
+    // تشغيل دائم: الخدمة تبقى شغالة ولا تنتظر استيقاظ النظام
+    static boolean always(Context c) {
+        return prefs(c).getBoolean("always", false);
+    }
+
     static NetworkRequest buildWifiRequest() {
         NetworkRequest.Builder b = new NetworkRequest.Builder()
                 .addTransportType(NetworkCapabilities.TRANSPORT_WIFI);
@@ -70,6 +75,9 @@ final class WifiTracker {
         new Thread(new Runnable() {
             @Override
             public void run() {
+                if (always(c) && !WifiWatchService.running) {
+                    startSvc(c);
+                }
                 if (useRoot(c)) {
                     exemptBattery(c);
                 }
@@ -376,6 +384,11 @@ final class WifiTracker {
 
     static void restart(Context c) {
         stop(c);
+        try {
+            Thread.sleep(700); // نمهل النظام ليُنهي الخدمة قبل إعادة تشغيلها
+        } catch (InterruptedException e) {
+            // تجاهل
+        }
         start(c);
     }
 

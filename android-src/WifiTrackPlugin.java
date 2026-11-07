@@ -41,6 +41,7 @@ public class WifiTrackPlugin extends Plugin {
         JSObject o = new JSObject();
         o.put("on", s.getBoolean("on", false));
         o.put("root", s.getBoolean("root", false));
+        o.put("always", s.getBoolean("always", false));
         o.put("workSsid", s.getString("work_ssid", ""));
         o.put("workBssid", s.getString("work_bssid", ""));
         o.put("workList", listJson(workList(s)));
@@ -57,6 +58,7 @@ public class WifiTrackPlugin extends Plugin {
         final Context c = getContext();
         final Boolean on = call.getBoolean("on", null);
         final Boolean root = call.getBoolean("root", null);
+        final Boolean always = call.getBoolean("always", null);
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -70,6 +72,11 @@ public class WifiTrackPlugin extends Plugin {
                         }
                     }
                     s.edit().putBoolean("root", root.booleanValue()).commit();
+                }
+                if (always != null) {
+                    s.edit().putBoolean("always", always.booleanValue()).commit();
+                    if (always.booleanValue()) askNotif();
+                    if (on == null && s.getBoolean("on", false)) WifiTracker.restart(c);
                 }
                 if (on != null) {
                     s.edit().putBoolean("on", on.booleanValue()).putString("state", "d").putString("ssid", "").commit();
