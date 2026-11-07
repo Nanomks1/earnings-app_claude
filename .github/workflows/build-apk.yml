@@ -43,12 +43,11 @@ jobs:
           mkdir -p $P
           cp android-src/AppIconPlugin.java $P/
 
-      - name: Folder picker plugin (SAF)
+      - name: All-files backup plugin
         run: |
           P=android/app/src/main/java/com/pd/earnings
           mkdir -p $P
-          cp android-src/SafBackupPlugin.java $P/
-          sed -i '/^dependencies {/a\    implementation "androidx.documentfile:documentfile:1.0.1"' android/app/build.gradle
+          cp android-src/AllFilesPlugin.java $P/
 
       - name: Fingerprint lock + home-screen widget
         run: |
@@ -147,8 +146,9 @@ jobs:
           sed -i '/defaultConfig {/a\        ndk { abiFilters "arm64-v8a" }' android/app/build.gradle
           M=android/app/src/main/AndroidManifest.xml
           sed -i 's#<application#<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29"/>\n    <application#' $M
-          sed -i 's#<application#<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>\n    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>\n    <uses-permission android:name="android.permission.WAKE_LOCK"/>\n    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\n    <uses-permission android:name="android.permission.VIBRATE"/>\n    <application#' $M
+          sed -i 's#<application#<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>\n    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>\n    <uses-permission android:name="android.permission.WAKE_LOCK"/>\n    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\n    <uses-permission android:name="android.permission.VIBRATE"/>\n    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"/>\n    <application#' $M
           grep -q 'FOREGROUND_SERVICE_SPECIAL_USE' $M || { echo "wifi permissions were not added to the manifest"; exit 1; }
+          grep -q 'MANAGE_EXTERNAL_STORAGE' $M || { echo "all-files permission was not added to the manifest"; exit 1; }
           sed -i 's#<application#<application android:requestLegacyExternalStorage="true"#' $M
 
       - name: Version number (changes with every build)
