@@ -202,6 +202,7 @@
     <button class="rb" id="wfSugOpen" type="button"><span class="bub"><svg class="ic"><use href="#i-list"/></svg></span><span class="t">اقتراحات الفترات<small>فترات الاتصال بشبكة العمل</small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
     <div class="rb" style="border-top:1px solid var(--bd)"><span class="bub"><svg class="ic"><use href="#i-wifi"/></svg></span><span class="t">تتبع الواي فاي<small>يسجّل الاتصال والانقطاع بمعزل عن السجل</small></span><input type="checkbox" id="wfOn"></div>
     <div class="rb" id="wfRootRow" style="border-top:1px solid var(--bd)"><span class="bub"><svg class="ic"><use href="#i-lock"/></svg></span><span class="t">استعمال الروت<small>لمعرفة اسم الشبكة</small></span><input type="checkbox" id="wfRootChk"></div>
+    <div class="rb" id="wfAlwaysRow" style="border-top:1px solid var(--bd)"><span class="bub"><svg class="ic"><use href="#i-clock"/></svg></span><span class="t">تشغيل دائم<small>أكثر موثوقية. إشعار صغير دائم، ويمكن إخفاؤه من إعدادات إشعارات التطبيق (قناة «تتبع الواي فاي»)</small></span><input type="checkbox" id="wfAlways"></div>
     <div class="info" id="wfInfo" style="color:var(--mut);font-size:calc(13px*var(--fs,1))"></div>
     <button class="rb" id="wfMark" type="button"><span class="bub"><svg class="ic"><use href="#i-home"/></svg></span><span class="t">أضف الشبكة الحالية إلى شبكات العمل<small>اتصل بالشبكة أولًا</small></span></button>
     <button class="rb" id="wfBat" type="button"><span class="bub"><svg class="ic"><use href="#i-sliders"/></svg></span><span class="t">استثناء من توفير البطارية<small>يتطلب الروت، ويحمي التتبع من الإيقاف</small></span></button>
@@ -266,8 +267,7 @@
   <div class="grp">
     <div class="rb"><span class="bub"><svg class="ic"><use href="#i-save"/></svg></span><span class="t">نسخ احتياطي تلقائي<small>بعد كل تعديل</small></span><input type="checkbox" id="auto"></div>
     <div class="info" id="bkWhere" style="color:var(--mut);font-size:calc(13px*var(--fs,1))"></div>
-    <button class="rb" id="bkPick"><span class="bub"><svg class="ic"><use href="#i-folder"/></svg></span><span class="t">اختيار مجلد لحفظ النسخ</span></button>
-    <button class="rb" id="bkReset"><span class="bub"><svg class="ic"><use href="#i-restore"/></svg></span><span class="t">العودة للمكان الافتراضي</span></button>
+    <button class="rb" id="bkAccess"><span class="bub"><svg class="ic"><use href="#i-folder"/></svg></span><span class="t">السماح بالوصول لكل الملفات<small>مطلوب لحفظ النسخ في المجلد المخصص</small></span></button>
     <button class="rb" id="bkNow"><span class="bub"><svg class="ic"><use href="#i-save"/></svg></span><span class="t">نسخة احتياطية جديدة الآن</span></button>
   </div>
   <div class="shd">التصدير والاستعادة</div>

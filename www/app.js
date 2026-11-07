@@ -102,9 +102,7 @@ function legacyPrefs() { // ترحيل لمرة واحدة من المفاتيح
   return normPrefs({ wg: rd('earnings_wg2'), ic: { style: ic.style, follow: ic.follow }, sd: localStorage.getItem('earnings_sd') !== '0' });
 }
 try { const raw = JSON.parse(localStorage.getItem(KEY)); state = norm(raw); if (!raw || !raw.prefs) state.prefs = legacyPrefs(); } catch (e) { state = norm(null); }
-let bk = {};
-try { bk = JSON.parse(localStorage.getItem('earnings_bk')) || {}; } catch (e) {}
-const saveBk = () => localStorage.setItem('earnings_bk', JSON.stringify(bk));
+try { localStorage.removeItem('earnings_bk'); } catch (e) {} // مجلد SAF القديم لم يعد مستعملًا
 let enc = {};
 try { enc = JSON.parse(localStorage.getItem('earnings_enc')) || {}; } catch (e) {}
 const saveEnc = () => localStorage.setItem('earnings_enc', JSON.stringify(enc));
@@ -118,12 +116,25 @@ const match = i => (ft === 'all' || kind(i) === ft) && (!fq || nz(i.note).includ
 const $ = id => document.getElementById(id);
 const isNative = () => !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());
 const plugin = n => isNative() ? Capacitor.Plugins[n] : null;
-let _saf;
-const saf = () => {
+let _af;
+const af = () => {
   if (!isNative()) return null;
-  if (!_saf) { try { _saf = Capacitor.registerPlugin ? Capacitor.registerPlugin('SafBackup') : Capacitor.Plugins.SafBackup; } catch (e) { _saf = Capacitor.Plugins.SafBackup || null; } }
-  return _saf;
+  if (!_af) { try { _af = Capacitor.registerPlugin ? Capacitor.registerPlugin('AllFiles') : Capacitor.Plugins.AllFiles; } catch (e) { _af = Capacitor.Plugins.AllFiles || null; } }
+  return _af;
 };
+const BK_PATH = '_All/All Backups/My work app'; // المسار الفعلي ثابت داخل التطبيق الأصلي
+let afOK = false;
+async function afReady() { // هل صلاحية «كل الملفات» ممنوحة الآن؟
+  const A = af();
+  try { afOK = !!(A && (await A.hasAccess()).ok); } catch (e) { afOK = false; }
+  return afOK;
+}
+async function refreshAf() { const ok = await afReady(); updBkWhere(); return ok; }
+async function afBack() { // عند العودة للتطبيق: إن مُنحت الصلاحية للتو فاحفظ نسخة في المجلد
+  if (!isNative()) return;
+  const was = afOK, ok = await refreshAf();
+  if (ok && !was) { warned = false; autoBackup(); }
+}
 const ic = n => `<svg class="ic"><use href="#i-${n}"/></svg>`;
 const ltr = s => '\u2066' + s + '\u2069';
 const num = n => Number(n).toLocaleString('en', { maximumFractionDigits: 2 });
@@ -1401,8 +1412,8 @@ function updBkWhere() {
   let st = '';
   if (lastBk.ok) st = '<br>آخر نسخة تلقائية: ' + t(lastBk.okAt);
   else if (lastBk.at) st = '<br><span style="color:var(--neg)">فشل آخر حفظ تلقائي</span>' + (lastBk.okAt ? ' • آخر نجاح: ' + t(lastBk.okAt) : '');
-  $('bkWhere').innerHTML = 'مكان النسخ: ' + esc(bk.tree ? (bk.name || 'المجلد المختار') : 'Documents/EarningsBackup (الافتراضي)') + st;
-  $('bkReset').hidden = !bk.tree;
+  $('bkWhere').innerHTML = 'مكان النسخ: ' + (afOK ? ltr(esc(BK_PATH)) : 'Documents/EarningsBackup (مؤقتًا)<br><span style="color:var(--neg)">امنح صلاحية «كل الملفات» ليُحفظ في ' + ltr(esc(BK_PATH)) + '</span>') + st;
+  $('bkAccess').hidden = afOK || !isNative();
 }
 const MT = { work: 'العمل', look: 'المظهر', wg: 'الودجت', sec: 'الأمان', bk: 'النسخ الاحتياطي والتصدير', wifi: 'الواي فاي', jobs: 'العناصر' };
 let mPage = '';
@@ -1593,11 +1604,10 @@ function markBk(ok) {
 }
 
 async function putFile(name, data) {
-  const S = saf();
-  if (bk.tree && S) {
-    try { await S.writeFile({ tree: bk.tree, name, data }); return { via: 'saf', name }; }
-    catch (e) { if (!warned) { warned = true; toast('تعذر الحفظ في المجلد المختار. اخترْه من جديد. حُفظت النسخة في المكان الافتراضي'); } }
-  }
+  if (await afReady()) {
+    try { await af().writeFile({ name, data }); return { via: 'af', name }; }
+    catch (e) { if (!warned) { warned = true; toast('تعذر الحفظ في مجلد النسخ. حُفظت النسخة في المكان المؤقت'); } }
+  } else if (isNative() && !warned) { warned = true; toast('امنح صلاحية «كل الملفات» من الإعدادات ← النسخ الاحتياطي'); }
   const FS = plugin('Filesystem'); if (!FS) throw new Error('no fs');
   let n = docsAlt[name] || name;
   try { await fsWrite(FS, BK_DIR + '/' + n, data); }
@@ -1605,11 +1615,11 @@ async function putFile(name, data) {
   return { via: 'docs', name: n };
 }
 async function readFrom(via, name) {
-  if (via === 'saf') return (await saf().readFile({ tree: bk.tree, name })).data;
+  if (via === 'af') return (await af().readFile({ name })).data;
   return (await plugin('Filesystem').readFile({ path: BK_DIR + '/' + name, directory: 'DOCUMENTS', encoding: 'utf8' })).data;
 }
 async function readBack(name) { // من مكان النسخ الحالي، وnull إن لم يوجد
-  try { return await readFrom(bk.tree && saf() ? 'saf' : 'docs', name); } catch (e) { return null; }
+  try { return await readFrom((await afReady()) ? 'af' : 'docs', name); } catch (e) { return null; }
 }
 function validBackup(t) {
   if (!t) return false;
@@ -1722,10 +1732,9 @@ async function manualBackup() {
     a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
     a.download = name; a.click(); return;
   }
-  if (!bk.tree) { try { await plugin('Filesystem').requestPermissions(); } catch (e) {} }
   try {
     const w = await putFile(name, data);
-    toast('تم الحفظ: ' + w.name + (w.via === 'saf' ? ' في ' + (bk.name || 'المجلد') : ' في Documents/' + BK_DIR));
+    toast('تم الحفظ: ' + w.name + (w.via === 'af' ? ' في ' + BK_PATH : ' في Documents/' + BK_DIR));
   } catch (e) { toast('تعذر الحفظ: تحقق من صلاحية التخزين'); }
 }
 
@@ -1752,22 +1761,18 @@ async function applyBackup(text) {
   } catch (e) { toast('ملف النسخة غير صالح'); }
 }
 $('bkNow').onclick = manualBackup;
-$('bkPick').onclick = async () => {
-  const S = saf();
-  if (!S) return toast('اختيار المجلد يعمل داخل التطبيق فقط');
-  try {
-    const r = await S.pickFolder();
-    bk = { tree: r.uri, name: r.name }; saveBk(); updBkWhere(); warned = false;
-    toast('تم اختيار المجلد'); autoBackup();
-  } catch (e) { /* أُلغي الاختيار */ }
+if (isNative()) refreshAf();
+$('bkAccess').onclick = async () => {
+  const A = af();
+  if (!A) return toast('يعمل داخل التطبيق فقط');
+  try { await A.openSettings(); } catch (e) { toast('تعذر فتح صفحة الإذن. افتحها من إعدادات النظام ← التطبيقات ← العمل ← الأذونات'); }
 };
-$('bkReset').onclick = () => { bk = {}; saveBk(); updBkWhere(); toast('عاد الحفظ إلى المكان الافتراضي'); };
 $('bkRestore').onclick = async () => {
-  const S = saf(), FS = plugin('Filesystem');
-  if (!FS && !S) return $('file').click();
+  const A = af(), FS = plugin('Filesystem');
+  if (!FS && !A) return $('file').click();
   try {
     let text;
-    if (bk.tree && S) text = (await S.readFile({ tree: bk.tree, name: AUTO_NAME })).data;
+    if (await afReady()) text = (await A.readFile({ name: AUTO_NAME })).data;
     else { try { await FS.requestPermissions(); } catch (e) {} text = (await FS.readFile({ path: BK_DIR + '/' + AUTO_NAME, directory: 'DOCUMENTS', encoding: 'utf8' })).data; }
     applyBackup(text);
   } catch (e) { toast('لم أجد النسخة التلقائية. اختر ملفًا'); $('file').click(); }
@@ -1777,23 +1782,22 @@ const bkLabel = n => /^earnings-backup\.json$/.test(n) ? 'النسخة التل�
   : /^earnings-safe-(\d)/.test(n) ? 'نسخة أمان قبل نقص بيانات ' + n.match(/safe-(\d)/)[1]
   : /^earnings-before-restore/.test(n) ? 'قبل آخر استعادة' : 'نسخة يدوية';
 async function listBackups() {
-  const S = saf();
-  if (bk.tree && S) { const r = await S.listFiles({ tree: bk.tree }); return (r.files || []).map(f => ({ name: f.name, uri: f.uri, modified: Number(f.modified) || 0 })); }
+  if (await afReady()) { const r = await af().listFiles(); return (r.files || []).map(f => ({ name: f.name, via: 'af', modified: Number(f.modified) || 0 })); }
   const FS = plugin('Filesystem'); if (!FS) throw new Error('no fs');
   try { await FS.requestPermissions(); } catch (e) {}
   const r = await FS.readdir({ path: BK_DIR, directory: 'DOCUMENTS' });
-  return (r.files || []).filter(f => /\.json$/i.test(f.name)).map(f => ({ name: f.name, uri: '', modified: Number(f.mtime) || 0 }));
+  return (r.files || []).filter(f => /\.json$/i.test(f.name)).map(f => ({ name: f.name, via: 'docs', modified: Number(f.mtime) || 0 }));
 }
 $('bkList').onclick = async () => {
   try {
     const fs = (await listBackups()).sort((a, b) => b.modified - a.modified);
-    $('filesList').innerHTML = fs.length ? fs.map(f => `<button data-name="${esc(f.name)}" data-uri="${esc(f.uri)}">${esc(bkLabel(f.name))}<br><small>${esc(f.name)}${f.modified ? ' • ' + new Date(f.modified).toLocaleString('ar-u-nu-latn') : ''}</small></button>`).join('') : emptyBox('file', 'لا توجد ملفات json في المجلد.');
+    $('filesList').innerHTML = fs.length ? fs.map(f => `<button data-name="${esc(f.name)}" data-via="${f.via}">${esc(bkLabel(f.name))}<br><small>${esc(f.name)}${f.modified ? ' • ' + new Date(f.modified).toLocaleString('ar-u-nu-latn') : ''}</small></button>`).join('') : emptyBox('file', 'لا توجد ملفات json في المجلد.');
     $('filesDlg').showModal();
-  } catch (e) { toast(bk.tree ? 'تعذر قراءة المجلد. اخترْه من جديد' : 'لا توجد نسخ في المكان الافتراضي'); }
+  } catch (e) { toast(afOK ? 'تعذر قراءة مجلد النسخ' : 'لا توجد نسخ في المكان المؤقت'); }
 };
 $('filesList').onclick = async e => {
   const b = e.target.closest('button'); if (!b) return;
-  try { applyBackup(b.dataset.uri ? (await saf().readFile({ uri: b.dataset.uri })).data : await readFrom('docs', b.dataset.name)); } catch (err) { toast('تعذر قراءة الملف'); }
+  try { applyBackup(await readFrom(b.dataset.via || 'docs', b.dataset.name)); } catch (err) { toast('تعذر قراءة الملف'); }
 };
 $('filesClose').onclick = () => $('filesDlg').close();
 $('bkFile').onclick = () => $('file').click();
@@ -1856,8 +1860,8 @@ async function pullWidget() { // يستلم ما سجّله الودجت وهو 
   if (keys.length) setTimeout(() => { try { const p = W.ackEvents({ keys }); if (p && p.catch) p.catch(() => {}); } catch (e) {} }, 8000);
   widgetReady = true; syncWidget(); foregroundChecks();
 }
-document.addEventListener('visibilitychange', () => { if (!document.hidden) { Promise.resolve(pullWidget()).then(takeShortcut); refreshSysColor(); } });
-(function () { const A = plugin('App'); if (A && A.addListener) A.addListener('appStateChange', st => { if (st && st.isActive) Promise.resolve(pullWidget()).then(takeShortcut); }); })();
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { Promise.resolve(pullWidget()).then(takeShortcut); refreshSysColor(); afBack(); } });
+(function () { const A = plugin('App'); if (A && A.addListener) A.addListener('appStateChange', st => { if (st && st.isActive) { Promise.resolve(pullWidget()).then(takeShortcut); afBack(); } }); })();
 
 // ---------- تنبيهات: نسخة احتياطية قديمة + نسيان الخروج ----------
 const BK_STALE_DAYS = 3;
@@ -1931,6 +1935,7 @@ async function wfCfgShow() {
   let c; try { c = await W.getConfig(); } catch (e) { return; }
   $('wfOn').checked = !!c.on; $('wfRootChk').checked = !!c.root;
   $('wfRootChk').disabled = !c.on; $('wfRootRow').style.opacity = c.on ? '' : '.5';
+  $('wfAlways').checked = !!c.always; $('wfAlways').disabled = !c.on; $('wfAlwaysRow').style.opacity = c.on ? '' : '.5';
   const wl = [...wfSet(c)], ws = wl.length;
   $('wfInfo').innerHTML = 'شبكات العمل: ' + (ws ? wl.map(n => '<span style="display:inline-flex;align-items:center;gap:6px;border:1px solid var(--bd);border-radius:14px;padding:2px 10px;margin:2px">' + esc(n) + '<button type="button" class="wfx" data-ws="' + esc(n) + '" aria-label="حذف" style="background:none;border:0;color:inherit;padding:0 2px;font-size:14px">✕</button></span>').join(' ') : 'غير محدّدة') + (c.on && !c.root ? '<br>الروت مطفأ: لا يمكن معرفة اسم الشبكة، فتُسجَّل الأحداث بلا اسم.' : '') + (c.on && c.root && !ws ? '<br>اتصل بشبكة العمل ثم اضغط «أضف الشبكة الحالية».' : '') + (c.on ? '<br><small>آخر استيقاظ من النظام: ' + wfDT(c.cbT) + (c.cbT ? ' (' + c.cbN + ')' : '') + '<br>آخر فحص دوري: ' + wfDT(c.pollT) + '<br>آخر فتح أو إقلاع: ' + wfDT(c.startT) + '</small>' : '');
 }
@@ -1944,6 +1949,12 @@ $('wfRootChk').onchange = async () => {
   const W = nplug('WifiTrack'), v = $('wfRootChk').checked;
   if (!W) { $('wfRootChk').checked = false; return; }
   try { await W.setConfig({ root: v }); if (v) toast('تم تفعيل الروت'); } catch (e) { toast('امنح الروت للتطبيق من مدير الروت ثم أعد المحاولة'); }
+  wfCfgShow();
+};
+$('wfAlways').onchange = async () => {
+  const W = nplug('WifiTrack'), v = $('wfAlways').checked;
+  if (!W) { $('wfAlways').checked = false; return; }
+  try { await W.setConfig({ always: v }); toast(v ? 'التشغيل الدائم مفعّل' : 'التشغيل الدائم متوقف'); } catch (e) { toast('تعذر الحفظ'); }
   wfCfgShow();
 };
 $('wfMark').onclick = async () => {
