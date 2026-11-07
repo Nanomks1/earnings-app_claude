@@ -86,20 +86,14 @@ public class AllFilesPlugin extends Plugin {
             File f = new File(d, name);
             File tmp = new File(d, name + ".tmp");
             byte[] b = data.getBytes(StandardCharsets.UTF_8);
-            FileOutputStream os = new FileOutputStream(tmp);
-            try {
+            try (FileOutputStream os = new FileOutputStream(tmp)) {
                 os.write(b);
                 os.getFD().sync();
-            } finally {
-                os.close();
             }
             if (!tmp.renameTo(f)) { // احتياط: كتابة مباشرة إن رفض النظام إعادة التسمية
-                FileOutputStream o2 = new FileOutputStream(f);
-                try {
+                try (FileOutputStream o2 = new FileOutputStream(f)) {
                     o2.write(b);
                     o2.getFD().sync();
-                } finally {
-                    o2.close();
                 }
                 tmp.delete();
             }
@@ -127,13 +121,10 @@ public class AllFilesPlugin extends Plugin {
                 return;
             }
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            InputStream is = new FileInputStream(f);
-            try {
+            try (InputStream is = new FileInputStream(f)) {
                 byte[] buf = new byte[8192];
                 int n;
                 while ((n = is.read(buf)) > 0) bos.write(buf, 0, n);
-            } finally {
-                is.close();
             }
             JSObject res = new JSObject();
             res.put("data", new String(bos.toByteArray(), StandardCharsets.UTF_8));

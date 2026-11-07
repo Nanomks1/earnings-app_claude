@@ -67,31 +67,47 @@ final class WifiTracker {
     }
 
     // تشغيل التتبع: تسجيل استيقاظ النظام عند اتصال الواي فاي، وبدء الخدمة إن كان الواي فاي متصلًا الآن
+    // من الواجهة: التسجيل فورًا، والفحص الثقيل في خيط مستقل كي لا يحجب الواجهة
     static void start(final Context c) {
         if (!isOn(c)) return;
-        prefs(c).edit().putLong("start_t", System.currentTimeMillis()).apply();
-        registerWake(c);
-        schedulePoll(c);
+        arm(c);
         new Thread(new Runnable() {
             @Override
             public void run() {
-                if (always(c) && !WifiWatchService.running) {
-                    startSvc(c);
-                }
-                if (useRoot(c)) {
-                    exemptBattery(c);
-                }
-                if (wifiUp(c)) {
-                    onWake(c, false);
-                } else if ("c".equals(state(c))) {
-                    try {
-                        onDisconnected(c, System.currentTimeMillis(), 1);
-                    } catch (Exception e) {
-                        // تجاهل
-                    }
-                }
+                startWork(c);
             }
         }).start();
+    }
+
+    // من خيط خلفي (مستقبل الإقلاع والتحديث): كل العمل قبل أن يحرّر المستقبل قفل الاستيقاظ
+    static void startSync(Context c) {
+        if (!isOn(c)) return;
+        arm(c);
+        startWork(c);
+    }
+
+    private static void arm(Context c) {
+        prefs(c).edit().putLong("start_t", System.currentTimeMillis()).apply();
+        registerWake(c);
+        schedulePoll(c);
+    }
+
+    private static void startWork(Context c) {
+        if (always(c) && !WifiWatchService.running) {
+            startSvc(c);
+        }
+        if (useRoot(c)) {
+            exemptBattery(c);
+        }
+        if (wifiUp(c)) {
+            onWake(c, false);
+        } else if ("c".equals(state(c))) {
+            try {
+                onDisconnected(c, System.currentTimeMillis(), 1);
+            } catch (Exception e) {
+                // تجاهل
+            }
+        }
     }
 
     static void startSvc(Context c) {
