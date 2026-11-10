@@ -54,7 +54,7 @@
     box.innerHTML = conv + shown.map(d => {
       const g = days[d].sort((a, b) => a.t - b.t || a.id - b.id);
       const shopL = g.filter(j => !j.remote), shop = sum(shopL), rem = sum(g.filter(j => j.remote)), wage = wm[d] || 0, cells = [];
-      const cell = (k, v, hl) => '<div' + (hl ? ' class="hl"' : '') + '><small>' + k + '</small><b>' + v + '</b></div>';
+      const cell = (k, v, hl) => '<div' + (hl ? ' class="jhl"' : '') + '><small>' + k + '</small><b>' + v + '</b></div>';
       if (wage > 0) cells.push(cell('الأجر', money(wage)));
       if (shopL.length) cells.push(cell('العناصر', money(shop), true));
       if (wage > 0 && shop > 0) cells.push(cell('النسبة', num(Math.round(shop / wage * 10) / 10) + '×'));

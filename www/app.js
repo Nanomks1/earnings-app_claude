@@ -150,6 +150,9 @@ const today = () => iso(new Date());
 const nowTime = () => { const d = new Date(); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); };
 const dt = s => new Date(s + 'T00:00');
 const fmtShort = s => dt(s).toLocaleDateString('ar-u-nu-latn', { day: 'numeric', month: 'long', year: 'numeric' });
+const fmtNoYear = s => dt(s).toLocaleDateString('ar-u-nu-latn', { day: 'numeric', month: 'long' });
+// مدى تاريخي: تُحذف السنة من البداية إن طابقت سنة النهاية (تجنّب التكرار وكسر السطر)
+const rangeShort = (a, b) => (a.slice(0, 4) === b.slice(0, 4) ? fmtNoYear(a) : fmtShort(a)) + ' ← ' + fmtShort(b);
 const fmtDay = s => dt(s).toLocaleDateString('ar-u-nu-latn', dt(s).getFullYear() === new Date().getFullYear() ? { weekday: 'long', day: 'numeric', month: 'long' } : { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 const unit = (n, one, two, few) => n === 1 ? one : n === 2 ? two : n + ' ' + (n <= 10 ? few : one);
 const fmtDur = m => { m = Math.round(m); const h = Math.floor(m / 60), r = m % 60; return [h ? unit(h, 'ساعة', 'ساعتان', 'ساعات') : '', r ? unit(r, 'دقيقة', 'دقيقتان', 'دقائق') : ''].filter(Boolean).join(' و ') || '—'; };
@@ -392,7 +395,7 @@ function render() {
   sorted.forEach(i => (groups[monday(i.date)] = groups[monday(i.date)] || []).push(i));
   $('list').innerHTML = sorted.length ? Object.keys(groups).sort().reverse().map(k => {
     const g = calc(groups[k]);
-    return `<div class="wk"><span>${weekLabel(k)}</span><span class="r"><b class="num">${signed(g.work - g.adv)}</b><button class="wkb" data-wk="${k}" aria-label="مشاركة الأسبوع">${ic('share')}</button></span></div>` + groups[k].map(itemRow).join('');
+    return `<div class="wk"><span>${weekLabel(k)}</span><span class="r"><small>الصافي</small><b class="num">${signed(g.work - g.adv)}</b><button class="wkb" data-wk="${k}" aria-label="مشاركة الأسبوع">${ic('share')}</button></span></div>` + groups[k].map(itemRow).join('');
   }).join('') : isFlt() ? emptyBox('search', 'لا توجد نتائج مطابقة.') : emptyBox('clock', 'لا توجد سجلات في الفترة الحالية.<br>سجّل دخول العمل أو أضف يومًا.');
   renderFltRes();
   renderView();
@@ -504,13 +507,13 @@ function renderArchive() {
   const arc = [...state.archive].reverse(), totRec = round2(arc.reduce((t, a) => t + (Number(a.received) || 0), 0));
   $('arch').innerHTML = arc.length ? `<button class="pay" style="margin:0;width:100%" id="shareAll">${ic('share')}مشاركة كل الدفعات</button><div style="display:flex;justify-content:space-between;gap:10px;margin:10px 4px 0;font-size:calc(13px*var(--fs,1));color:var(--mut)"><span>مجموع المستلم: <b style="color:var(--text)">${money(totRec)}</b></span><span>عدد الدفعات: <b style="color:var(--text)">${arc.length}</b></span></div>` + arc.map(a => {
     const dates = a.items.map(i => i.date).sort();
-    const range = dates.length ? fmtShort(dates[0]) + ' ← ' + fmtShort(dates[dates.length - 1]) : '—';
+    const range = dates.length ? rangeShort(dates[0], dates[dates.length - 1]) : '—';
     const lines = [...a.items].sort((x, y) => x.date.localeCompare(y.date)).map(i =>
       `${fmtShort(i.date)}: ${i.type === 'work' ? (i.remote ? 'عن بعد = ' : fmtDur(i.mins) + ' = ') + money(i.amount) : 'كريدي ' + signed(-i.amount)}${i.note ? ' • ' + esc(i.note) : ''}`).join('<br>');
     const rem = round2(a.remain || 0), ps = paysSorted(a);
     const badge = rem === 0 ? `<span class="pill pos">مسدّدة</span>` : rem > 0 ? `<span class="pill neg">بقي ${money(rem)}</span>` : `<span class="pill pos">زيادة ${money(-rem)}</span>`;
     const payRows = ps.map(p => `<div class="kv" style="align-items:center;padding:0 0 0 0"><span>${fmtShort(p.d)}${p.n ? ' • ' + esc(p.n) : ''}</span><span style="display:flex;align-items:center;gap:6px"><b>${money(p.a)}</b><button class="pe" type="button" data-id="${a.id}" data-p="${p.id}" aria-label="تعديل الدفعة" style="background:none;border:0;color:var(--mut);width:36px;height:36px;display:grid;place-items:center">${ic('edit')}</button></span></div>`).join('');
-    return `<details class="card"><summary><span class="bub">${ic('tcircle')}</span><div><b>${fmtShort(a.paidAt)}</b><small>${range}</small><small>${badge}</small></div><b class="num${Number(a.received) ? '' : ' zero'}" style="direction:ltr">${money(a.received)}</b></summary>
+    return `<details class="card"><summary><span class="bub chv">${ic('chev')}</span><div><b>${fmtShort(a.paidAt)}</b><small>${range}</small><small>${badge}</small></div><b class="num${Number(a.received) ? '' : ' zero'}" style="direction:ltr">${money(a.received)}</b></summary>
       <div class="lines">
         <div class="kv"><span>أيام العمل</span><b>${a.days}</b></div>
         <div class="kv"><span>مجموع الساعات</span><b>${fmtHM(a.mins)}</b></div>
@@ -774,9 +777,10 @@ function renderBalance() {
   if (pts.length < 2) { $('chartBal').innerHTML = head + '<div class="nodata">لا توجد بيانات كافية في هذه الفترة</div>'; return; }
   const t = p => dt(p.d).getTime(), t0 = t(pts[0]), t1 = t(pts[pts.length - 1]);
   const vs = pts.map(p => p.v), mx = Math.max(...vs, 0), mn = Math.min(...vs, 0), span = mx - mn || 1;
-  const X = p => t1 === t0 ? 0 : (t(p) - t0) / (t1 - t0) * 300, Y = v => 8 + (mx - v) / span * 104;
+  const X = p => t1 === t0 ? 0 : (t1 - t(p)) / (t1 - t0) * 300, // الأحدث يسارًا كبقية الرسوم (اتجاه الزمن من اليمين لليسار)
+         Y = v => 8 + (mx - v) / span * 104;
   const line = pts.map(p => X(p).toFixed(1) + ',' + Y(p.v).toFixed(1)).join(' ');
-  const area = '0,' + Y(0).toFixed(1) + ' ' + line + ' 300,' + Y(0).toFixed(1);
+  const area = '300,' + Y(0).toFixed(1) + ' ' + line + ' 0,' + Y(0).toFixed(1);
   const sd = p => dt(p.d).toLocaleDateString('ar-u-nu-latn', { day: 'numeric', month: 'short' });
   $('chartBal').innerHTML = head +
     `<svg viewBox="0 0 300 120" preserveAspectRatio="none"><line x1="0" x2="300" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}" stroke="var(--bd)" stroke-width="1" stroke-dasharray="4 4" vector-effect="non-scaling-stroke"/>` +
@@ -788,6 +792,14 @@ function curDates() { // من بداية الفترة الحالية إلى ال
   const ds = state.items.map(i => i.date).filter(Boolean).sort();
   $('sFrom').value = ds.length ? ds[0] : today(); $('sTo').value = today();
 }
+// عرض التاريخ بصيغة «30 أكتوبر 2026» فوق حقل التاريخ الأصلي (الأصلي يعرض 10/30/2026 فيلتبس اليوم بالشهر)
+function dateView(id) {
+  const el = $(id), v = $(id + 'V'), d = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+  const upd = () => { v.textContent = el.value ? fmtShort(el.value) : '—'; };
+  Object.defineProperty(el, 'value', { get() { return d.get.call(this); }, set(x) { d.set.call(this, x); upd(); }, configurable: true });
+  el.addEventListener('input', upd); el.addEventListener('change', upd); upd();
+}
+dateView('sFrom'); dateView('sTo');
 function setMode(m) {
   sumMode = m;
   const d = new Date();
