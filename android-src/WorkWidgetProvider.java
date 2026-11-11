@@ -186,6 +186,8 @@ public class WorkWidgetProvider extends AppWidgetProvider {
         AppWidgetManager m = AppWidgetManager.getInstance(c);
         int[] ids = m.getAppWidgetIds(new ComponentName(c, WorkWidgetProvider.class));
         for (int id : ids) draw(c, m, id);
+        ComboWidgetProvider.refreshAll(c);
+        ItemWidgetProvider.refreshAll(c);
     }
 
     @Override

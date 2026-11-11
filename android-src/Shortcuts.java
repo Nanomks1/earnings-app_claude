@@ -16,6 +16,7 @@ import java.util.Arrays;
 final class Shortcuts {
     static final String IN = "com.pd.earnings.SC_IN";
     static final String OUT = "com.pd.earnings.SC_OUT";
+    static final String ITEM = "com.pd.earnings.SC_ITEM"; // من ودجت «إضافة عنصر»
 
     private static Icon glyph(Context c, int res, int bg) {
         int s = 192;
@@ -63,8 +64,8 @@ final class Shortcuts {
     static void capture(Context c, Intent i) {
         if (i == null || i.getAction() == null) return;
         String a = i.getAction();
-        if (IN.equals(a) || OUT.equals(a)) {
-            WorkWidgetProvider.prefs(c).edit().putString("sc", IN.equals(a) ? "in" : "out").commit();
+        if (IN.equals(a) || OUT.equals(a) || ITEM.equals(a)) {
+            WorkWidgetProvider.prefs(c).edit().putString("sc", IN.equals(a) ? "in" : (OUT.equals(a) ? "out" : "item")).commit();
             i.setAction(Intent.ACTION_MAIN);
         }
     }
