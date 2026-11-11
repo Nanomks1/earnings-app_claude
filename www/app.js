@@ -711,7 +711,7 @@ $('shareCur').onclick = () => {
   askShare('مشاركة الفترة الحالية', d => currentText(d), d => ({ cfg: currentCfg(d), name: 'work-current-' + today() + '.pdf' }));
 };
 const stat = (icon, cls, val, label) => {
-  const L = val.replace(/<[^>]*>/g, '').length, f = /wide|net/.test(cls) ? '' : L > 12 ? ' f2' : L > 9 ? ' f1' : ''; // الأرقام الطويلة تصغر بدل أن تُقصّ
+  const L = val.replace(/<[^>]*>/g, '').length, f = /wide|net/.test(cls) ? '' : L > 10 ? ' f2' : L > 8 ? ' f1' : ''; // الأرقام الطويلة تصغر بدل أن تُقصّ
   return `<div class="stat ${cls}${f}"><span class="bub ${cls === 'cr' ? 'neg' : ''}">${ic(icon)}</span><div class="txt"><div class="sv num">${val}</div><div class="sl">${label}</div></div></div>`;
 };
 const num2 = n => Number(n).toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -726,8 +726,8 @@ function renderSummary() {
     stat('calendar', '', `<span>${c.days}</span>`, 'أيام العمل') +
     stat('clock', '', `<span dir="ltr">${fmtHM(c.mins)}<small>س</small></span>`, 'مجموع الساعات') +
     (cur ? '' : stat('cash', '', mv(c.work), 'الأجور') + stat('mcircle', 'cr', mv(c.adv, c.adv > 0), 'الكريدي') + (c.ramt ? stat('home', 'wide', mv(c.ramt), 'منها عن بعد') : '')) +
-    stat('cash', '', mv(c.days ? round2(c.work / c.days) : 0), 'متوسط أجر اليوم') +
-    stat('clock', '', `<span dir="ltr">${fmtHM(c.wd ? c.mins / c.wd : 0)}<small>س</small></span>`, 'متوسط ساعات اليوم') +
+    stat('cash', '', mv(c.days ? round2(c.work / c.days) : 0), 'متوسط الأجر') +
+    stat('clock', '', `<span dir="ltr">${fmtHM(c.wd ? c.mins / c.wd : 0)}<small>س</small></span>`, 'متوسط الساعات') +
     (cur && c.ramt ? stat('home', 'wide', mv(c.ramt), 'أجور عن بعد') : '') +
     (cur && !state.carry ? '' : stat('tcircle', 'net', mv(Math.abs(c.work - c.adv), c.work - c.adv < 0), 'الصافي'));
   $('sDates').style.display = sumMode === 'all' ? 'none' : ''; // «الكل» بلا حقلي من/إلى
@@ -855,7 +855,7 @@ function renderCal() {
     const mins = L.filter(i => i.type === 'work' && !i.remote).reduce((s, i) => s + i.mins, 0);
     const rem = L.some(i => i.type === 'work' && i.remote), adv = L.some(i => i.type === 'adv');
     const cls = mins > 0 ? 'w' : rem ? 'r' : adv ? 'a' : ds < td ? 'e' : '';
-    const sub = mins > 0 ? fmtHM(mins) : rem ? 'عن بعد' : adv ? 'كريدي' : '';
+    const sub = mins > 0 ? fmtHM(mins) : rem ? ic('home') : adv ? 'كريدي' : '';
     const dots = (mins > 0 && rem ? '<i class="r"></i>' : '') + (adv && (mins > 0 || rem) ? '<i class="a"></i>' : '');
     cells += `<button class="cd ${cls}${ds === td ? ' td' : ''}" data-d="${ds}">${dots}${d}${sub ? '<b>' + sub + '</b>' : ''}</button>`;
   }

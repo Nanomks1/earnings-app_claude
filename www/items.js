@@ -60,8 +60,7 @@
       if (wage > 0 && shop > 0) cells.push(cell('النسبة', num(Math.round(shop / wage * 10) / 10) + '×'));
       if (rem > 0) cells.push(cell('عن بعد', money(rem)));
       return '<div class="jcard"><div class="jh"><b>' + fmtDay(d) + '</b></div><div class="jk">' + cells.join('') + '</div>' +
-        g.map(j => '<button class="jrow" type="button" data-id="' + j.id + '"><span class="jt"><b><bdi>' + esc(j.dev) + '</bdi></b><span class="jm">' +
-          (j.pr ? ' · ' + esc(j.pr) : '') + '</span>' + (j.remote ? '<span class="jx"> · عن بعد' + (settled(j, have) ? ' · محسوبة' : '') + '</span>' : '') +
+        g.map(j => '<button class="jrow" type="button" data-id="' + j.id + '"><span class="jt"><b><bdi>' + esc(j.dev) + '</bdi></b>' + (j.pr ? '<span class="jm">' + esc(j.pr) + '</span>' : '') + (j.remote ? '<span class="jx"> · عن بعد' + (settled(j, have) ? ' · محسوبة' : '') + '</span>' : '') +
           '</span><span class="jp num">' + money(j.amt) + '</span></button>').join('') + '</div>';
     }).join('') + (keys.length > shown.length ? '<button class="jmore" id="jMore" type="button">عرض أيام أقدم</button>' : '');
   }
@@ -95,9 +94,9 @@
     const ratio = wage > 0 && shop > 0 ? Math.round(shop / wage * 10) / 10 : 0;
     if (dk.length) {
       const best = dk.sort((a, b) => sd[b] - sd[a])[0], mxc = Math.max(shop, wage, 1), pcw = v => Math.max(3, Math.round(v / mxc * 100));
-      cmp += '<div class="jcmp"><div class="jt a"><small>عناصر المحل</small><div class="n">' + money(shop) + '</div><div class="jtr"><i style="width:' + pcw(shop) + '%"></i></div></div>' +
-        '<div class="jt"><small>أجر نفس الأيام</small><div class="n">' + money(wage) + '</div><div class="jtr"><i style="width:' + pcw(wage) + '%"></i></div></div></div>' +
-        '<div class="jmm"><div><small>الثمن لكل ساعة عمل</small><b>' + (hrs > 0 ? money(round2(shop / hrs)) : '—') + '</b></div>' +
+      cmp += '<div class="stcmp"><div class="stt a"><small>عناصر المحل</small><div class="n">' + money(shop) + '</div><div class="sttr"><i style="width:' + pcw(shop) + '%"></i></div></div>' +
+        '<div class="stt"><small>أجر نفس الأيام</small><div class="n">' + money(wage) + '</div><div class="sttr"><i style="width:' + pcw(wage) + '%"></i></div></div></div>' +
+        '<div class="stmm"><div><small>الثمن لكل ساعة عمل</small><b>' + (hrs > 0 ? money(round2(shop / hrs)) : '—') + '</b></div>' +
         '<div><small>أفضل يوم • <bdi dir="rtl">' + fmtNoYear(best) + '</bdi></small><b>' + money(sd[best]) + '</b></div></div>';
     }
     html += '<div class="jgrid"><div class="jg hero"><small>المجموع</small><b>' + money(tot) + '</b>' +
@@ -113,7 +112,7 @@
       const rw = round2(allItems().reduce((t, i) => t + (i.type === 'work' && i.remote && rg(i.date) ? i.amount : 0), 0));
       cmp += kv('عناصر عن بعد', money(sum(remJ))) + kv('أجور عن بعد في الفترة', money(rw));
     }
-    if (cmp) html += '<div class="jbox"><div class="mh jh"><span>مقارنة بالأجر</span>' + (ratio ? '<span class="p">' + num(ratio) + '×</span>' : '') + '</div>' + cmp + '</div>';
+    if (cmp) html += '<div class="jbox"><div class="mh sth"><span>مقارنة بالأجر</span>' + (ratio ? '<span class="p">' + num(ratio) + '×</span>' : '') + '</div>' + cmp + '</div>';
     // حسب الماركة (أول كلمة من اسم الجهاز) وحسب المشكلة
     const grp = fn => { const m = new Map(); J.forEach(j => fn(j).forEach(p => { const o = m.get(p[0]) || { s: p[1], n: 0, t: 0 }; o.n++; o.t = round2(o.t + j.amt); m.set(p[0], o); })); return [...m.values()]; };
     const probs = grp(j => splitPr(j.pr).map(p => [k1(p), p])).sort((a, b) => b.t - a.t || b.n - a.n).slice(0, 8);

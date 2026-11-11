@@ -422,21 +422,21 @@ details[open] .bub.chv .ic{transform:rotate(90deg)}
 .pchip:active{background:rgba(255,255,255,.3)}
 
 /* إحصاءات العناصر: بطاقة مقارنة بالأجر وبطاقة حسب النوع */
-.jh{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
-.jh .p{font-size:calc(13px*var(--fs,1));font-weight:700;padding:2px 10px;border-radius:999px;background:color-mix(in srgb,var(--gd2) 28%,transparent);color:var(--gdt);direction:ltr}
-.jcmp,.jmm{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.jcmp{margin-top:6px}
-.jmm{margin-top:10px}
-.jt{border-radius:14px;padding:10px 12px;background:var(--card2);min-width:0}
-.jt.a{background:var(--tint)}
-.jt small,.jmm small{display:block;font-size:calc(12px*var(--fs,1));color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.jt .n{font-size:calc(19px*var(--fs,1));font-weight:800;direction:ltr;text-align:right;margin:2px 0 8px;white-space:nowrap}
-.jt.a .n{color:var(--pritx)}
-.jtr{height:6px;border-radius:3px;background:color-mix(in srgb,var(--text) 10%,transparent);overflow:hidden}
-.jtr i{display:block;height:100%;border-radius:3px;background:var(--mut)}
-.jt.a .jtr i{background:var(--pritx)}
-.jmm>div{border:1px solid var(--bd);border-radius:12px;padding:8px 10px;min-width:0}
-.jmm b{display:block;font-size:calc(14.5px*var(--fs,1));direction:ltr;text-align:right}
+.sth{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.sth .p{font-size:calc(13px*var(--fs,1));font-weight:700;padding:2px 10px;border-radius:999px;background:color-mix(in srgb,var(--gd2) 28%,transparent);color:var(--gdt);direction:ltr}
+.stcmp,.stmm{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stcmp{margin-top:6px}
+.stmm{margin-top:10px}
+.stt{border-radius:14px;padding:10px 12px;background:var(--card2);min-width:0}
+.stt.a{background:var(--tint)}
+.stt small,.stmm small{display:block;font-size:calc(12px*var(--fs,1));color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stt .n{font-size:calc(19px*var(--fs,1));font-weight:800;direction:ltr;text-align:right;margin:2px 0 8px;white-space:nowrap}
+.stt.a .n{color:var(--pritx)}
+.sttr{height:6px;border-radius:3px;background:color-mix(in srgb,var(--text) 10%,transparent);overflow:hidden}
+.sttr i{display:block;height:100%;border-radius:3px;background:var(--mut)}
+.stt.a .sttr i{background:var(--pritx)}
+.stmm>div{border:1px solid var(--bd);border-radius:12px;padding:8px 10px;min-width:0}
+.stmm b{display:block;font-size:calc(14.5px*var(--fs,1));direction:ltr;text-align:right}
 .hl{align-items:flex-start}
 .hn{display:flex;align-items:center;gap:8px;font-weight:600}
 .hn bdi{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -447,3 +447,18 @@ details[open] .bub.chv .ic{transform:rotate(90deg)}
 .hbar{height:8px;border-radius:4px;margin-top:6px}
 .hbar i{border-radius:4px}
 .hbar i.gd{background:linear-gradient(90deg,var(--gd2),var(--gd1))}
+
+/* زر ثانوي عريض (الأرشيف والتقويم) */
+.pay{display:flex;align-items:center;justify-content:center;gap:8px;margin:12px 16px 0;width:calc(100% - 32px);height:48px;border-radius:16px;border:1px solid var(--pri);background:var(--card);color:var(--text);font-weight:700;font-size:calc(15px*var(--fs,1))}
+.pay .ic{color:var(--pritx)}
+/* الملخص: الأرقام لا تنكسر */
+.stat .sv>span{flex-wrap:nowrap;white-space:nowrap}
+.stat.f2 .sv{font-size:calc(12.5px*var(--fs,1))}
+/* مشاركة الملخص زر ثانوي */
+#sShare{background:var(--card);color:var(--text);border:1px solid var(--pri)}
+#sShare .ic{color:var(--pritx)}
+/* التقويم: بلاطات 2×2 وأيقونة عن بعد */
+.cs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cs div{padding:9px 6px}
+.cs b{font-size:calc(15px*var(--fs,1))}
+.cd b .ic{width:16px;height:16px;vertical-align:middle}
