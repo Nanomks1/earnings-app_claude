@@ -740,7 +740,7 @@ function renderChart() {
   $('chart').innerHTML = `<div class="ch"><b>ساعات آخر 7 أيام</b><span class="num">${fmtHM(tot)} س</span></div>${cmp}<div class="bars">` +
     days.map((d, n) => {
       const h = mins[n] / 60;
-      return `<div class="b ${mins[n] ? 'has' : ''} ${n === 6 ? 'today' : ''}"><span class="bv num">${mins[n] ? +h.toFixed(1) : ''}</span><i style="height:${mins[n] ? Math.max(6, Math.round(mins[n] / max * 84)) : 3}px"></i><span class="bd">${WD[dt(d).getDay()]}</span></div>`;
+      return `<div class="b ${mins[n] ? 'has' : ''} ${n === 6 ? 'today' : ''} ${mins[n] && mins[n] === max && new Set(mins.filter(Boolean)).size > 1 ? 'max' : ''}" style="--v:${(mins[n] / max).toFixed(2)}"><span class="bv num">${mins[n] ? +h.toFixed(1) : ''}</span><i style="height:${mins[n] ? Math.max(6, Math.round(mins[n] / max * 84)) : 3}px"></i><span class="bd">${WD[dt(d).getDay()]}</span></div>`;
     }).join('') + '</div>';
 }
 function renderWeekday() {
@@ -752,7 +752,7 @@ function renderWeekday() {
   if (!cnt.some(Boolean)) { $('chartWd').innerHTML = head + '<div class="nodata">لا توجد أيام عمل في هذه الفترة</div>'; return; }
   const avg = sum.map((t, k) => cnt[k] ? t / cnt[k] : 0), max = Math.max(...avg, 1);
   $('chartWd').innerHTML = head + '<div class="bars">' + [1, 2, 3, 4, 5, 6, 0].map(w =>
-    `<div class="b ${cnt[w] ? 'has' : ''}"><span class="bv num">${cnt[w] ? kfmt(avg[w]) : ''}</span><i style="height:${cnt[w] ? Math.max(6, Math.round(avg[w] / max * 84)) : 3}px"></i><span class="bd">${WD[w]}</span></div>`).join('') + '</div>';
+    `<div class="b ${cnt[w] ? 'has' : ''} ${cnt[w] && avg[w] === max && new Set(avg.filter(Boolean)).size > 1 ? 'max' : ''}" style="--v:${(avg[w] / max).toFixed(2)}"><span class="bv num">${cnt[w] ? kfmt(avg[w]) : ''}</span><i style="height:${cnt[w] ? Math.max(6, Math.round(avg[w] / max * 84)) : 3}px"></i><span class="bd">${WD[w]}</span></div>`).join('') + '</div>';
 }
 const kfmt = n => { const a = Math.abs(n), t = a >= 1000 ? (Math.round(a / 100) / 10) + 'k' : String(Math.round(a)); return (n < 0 ? '-' : '') + t; };
 function renderMonths() {
