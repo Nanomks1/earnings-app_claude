@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>build-apk.yml</title>
+<style>
+body{font-family:system-ui,sans-serif;margin:0;background:#f4f5f7;color:#111}
+.bar{position:sticky;top:0;background:#fff;padding:12px;border-bottom:1px solid #ddd;display:flex;gap:10px;align-items:center}
+button{font-size:17px;padding:12px 22px;border:0;border-radius:12px;background:#2e7d32;color:#fff}
+span{font-size:14px;color:#555}
+pre{direction:ltr;text-align:left;margin:0;padding:12px;font-size:11px;line-height:1.45;white-space:pre-wrap;word-break:break-all}
+@media(prefers-color-scheme:dark){body{background:#121212;color:#eee}.bar{background:#1e1e1e;border-color:#333}span{color:#aaa}}
+</style></head><body>
+<div class="bar"><button id="b">نسخ الملف</button><span id="m">.github/workflows/build-apk.yml</span></div>
+<pre id="c">name: Build APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Show resolved library versions
+        run: npm ls --depth=0
+
+      - name: Add Android platform
+        run: npx cap add android
+
+      - name: Status bar icons follow day/night
+        run: |
+          R=android/app/src/main/res
+          mkdir -p $R/values $R/values-night
+          printf &#x27;&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;\n&lt;resources&gt;\n    &lt;bool name=&quot;work_light_bars&quot;&gt;true&lt;/bool&gt;\n&lt;/resources&gt;\n&#x27; &gt; $R/values/work_bool.xml
+          printf &#x27;&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;\n&lt;resources&gt;\n    &lt;bool name=&quot;work_light_bars&quot;&gt;false&lt;/bool&gt;\n&lt;/resources&gt;\n&#x27; &gt; $R/values-night/work_bool.xml
+          sed -i &#x27;s#\(&lt;style name=&quot;AppTheme.NoActionBar&quot;[^&gt;]*&gt;\)#\1\n        &lt;item name=&quot;android:windowLightStatusBar&quot;&gt;@bool/work_light_bars&lt;/item&gt;\n        &lt;item name=&quot;android:windowLightNavigationBar&quot;&gt;@bool/work_light_bars&lt;/item&gt;#&#x27; $R/values/styles.xml
+
+      - name: App icons (2 styles x 8 colors, switchable)
+        run: |
+          pip install --break-system-packages pillow
+          python3 android-src/gen_icons.py
+          P=android/app/src/main/java/com/pd/earnings
+          mkdir -p $P
+          cp android-src/AppIconPlugin.java $P/
+
+      - name: All-files backup plugin
+        run: |
+          P=android/app/src/main/java/com/pd/earnings
+          mkdir -p $P
+          cp android-src/AllFilesPlugin.java $P/
+
+      - name: Fingerprint lock + home-screen widget
+        run: |
+          P=android/app/src/main/java/com/pd/earnings
+          R=android/app/src/main/res
+          mkdir -p $P $R/layout $R/drawable $R/xml
+          cp android-src/BioPlugin.java $P/
+          cp android-src/WorkWidgetProvider.java $P/
+          cp android-src/TotalWidgetProvider.java $P/
+          cp android-src/Shortcuts.java $P/
+          cp android-src/WorkWidgetPlugin.java $P/
+          cp android-src/ItemWidgetProvider.java $P/
+          cp android-src/ComboWidgetProvider.java $P/
+          cp android-src/MainActivity.java $P/
+          cp android-src/WifiTracker.java $P/
+          cp android-src/WifiWatchService.java $P/
+          cp android-src/WifiBootReceiver.java $P/
+          cp android-src/WifiTrackPlugin.java $P/
+          cp android-src/work_widget.xml $R/layout/
+          cp android-src/work_widget_bg.xml $R/drawable/
+          cp android-src/work_widget_bg_on.xml $R/drawable/
+          cp android-src/work_w_play.xml $R/drawable/
+          cp android-src/work_w_stop.xml $R/drawable/
+          cp android-src/work_w_check.xml $R/drawable/
+          cp android-src/work_widget_bg_glass.xml $R/drawable/
+          cp android-src/work_widget_bg_none.xml $R/drawable/
+          cp android-src/work_widget_bg_dark.xml $R/drawable/
+          cp android-src/work_w_play_s.xml $R/drawable/
+          cp android-src/work_w_stop_s.xml $R/drawable/
+          cp android-src/work_w_check_s.xml $R/drawable/
+          cp android-src/work_w_play_r.xml $R/drawable/
+          cp android-src/work_w_stop_r.xml $R/drawable/
+          cp android-src/work_w_check_r.xml $R/drawable/
+          cp android-src/work_w_colors.xml $R/values/work_w_colors.xml
+          cp android-src/work_w_colors_night.xml $R/values-night/work_w_colors.xml
+          cp android-src/work_widget_info.xml $R/xml/
+          cat &gt; $R/layout/work_total_widget.xml &lt;&lt;&#x27;XMLEOF&#x27;
+          &lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+          &lt;LinearLayout xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;
+              android:id=&quot;@+id/work_t_root&quot;
+              android:layout_width=&quot;match_parent&quot;
+              android:layout_height=&quot;match_parent&quot;
+              android:orientation=&quot;vertical&quot;
+              android:gravity=&quot;center&quot;
+              android:paddingStart=&quot;12dp&quot;
+              android:paddingEnd=&quot;12dp&quot;
+              android:paddingTop=&quot;6dp&quot;
+              android:paddingBottom=&quot;6dp&quot;
+              android:background=&quot;@drawable/work_widget_bg&quot;&gt;
+              &lt;TextView
+                  android:id=&quot;@+id/work_t_label&quot;
+                  android:layout_width=&quot;wrap_content&quot;
+                  android:layout_height=&quot;wrap_content&quot;
+                  android:maxLines=&quot;1&quot;
+                  android:textSize=&quot;12sp&quot;
+                  android:text=&quot;المجموع الكامل&quot; /&gt;
+              &lt;TextView
+                  android:id=&quot;@+id/work_t_value&quot;
+                  android:layout_width=&quot;match_parent&quot;
+                  android:layout_height=&quot;0dp&quot;
+                  android:layout_weight=&quot;1&quot;
+                  android:gravity=&quot;center&quot;
+                  android:maxLines=&quot;1&quot;
+                  android:textStyle=&quot;bold&quot;
+                  android:textDirection=&quot;ltr&quot;
+                  android:autoSizeTextType=&quot;uniform&quot;
+                  android:autoSizeMinTextSize=&quot;12sp&quot;
+                  android:autoSizeMaxTextSize=&quot;26sp&quot;
+                  android:text=&quot;&quot; /&gt;
+          &lt;/LinearLayout&gt;
+          XMLEOF
+          cat &gt; $R/xml/work_total_info.xml &lt;&lt;&#x27;XMLEOF&#x27;
+          &lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+          &lt;appwidget-provider xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;
+              android:minWidth=&quot;110dp&quot;
+              android:minHeight=&quot;40dp&quot;
+              android:targetCellWidth=&quot;2&quot;
+              android:targetCellHeight=&quot;1&quot;
+              android:updatePeriodMillis=&quot;0&quot;
+              android:initialLayout=&quot;@layout/work_total_widget&quot;
+              android:resizeMode=&quot;horizontal|vertical&quot;
+              android:widgetCategory=&quot;home_screen&quot; /&gt;
+          XMLEOF
+          cat &gt; $R/layout/work_item_widget.xml &lt;&lt;&#x27;XMLEOF&#x27;
+          &lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+          &lt;LinearLayout xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;
+              android:id=&quot;@+id/work_i_root&quot;
+              android:layout_width=&quot;match_parent&quot;
+              android:layout_height=&quot;match_parent&quot;
+              android:orientation=&quot;vertical&quot;
+              android:gravity=&quot;center&quot;
+              android:padding=&quot;6dp&quot;
+              android:background=&quot;@drawable/work_widget_bg&quot;&gt;
+              &lt;ImageView
+                  android:id=&quot;@+id/work_i_icon_a&quot;
+                  android:layout_width=&quot;30dp&quot;
+                  android:layout_height=&quot;30dp&quot;
+                  android:tint=&quot;@color/work_w_fg&quot;
+                  android:src=&quot;@drawable/work_w_add&quot; /&gt;
+              &lt;ImageView
+                  android:id=&quot;@+id/work_i_icon_w&quot;
+                  android:layout_width=&quot;30dp&quot;
+                  android:layout_height=&quot;30dp&quot;
+                  android:tint=&quot;#FFFFFFFF&quot;
+              android:visibility=&quot;gone&quot;
+                  android:src=&quot;@drawable/work_w_add&quot; /&gt;
+              &lt;ImageView
+                  android:id=&quot;@+id/work_i_icon_k&quot;
+                  android:layout_width=&quot;30dp&quot;
+                  android:layout_height=&quot;30dp&quot;
+                  android:tint=&quot;#FF111111&quot;
+              android:visibility=&quot;gone&quot;
+                  android:src=&quot;@drawable/work_w_add&quot; /&gt;
+              &lt;TextView
+                  android:id=&quot;@+id/work_i_title_a&quot;
+                  android:layout_width=&quot;wrap_content&quot;
+                  android:layout_height=&quot;wrap_content&quot;
+                  android:layout_marginTop=&quot;2dp&quot;
+                  android:maxLines=&quot;1&quot;
+                  android:textColor=&quot;@color/work_w_fg&quot;
+                  android:textSize=&quot;12sp&quot;
+                  android:text=&quot;عنصر&quot; /&gt;
+              &lt;TextView
+                  android:id=&quot;@+id/work_i_title_w&quot;
+                  android:layout_width=&quot;wrap_content&quot;
+                  android:layout_height=&quot;wrap_content&quot;
+                  android:layout_marginTop=&quot;2dp&quot;
+                  android:maxLines=&quot;1&quot;
+                  android:textColor=&quot;#FFFFFFFF&quot;
+                  android:textSize=&quot;12sp&quot;
+                  android:visibility=&quot;gone&quot;
+                  android:text=&quot;عنصر&quot; /&gt;
+              &lt;TextView
+                  android:id=&quot;@+id/work_i_title_k&quot;
+                  android:layout_width=&quot;wrap_content&quot;
+                  android:layout_height=&quot;wrap_content&quot;
+                  android:layout_marginTop=&quot;2dp&quot;
+                  android:maxLines=&quot;1&quot;
+                  android:textColor=&quot;#FF111111&quot;
+                  android:textSize=&quot;12sp&quot;
+                  android:visibility=&quot;gone&quot;
+                  android:text=&quot;عنصر&quot; /&gt;
+          &lt;/LinearLayout&gt;
+          XMLEOF
+          cat &gt; $R/layout/work_combo_widget.xml &lt;&lt;&#x27;XMLEOF&#x27;
+          &lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+          &lt;LinearLayout xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;
+              android:id=&quot;@+id/work_c_root&quot;
+              android:layout_width=&quot;match_parent&quot;
+              android:layout_height=&quot;match_parent&quot;
+              android:orientation=&quot;horizontal&quot;
+              android:layoutDirection=&quot;rtl&quot;
+              android:gravity=&quot;center&quot;
+              android:padding=&quot;1dp&quot;
+              android:background=&quot;@drawable/work_widget_bg&quot;&gt;
+              &lt;LinearLayout
+                  android:id=&quot;@+id/work_c_in&quot;
+                  android:layout_width=&quot;0dp&quot;
+                  android:layout_height=&quot;match_parent&quot;
+                  android:layout_weight=&quot;1&quot;
+                  android:orientation=&quot;vertical&quot;
+                  android:gravity=&quot;center&quot;
+                  android:padding=&quot;6dp&quot;&gt;
+                  &lt;ImageView
+                      android:id=&quot;@+id/work_c_in_a&quot;
+                      android:layout_width=&quot;30dp&quot;
+                      android:layout_height=&quot;30dp&quot;
+                      android:tint=&quot;@color/work_w_fg&quot;
+                      android:src=&quot;@drawable/work_w_play&quot; /&gt;
+                  &lt;ImageView
+                      android:id=&quot;@+id/work_c_in_w&quot;
+                      android:layout_width=&quot;30dp&quot;
+                      android:layout_height=&quot;30dp&quot;
+                      android:tint=&quot;#FFFFFFFF&quot;
+                      android:visibility=&quot;gone&quot;
+                      android:src=&quot;@drawable/work_w_play&quot; /&gt;
+                  &lt;ImageView
+                      android:id=&quot;@+id/work_c_in_k&quot;
+                      android:layout_width=&quot;30dp&quot;
+                      android:layout_height=&quot;30dp&quot;
+                      android:tint=&quot;#FF111111&quot;
+                      android:visibility=&quot;gone&quot;
+                      android:src=&quot;@drawable/work_w_play&quot; /&gt;
+                  &lt;TextView
+                      android:id=&quot;@+id/work_c_in_ta&quot;
+                      android:layout_width=&quot;wrap_content&quot;
+                      android:layout_height=&quot;wrap_content&quot;
+                      android:layout_marginTop=&quot;2dp&quot;
+                      android:maxLines=&quot;1&quot;
+                      android:textColor=&quot;@color/work_w_fg&quot;
+                      android:textSize=&quot;12sp&quot;
+                      android:text=&quot;دخول&quot; /&gt;
+                  &lt;TextView
+                      android:id=&quot;@+id/work_c_in_tw&quot;
+                      android:layout_width=&quot;wrap_content&quot;
+                      android:layout_height=&quot;wrap_content&quot;
+                      android:layout_marginTop=&quot;2dp&quot;
+                      android:maxLines=&quot;1&quot;
+                      android:textColor=&quot;#FFFFFFFF&quot;
+                      android:textSize=&quot;12sp&quot;
+                      android:visibility=&quot;gone&quot;
+                      android:text=&quot;دخول&quot; /&gt;
+                  &lt;TextView
+                      android:id=&quot;@+id/work_c_in_tk&quot;
+                      android:layout_width=&quot;wrap_content&quot;
+                      android:layout_height=&quot;wrap_content&quot;
+                      android:layout_marginTop=&quot;2dp&quot;
+                      android:maxLines=&quot;1&quot;
+                      android:textColor=&quot;#FF111111&quot;
+                      android:textSize=&quot;12sp&quot;
+                      android:visibility=&quot;gone&quot;
+                      android:text=&quot;دخول&quot; /&gt;
+              &lt;/LinearLayout&gt;
+              &lt;View
+                  android:layout_width=&quot;1dp&quot;
+                  android:layout_height=&quot;40dp&quot;
+                  android:background=&quot;#33808080&quot; /&gt;
+              &lt;LinearLayout
+                  android:id=&quot;@+id/work_c_add&quot;
+                  android:layout_width=&quot;0dp&quot;
+                  android:layout_height=&quot;match_parent&quot;
+                  android:layout_weight=&quot;1&quot;
+                  android:orientation=&quot;vertical&quot;
+                  android:gravity=&quot;center&quot;
+                  android:padding=&quot;6dp&quot;&gt;
+                  &lt;ImageView
+                      android:id=&quot;@+id/work_c_add_a&quot;
+                      android:layout_width=&quot;30dp&quot;
+                      android:layout_height=&quot;30dp&quot;
+                      android:tint=&quot;@color/work_w_fg&quot;
+                      android:src=&quot;@drawable/work_w_add&quot; /&gt;
+                  &lt;ImageView
+                      android:id=&quot;@+id/work_c_add_w&quot;
+                      android:layout_width=&quot;30dp&quot;
+                      android:layout_height=&quot;30dp&quot;
+                      android:tint=&quot;#FFFFFFFF&quot;
+                      android:visibility=&quot;gone&quot;
+                      android:src=&quot;@drawable/work_w_add&quot; /&gt;
+                  &lt;ImageView
+                      android:id=&quot;@+id/work_c_add_k&quot;
+                      android:layout_width=&quot;30dp&quot;
+                      android:layout_height=&quot;30dp&quot;
+                      android:tint=&quot;#FF111111&quot;
+                      android:visibility=&quot;gone&quot;
+                      android:src=&quot;@drawable/work_w_add&quot; /&gt;
+                  &lt;TextView
+                      android:id=&quot;@+id/work_c_add_ta&quot;
+                      android:layout_width=&quot;wrap_content&quot;
+                      android:layout_height=&quot;wrap_content&quot;
+                      android:layout_marginTop=&quot;2dp&quot;
+                      android:maxLines=&quot;1&quot;
+                      android:textColor=&quot;@color/work_w_fg&quot;
+                      android:textSize=&quot;12sp&quot;
+                      android:text=&quot;عنصر&quot; /&gt;
+                  &lt;TextView
+                      android:id=&quot;@+id/work_c_add_tw&quot;
+                      android:layout_width=&quot;wrap_content&quot;
+                      android:layout_height=&quot;wrap_content&quot;
+                      android:layout_marginTop=&quot;2dp&quot;
+                      android:maxLines=&quot;1&quot;
+                      android:textColor=&quot;#FFFFFFFF&quot;
+                      android:textSize=&quot;12sp&quot;
+                      android:visibility=&quot;gone&quot;
+                      android:text=&quot;عنصر&quot; /&gt;
+                  &lt;TextView
+                      android:id=&quot;@+id/work_c_add_tk&quot;
+                      android:layout_width=&quot;wrap_content&quot;
+                      android:layout_height=&quot;wrap_content&quot;
+                      android:layout_marginTop=&quot;2dp&quot;
+                      android:maxLines=&quot;1&quot;
+                      android:textColor=&quot;#FF111111&quot;
+                      android:textSize=&quot;12sp&quot;
+                      android:visibility=&quot;gone&quot;
+                      android:text=&quot;عنصر&quot; /&gt;
+              &lt;/LinearLayout&gt;
+          &lt;/LinearLayout&gt;
+          XMLEOF
+          cat &gt; $R/drawable/work_w_add.xml &lt;&lt;&#x27;XMLEOF&#x27;
+          &lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+          &lt;vector xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;
+              android:width=&quot;24dp&quot; android:height=&quot;24dp&quot; android:viewportWidth=&quot;24&quot; android:viewportHeight=&quot;24&quot;&gt;
+              &lt;path android:strokeColor=&quot;#FFFFFFFF&quot; android:strokeWidth=&quot;2.4&quot; android:strokeLineCap=&quot;round&quot; android:pathData=&quot;M12,5V19M5,12H19&quot; /&gt;
+          &lt;/vector&gt;
+          XMLEOF
+          cat &gt; $R/drawable/work_c_half_on.xml &lt;&lt;&#x27;XMLEOF&#x27;
+          &lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+          &lt;shape xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot; android:shape=&quot;rectangle&quot;&gt;
+              &lt;solid android:color=&quot;#F2C2791C&quot; /&gt;
+              &lt;corners android:topRightRadius=&quot;27dp&quot; android:bottomRightRadius=&quot;27dp&quot; android:topLeftRadius=&quot;0dp&quot; android:bottomLeftRadius=&quot;0dp&quot; /&gt;
+          &lt;/shape&gt;
+          XMLEOF
+          cat &gt; $R/xml/work_item_info.xml &lt;&lt;&#x27;XMLEOF&#x27;
+          &lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+          &lt;appwidget-provider xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;
+              android:minWidth=&quot;40dp&quot;
+              android:minHeight=&quot;40dp&quot;
+              android:targetCellWidth=&quot;1&quot;
+              android:targetCellHeight=&quot;1&quot;
+              android:updatePeriodMillis=&quot;0&quot;
+              android:initialLayout=&quot;@layout/work_item_widget&quot;
+              android:resizeMode=&quot;horizontal|vertical&quot;
+              android:widgetCategory=&quot;home_screen&quot; /&gt;
+          XMLEOF
+          cat &gt; $R/xml/work_combo_info.xml &lt;&lt;&#x27;XMLEOF&#x27;
+          &lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+          &lt;appwidget-provider xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;
+              android:minWidth=&quot;110dp&quot;
+              android:minHeight=&quot;40dp&quot;
+              android:targetCellWidth=&quot;2&quot;
+              android:targetCellHeight=&quot;1&quot;
+              android:updatePeriodMillis=&quot;0&quot;
+              android:initialLayout=&quot;@layout/work_combo_widget&quot;
+              android:resizeMode=&quot;horizontal|vertical&quot;
+              android:widgetCategory=&quot;home_screen&quot; /&gt;
+          XMLEOF
+          M=android/app/src/main/AndroidManifest.xml
+          sed -i &#x27;s#&lt;/application&gt;#    &lt;receiver android:name=&quot;.WorkWidgetProvider&quot; android:exported=&quot;true&quot;&gt;&lt;intent-filter&gt;&lt;action android:name=&quot;android.appwidget.action.APPWIDGET_UPDATE&quot;/&gt;&lt;/intent-filter&gt;&lt;meta-data android:name=&quot;android.appwidget.provider&quot; android:resource=&quot;@xml/work_widget_info&quot;/&gt;&lt;/receiver&gt;\n    &lt;/application&gt;#&#x27; $M
+          sed -i &#x27;s#&lt;/application&gt;#    &lt;receiver android:name=&quot;.TotalWidgetProvider&quot; android:label=&quot;المجموع&quot; android:exported=&quot;true&quot;&gt;&lt;intent-filter&gt;&lt;action android:name=&quot;android.appwidget.action.APPWIDGET_UPDATE&quot;/&gt;&lt;/intent-filter&gt;&lt;meta-data android:name=&quot;android.appwidget.provider&quot; android:resource=&quot;@xml/work_total_info&quot;/&gt;&lt;/receiver&gt;\n    &lt;/application&gt;#&#x27; $M
+          sed -i &#x27;s#&lt;/application&gt;#    &lt;service android:name=&quot;.WifiWatchService&quot; android:exported=&quot;false&quot; android:foregroundServiceType=&quot;specialUse&quot;&gt;&lt;property android:name=&quot;android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE&quot; android:value=&quot;wifi_presence_tracking&quot;/&gt;&lt;/service&gt;\n    &lt;receiver android:name=&quot;.WifiBootReceiver&quot; android:exported=&quot;false&quot;&gt;&lt;intent-filter&gt;&lt;action android:name=&quot;android.intent.action.BOOT_COMPLETED&quot;/&gt;&lt;action android:name=&quot;android.intent.action.MY_PACKAGE_REPLACED&quot;/&gt;&lt;action android:name=&quot;com.pd.earnings.WIFI_WAKE&quot;/&gt;&lt;/intent-filter&gt;&lt;/receiver&gt;\n    &lt;/application&gt;#&#x27; $M
+          sed -i &#x27;s#&lt;/application&gt;#    &lt;receiver android:name=&quot;.ItemWidgetProvider&quot; android:label=&quot;إضافة عنصر&quot; android:exported=&quot;true&quot;&gt;&lt;intent-filter&gt;&lt;action android:name=&quot;android.appwidget.action.APPWIDGET_UPDATE&quot;/&gt;&lt;/intent-filter&gt;&lt;meta-data android:name=&quot;android.appwidget.provider&quot; android:resource=&quot;@xml/work_item_info&quot;/&gt;&lt;/receiver&gt;\n    &lt;/application&gt;#&#x27; $M
+          sed -i &#x27;s#&lt;/application&gt;#    &lt;receiver android:name=&quot;.ComboWidgetProvider&quot; android:label=&quot;دخول وعنصر&quot; android:exported=&quot;true&quot;&gt;&lt;intent-filter&gt;&lt;action android:name=&quot;android.appwidget.action.APPWIDGET_UPDATE&quot;/&gt;&lt;/intent-filter&gt;&lt;meta-data android:name=&quot;android.appwidget.provider&quot; android:resource=&quot;@xml/work_combo_info&quot;/&gt;&lt;/receiver&gt;\n    &lt;/application&gt;#&#x27; $M
+          grep -q &#x27;WifiBootReceiver&#x27; $M || { echo &quot;wifi receivers were not added to the manifest&quot;; exit 1; }
+          grep -q &#x27;WifiWatchService&#x27; $M || { echo &quot;wifi service was not added to the manifest&quot;; exit 1; }
+          grep -q &#x27;WorkWidgetProvider&#x27; $M || { echo &quot;widget receiver was not added to the manifest&quot;; exit 1; }
+          grep -q &#x27;TotalWidgetProvider&#x27; $M || { echo &quot;total widget receiver was not added to the manifest&quot;; exit 1; }
+          grep -q &#x27;ItemWidgetProvider&#x27; $M || { echo &quot;item widget receiver was not added to the manifest&quot;; exit 1; }
+          grep -q &#x27;ComboWidgetProvider&#x27; $M || { echo &quot;combo widget receiver was not added to the manifest&quot;; exit 1; }
+          sed -i &#x27;/^dependencies {/a\    implementation &quot;androidx.biometric:biometric:1.1.0&quot;&#x27; android/app/build.gradle
+          grep -q &#x27;androidx.biometric&#x27; android/app/build.gradle || { echo &quot;biometric dependency was not added&quot;; exit 1; }
+
+      - name: Android 16 (API 36) + arm64 only + storage permissions
+        run: |
+          sed -i &#x27;s/targetSdkVersion = .*/targetSdkVersion = 36/&#x27; android/variables.gradle
+          sed -i &#x27;/defaultConfig {/a\        ndk { abiFilters &quot;arm64-v8a&quot; }&#x27; android/app/build.gradle
+          M=android/app/src/main/AndroidManifest.xml
+          sed -i &#x27;s#&lt;application#&lt;uses-permission android:name=&quot;android.permission.READ_EXTERNAL_STORAGE&quot; android:maxSdkVersion=&quot;32&quot;/&gt;\n    &lt;uses-permission android:name=&quot;android.permission.WRITE_EXTERNAL_STORAGE&quot; android:maxSdkVersion=&quot;29&quot;/&gt;\n    &lt;application#&#x27; $M
+          sed -i &#x27;s#&lt;application#&lt;uses-permission android:name=&quot;android.permission.RECEIVE_BOOT_COMPLETED&quot;/&gt;\n    &lt;uses-permission android:name=&quot;android.permission.ACCESS_WIFI_STATE&quot;/&gt;\n    &lt;uses-permission android:name=&quot;android.permission.ACCESS_NETWORK_STATE&quot;/&gt;\n    &lt;uses-permission android:name=&quot;android.permission.WAKE_LOCK&quot;/&gt;\n    &lt;uses-permission android:name=&quot;android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS&quot;/&gt;\n    &lt;uses-permission android:name=&quot;android.permission.FOREGROUND_SERVICE&quot;/&gt;\n    &lt;uses-permission android:name=&quot;android.permission.FOREGROUND_SERVICE_SPECIAL_USE&quot;/&gt;\n    &lt;uses-permission android:name=&quot;android.permission.POST_NOTIFICATIONS&quot;/&gt;\n    &lt;uses-permission android:name=&quot;android.permission.VIBRATE&quot;/&gt;\n    &lt;uses-permission android:name=&quot;android.permission.MANAGE_EXTERNAL_STORAGE&quot;/&gt;\n    &lt;application#&#x27; $M
+          grep -q &#x27;FOREGROUND_SERVICE_SPECIAL_USE&#x27; $M || { echo &quot;wifi permissions were not added to the manifest&quot;; exit 1; }
+          grep -q &#x27;MANAGE_EXTERNAL_STORAGE&#x27; $M || { echo &quot;all-files permission was not added to the manifest&quot;; exit 1; }
+          sed -i &#x27;s#&lt;application#&lt;application android:requestLegacyExternalStorage=&quot;true&quot;#&#x27; $M
+
+      - name: Version number (changes with every build)
+        env:
+          N: ${{ github.run_number }}
+        run: |
+          G=android/app/build.gradle
+          K=$((N - 69)); [ $K -lt 0 ] &amp;&amp; K=0
+          VN=&quot;$((5 + K / 100)).$((K / 10 % 10)).$((K % 10))&quot;
+          sed -i &quot;s/versionCode [0-9][0-9]*/versionCode $N/; s/versionName \&quot;[^\&quot;]*\&quot;/versionName \&quot;$VN\&quot;/&quot; $G
+          grep -q &quot;versionCode $N$&quot; $G || { echo &quot;versionCode was not updated&quot;; exit 1; }
+          grep -q &quot;versionName \&quot;$VN\&quot;&quot; $G || { echo &quot;versionName was not updated&quot;; exit 1; }
+          echo &quot;VN=$VN&quot; &gt;&gt; $GITHUB_ENV
+          echo &quot;Version: $VN (code $N)&quot;
+
+      - name: Sync web assets
+        run: npx cap sync android
+
+      - name: Build release APK
+        working-directory: android
+        run: ./gradlew assembleRelease
+
+      - name: Sign APK
+        env:
+          KS_B64: ${{ secrets.KEYSTORE_B64 || secrets.KEYSTORE_BASE64 || secrets.KEYSTORE }}
+          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD || secrets.STORE_PASSWORD || secrets.KS_PASSWORD || &#x27;workpass123&#x27; }}
+          KEY_ALIAS_IN: ${{ secrets.KEY_ALIAS || secrets.KEYSTORE_ALIAS || secrets.ALIAS }}
+          KEY_PASS_IN: ${{ secrets.KEY_PASSWORD || secrets.KEYSTORE_KEY_PASSWORD }}
+        run: |
+          if [ -n &quot;$KS_B64&quot; ]; then
+            echo &quot;Keystore source: repository secret&quot;
+            echo &quot;$KS_B64&quot; | tr -d &#x27; \r\n&#x27; | base64 -d &gt; work.p12 || { echo &quot;::error::The keystore secret is not valid base64&quot;; exit 1; }
+          else
+            echo &quot;::warning::No keystore secret found. Using a temporary key, so every update needs an uninstall first.&quot;
+            keytool -genkeypair -keystore work.p12 -storetype pkcs12 -alias work -keyalg RSA -keysize 2048 -validity 10000 -storepass &quot;$KS_PASS&quot; -keypass &quot;$KS_PASS&quot; -dname &quot;CN=Work App&quot;
+            KEY_ALIAS_IN=work
+            KEY_PASS_IN=
+          fi
+          BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          $BT/zipalign -f -p 4 android/app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
+          ARGS=(--ks work.p12 --ks-pass env:KS_PASS)
+          if [ -n &quot;$KEY_ALIAS_IN&quot; ]; then ARGS+=(--ks-key-alias &quot;$KEY_ALIAS_IN&quot;); fi
+          if [ -n &quot;$KEY_PASS_IN&quot; ]; then ARGS+=(--key-pass env:KEY_PASS_IN); fi
+          $BT/apksigner sign &quot;${ARGS[@]}&quot; --out work-release.apk aligned.apk
+          $BT/apksigner verify work-release.apk
+          echo &quot;Signed OK&quot;
+
+      - name: Name the APK by version
+        run: mv work-release.apk &quot;work-v$VN.apk&quot;
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: work-v${{ env.VN }}
+          path: work-v${{ env.VN }}.apk
+</pre>
+<script>
+document.getElementById('b').onclick=async()=>{
+ const t=document.getElementById('c').textContent,m=document.getElementById('m');
+ try{await navigator.clipboard.writeText(t);}catch(e){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();document.execCommand('copy');a.remove();}
+ m.textContent='تم النسخ ('+t.length+' حرف)';
+};
+</script></body></html>
