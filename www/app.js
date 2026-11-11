@@ -291,10 +291,10 @@ function weekLabel(ms) {
 }
 function itemRow(i) {
   const neg = i.type === 'adv';
-  const t = i.start && i.end ? `<span dir="ltr">${i.start} – ${i.end}</span> • ` : '';
-  const sub = neg ? 'كريدي' : i.remote ? 'عن بعد' : t + fmtDur(i.mins) + (i.brk ? ' (استراحة ' + i.brk + ' د)' : '');
+  const t = !neg && !i.remote && i.start && i.end ? ` <span class="tpill">${i.start} – ${i.end}</span>` : '';
+  const sub = neg ? 'كريدي' : i.remote ? 'عن بعد' : fmtDur(i.mins) + (i.brk ? ' (استراحة ' + i.brk + ' د)' : '');
   return `<button class="item" data-id="${i.id}"><span class="bub ${neg ? 'neg' : ''}">${ic(neg ? 'minus' : i.remote ? 'home' : 'clock')}</span>
-    <div><div class="d">${fmtDay(i.date)}</div><div class="m">${sub}${i.note ? ' • ' + esc(i.note) : ''}</div></div>
+    <div><div class="d">${fmtDay(i.date)}${t}</div><div class="m">${sub}${i.note ? ' • ' + esc(i.note) : ''}</div></div>
     <div class="amt num ${neg ? 'n' : 'p'}">${neg ? '−' : ''}${money(i.amount)}</div></button>`;
 }
 function emptyBox(icon, text) { return `<div class="empty"><span class="bub">${ic(icon)}</span><div>${text}</div></div>`; }
@@ -706,7 +706,7 @@ $('shareCur').onclick = () => {
   if (!state.items.length) return toast('لا توجد سجلات في الفترة الحالية');
   askShare('مشاركة الفترة الحالية', d => currentText(d), d => ({ cfg: currentCfg(d), name: 'work-current-' + today() + '.pdf' }));
 };
-const stat = (icon, cls, val, label) => `<div class="stat ${cls}"><span class="bub ${cls === 'cr' ? 'neg' : ''}">${ic(icon)}</span><div class="sv num">${val}</div><div class="sl">${label}</div></div>`;
+const stat = (icon, cls, val, label) => `<div class="stat ${cls}"><span class="bub ${cls === 'cr' ? 'neg' : ''}">${ic(icon)}</span><div class="txt"><div class="sv num">${val}</div><div class="sl">${label}</div></div></div>`;
 const mv = (n, neg) => `<span dir="ltr">${neg ? '−' : ''}${num(n)}<small>${esc(state.currency)}</small></span>`;
 function renderSummary() {
   if (sumMode === 'cur') curDates();
@@ -715,12 +715,12 @@ function renderSummary() {
   // في «الفترة الحالية» يعرض الرأس أصلًا المستحق والأجور والكريدي، فلا نكرّرها هنا
   $('sumOut').innerHTML =
     (cur && state.carry ? stat('cash', 'wide', mv(Math.abs(state.carry), state.carry < 0), 'مرحَّل من قبل') : '') +
-    stat('calendar', '', c.days, 'أيام العمل') +
+    stat('calendar', '', `<span>${c.days}</span>`, 'أيام العمل') +
     stat('clock', '', `<span dir="ltr">${fmtHM(c.mins)}<small>س</small></span>`, 'مجموع الساعات') +
-    (cur ? (c.ramt ? stat('home', 'wide', mv(c.ramt), 'أجور عن بعد') : '')
-         : stat('cash', '', mv(c.work), 'الأجور' + (c.ramt ? `<small>منها عن بعد ${money(c.ramt)}</small>` : '')) + stat('mcircle', 'cr', mv(c.adv, c.adv > 0), 'الكريدي')) +
+    (cur ? '' : stat('cash', '', mv(c.work), 'الأجور' + (c.ramt ? `<small>منها عن بعد ${money(c.ramt)}</small>` : '')) + stat('mcircle', 'cr', mv(c.adv, c.adv > 0), 'الكريدي')) +
     stat('cash', '', mv(c.days ? Math.round(c.work / c.days * 10) / 10 : 0), 'متوسط أجر اليوم') +
-    stat('clock', '', `<span dir="ltr">${fmtHM(c.wd ? c.mins / c.wd : 0)}<small>س</small></span>`, 'متوسط الساعات في اليوم') +
+    stat('clock', '', `<span dir="ltr">${fmtHM(c.wd ? c.mins / c.wd : 0)}<small>س</small></span>`, 'متوسط ساعات اليوم') +
+    (cur && c.ramt ? stat('home', 'wide', mv(c.ramt), 'أجور عن بعد') : '') +
     (cur && !state.carry ? '' : stat('tcircle', 'net', mv(Math.abs(c.work - c.adv), c.work - c.adv < 0), 'الصافي'));
   renderChart(); renderWeekday(); renderMonths(); renderBalance();
 }
@@ -732,7 +732,7 @@ function renderChart() {
   const pd = new Date(); pd.setDate(pd.getDate() - 13); const p0 = iso(pd); pd.setDate(pd.getDate() + 6); const p1 = iso(pd);
   const prev = allItems().filter(i => i.type === 'work' && i.date >= p0 && i.date <= p1).reduce((s, i) => s + i.mins, 0);
   const dm = Math.round(tot - prev);
-  const cmp = prev || tot ? `<div class="cmp ${dm > 0 ? 'up' : dm < 0 ? 'dn' : ''}">${dm === 0 ? 'مثل الأسبوع السابق' : (dm > 0 ? '+' : '−') + fmtHM(Math.abs(dm)) + ' س عن الأسبوع السابق'}</div>` : '';
+  const cmp = prev || tot ? `<div class="cmp ${dm > 0 ? 'up' : dm < 0 ? 'dn' : ''}">${dm === 0 ? 'مثل الأسبوع السابق' : `<span dir="ltr">${(dm > 0 ? '+' : '−') + fmtHM(Math.abs(dm))}</span> س عن الأسبوع السابق`}</div>` : '';
   $('chart').innerHTML = `<div class="ch"><b>ساعات آخر 7 أيام</b><span class="num">${fmtHM(tot)} س</span></div>${cmp}<div class="bars">` +
     days.map((d, n) => {
       const h = mins[n] / 60;
@@ -782,11 +782,12 @@ function renderBalance() {
   const line = pts.map(p => X(p).toFixed(1) + ',' + Y(p.v).toFixed(1)).join(' ');
   const area = '300,' + Y(0).toFixed(1) + ' ' + line + ' 0,' + Y(0).toFixed(1);
   const sd = p => dt(p.d).toLocaleDateString('ar-u-nu-latn', { day: 'numeric', month: 'short' });
+  const lastP = pts[pts.length - 1];
   $('chartBal').innerHTML = head +
-    `<svg viewBox="0 0 300 120" preserveAspectRatio="none"><line x1="0" x2="300" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}" stroke="var(--bd)" stroke-width="1" stroke-dasharray="4 4" vector-effect="non-scaling-stroke"/>` +
-    `<polygon points="${area}" fill="var(--tint)"/><polyline points="${line}" fill="none" stroke="var(--pritx)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>` +
-    `<div class="ax"><span>${esc(sd(pts[0]))}</span><span>${esc(sd(pts[pts.length - 1]))}</span></div>` +
-    `<div class="mm"><span>أدنى: ${signed(Math.min(...vs))}</span><span>أعلى: ${signed(Math.max(...vs))}</span></div>`;
+    `<svg viewBox="0 0 300 120" preserveAspectRatio="none"><defs><linearGradient id="balG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--pritx)" stop-opacity=".35"/><stop offset="100%" stop-color="var(--pritx)" stop-opacity="0"/></linearGradient></defs><line x1="0" x2="300" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}" stroke="var(--bd)" stroke-width="1" stroke-dasharray="4 4" vector-effect="non-scaling-stroke"/>` +
+    `<polygon points="${area}" fill="url(#balG)"/><polyline points="${line}" fill="none" stroke="var(--pritx)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/><ellipse cx="${X(lastP).toFixed(1)}" cy="${Y(lastP.v).toFixed(1)}" rx="4" ry="4.5" fill="var(--pritx)" stroke="var(--card)" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>` +
+    `<div class="ax"><span>${esc(sd(pts[0]))}</span><span>${esc(sd(lastP))}</span></div>` +
+    `<div class="mm"><div><span>أدنى</span><b class="num">${signed(Math.min(...vs))}</b></div><div><span>أعلى</span><b class="num">${signed(Math.max(...vs))}</b></div></div>`;
 }
 function curDates() { // من بداية الفترة الحالية إلى اليوم
   const ds = state.items.map(i => i.date).filter(Boolean).sort();
@@ -853,8 +854,8 @@ function renderCal() {
   const box = (k, v) => `<div>${k}<b class="num">${v}</b></div>`;
   $('cal').innerHTML = `<div class="card"><div class="cal-h"><button data-nav="-1" aria-label="الشهر السابق">›</button><b>${monthLabel(calM)}</b><button data-nav="1" aria-label="الشهر التالي">‹</button></div>
     <div class="cg">${CAL_WD.map(w => `<span class="cw">${w}</span>`).join('')}${cells}</div>
-    <div class="lg"><span>■ عمل بالساعات</span><span>▢ عن بعد</span><span>◌ يوم بلا سجل</span></div>
-    <div class="cs">${box('الأيام', c.days)}${box('الساعات', fmtHM(c.mins))}${box('الأجور', money(c.work))}${c.adv ? box('الكريدي', signed(-c.adv)) : ''}</div></div>
+    <div class="lg"><span><i class="sw-w"></i>عمل بالساعات</span><span><i class="sw-r"></i>عن بعد</span><span><i class="sw-a"></i>كريدي</span><span><i class="sw-e"></i>بلا سجل</span></div>
+    <div class="cs">${box('الأيام', c.days)}${box('الساعات', fmtHM(c.mins))}${box('الأجور', amtH(c.work))}${c.adv ? box('الكريدي', amtH(-c.adv, true)) : ''}</div></div>
     <button class="pay" id="calPdf" style="margin:12px 0 0;width:100%">${ic('file')}تقرير PDF لهذا الشهر</button>`;
 }
 function openDay(ds) {

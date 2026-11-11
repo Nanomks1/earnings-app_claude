@@ -45,7 +45,7 @@
       box.innerHTML = q ? emptyBox('search', 'لا توجد نتائج مطابقة.') : emptyBox('list', 'لا توجد عناصر بعد.<br>اضغط «عنصر» لتسجيل أول عنصر.');
       return;
     }
-    $('jSum').innerHTML = 'العدد: ' + all.length + ' • المجموع: ' + money(sum(all));
+    $('jSum').innerHTML = '<span>العدد: <b>' + all.length + '</b></span><span>المجموع: <b class="num">' + money(sum(all)) + '</b></span>';
     const wm = wageMap(), days = {};
     all.forEach(j => (days[j.date] = days[j.date] || []).push(j));
     const keys = Object.keys(days).sort().reverse(), shown = keys.slice(0, showDays);
@@ -60,8 +60,8 @@
       if (wage > 0 && shop > 0) cells.push(cell('النسبة', num(Math.round(shop / wage * 10) / 10) + '×'));
       if (rem > 0) cells.push(cell('عن بعد', money(rem)));
       return '<div class="jcard"><div class="jh"><b>' + fmtDay(d) + '</b></div><div class="jk">' + cells.join('') + '</div>' +
-        g.map(j => '<button class="jrow" type="button" data-id="' + j.id + '"><span class="jt"><b><bdi>' + esc(j.dev) + '</bdi></b><span class="jm">' +
-          (j.pr ? ' · ' + esc(j.pr) : '') + '</span>' + (j.remote ? '<span class="jx"> · عن بعد' + (settled(j, have) ? ' · محسوبة' : '') + '</span>' : '') +
+        g.map(j => '<button class="jrow" type="button" data-id="' + j.id + '"><span class="jt"><b><bdi>' + esc(j.dev) + '</bdi></b>' +
+          (j.pr ? '<span class="jm"><bdi>' + esc(j.pr) + '</bdi></span>' : '') + (j.remote ? '<span class="jx">عن بعد' + (settled(j, have) ? ' · محسوبة' : '') + '</span>' : '') +
           '</span><span class="jp num">' + money(j.amt) + '</span></button>').join('') + '</div>';
     }).join('') + (keys.length > shown.length ? '<button class="jmore" id="jMore" type="button">عرض أيام أقدم</button>' : '');
   }
