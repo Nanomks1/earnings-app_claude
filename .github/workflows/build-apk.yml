@@ -59,6 +59,8 @@ jobs:
           cp android-src/TotalWidgetProvider.java $P/
           cp android-src/Shortcuts.java $P/
           cp android-src/WorkWidgetPlugin.java $P/
+          cp android-src/ItemWidgetProvider.java $P/
+          cp android-src/ComboWidgetProvider.java $P/
           cp android-src/MainActivity.java $P/
           cp android-src/WifiTracker.java $P/
           cp android-src/WifiWatchService.java $P/
@@ -129,14 +131,250 @@ jobs:
               android:resizeMode="horizontal|vertical"
               android:widgetCategory="home_screen" />
           XMLEOF
+          cat > $R/layout/work_item_widget.xml <<'XMLEOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:id="@+id/work_i_root"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:orientation="vertical"
+              android:gravity="center"
+              android:padding="6dp"
+              android:background="@drawable/work_widget_bg">
+              <ImageView
+                  android:id="@+id/work_i_icon_a"
+                  android:layout_width="30dp"
+                  android:layout_height="30dp"
+                  android:tint="@color/work_w_fg"
+                  android:src="@drawable/work_w_add" />
+              <ImageView
+                  android:id="@+id/work_i_icon_w"
+                  android:layout_width="30dp"
+                  android:layout_height="30dp"
+                  android:tint="#FFFFFFFF"
+              android:visibility="gone"
+                  android:src="@drawable/work_w_add" />
+              <ImageView
+                  android:id="@+id/work_i_icon_k"
+                  android:layout_width="30dp"
+                  android:layout_height="30dp"
+                  android:tint="#FF111111"
+              android:visibility="gone"
+                  android:src="@drawable/work_w_add" />
+              <TextView
+                  android:id="@+id/work_i_title_a"
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:layout_marginTop="2dp"
+                  android:maxLines="1"
+                  android:textColor="@color/work_w_fg"
+                  android:textSize="12sp"
+                  android:text="عنصر" />
+              <TextView
+                  android:id="@+id/work_i_title_w"
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:layout_marginTop="2dp"
+                  android:maxLines="1"
+                  android:textColor="#FFFFFFFF"
+                  android:textSize="12sp"
+                  android:visibility="gone"
+                  android:text="عنصر" />
+              <TextView
+                  android:id="@+id/work_i_title_k"
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:layout_marginTop="2dp"
+                  android:maxLines="1"
+                  android:textColor="#FF111111"
+                  android:textSize="12sp"
+                  android:visibility="gone"
+                  android:text="عنصر" />
+          </LinearLayout>
+          XMLEOF
+          cat > $R/layout/work_combo_widget.xml <<'XMLEOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:id="@+id/work_c_root"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:orientation="horizontal"
+              android:layoutDirection="rtl"
+              android:gravity="center"
+              android:padding="1dp"
+              android:background="@drawable/work_widget_bg">
+              <LinearLayout
+                  android:id="@+id/work_c_in"
+                  android:layout_width="0dp"
+                  android:layout_height="match_parent"
+                  android:layout_weight="1"
+                  android:orientation="vertical"
+                  android:gravity="center"
+                  android:padding="6dp">
+                  <ImageView
+                      android:id="@+id/work_c_in_a"
+                      android:layout_width="30dp"
+                      android:layout_height="30dp"
+                      android:tint="@color/work_w_fg"
+                      android:src="@drawable/work_w_play" />
+                  <ImageView
+                      android:id="@+id/work_c_in_w"
+                      android:layout_width="30dp"
+                      android:layout_height="30dp"
+                      android:tint="#FFFFFFFF"
+                      android:visibility="gone"
+                      android:src="@drawable/work_w_play" />
+                  <ImageView
+                      android:id="@+id/work_c_in_k"
+                      android:layout_width="30dp"
+                      android:layout_height="30dp"
+                      android:tint="#FF111111"
+                      android:visibility="gone"
+                      android:src="@drawable/work_w_play" />
+                  <TextView
+                      android:id="@+id/work_c_in_ta"
+                      android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:layout_marginTop="2dp"
+                      android:maxLines="1"
+                      android:textColor="@color/work_w_fg"
+                      android:textSize="12sp"
+                      android:text="دخول" />
+                  <TextView
+                      android:id="@+id/work_c_in_tw"
+                      android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:layout_marginTop="2dp"
+                      android:maxLines="1"
+                      android:textColor="#FFFFFFFF"
+                      android:textSize="12sp"
+                      android:visibility="gone"
+                      android:text="دخول" />
+                  <TextView
+                      android:id="@+id/work_c_in_tk"
+                      android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:layout_marginTop="2dp"
+                      android:maxLines="1"
+                      android:textColor="#FF111111"
+                      android:textSize="12sp"
+                      android:visibility="gone"
+                      android:text="دخول" />
+              </LinearLayout>
+              <View
+                  android:layout_width="1dp"
+                  android:layout_height="40dp"
+                  android:background="#33808080" />
+              <LinearLayout
+                  android:id="@+id/work_c_add"
+                  android:layout_width="0dp"
+                  android:layout_height="match_parent"
+                  android:layout_weight="1"
+                  android:orientation="vertical"
+                  android:gravity="center"
+                  android:padding="6dp">
+                  <ImageView
+                      android:id="@+id/work_c_add_a"
+                      android:layout_width="30dp"
+                      android:layout_height="30dp"
+                      android:tint="@color/work_w_fg"
+                      android:src="@drawable/work_w_add" />
+                  <ImageView
+                      android:id="@+id/work_c_add_w"
+                      android:layout_width="30dp"
+                      android:layout_height="30dp"
+                      android:tint="#FFFFFFFF"
+                      android:visibility="gone"
+                      android:src="@drawable/work_w_add" />
+                  <ImageView
+                      android:id="@+id/work_c_add_k"
+                      android:layout_width="30dp"
+                      android:layout_height="30dp"
+                      android:tint="#FF111111"
+                      android:visibility="gone"
+                      android:src="@drawable/work_w_add" />
+                  <TextView
+                      android:id="@+id/work_c_add_ta"
+                      android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:layout_marginTop="2dp"
+                      android:maxLines="1"
+                      android:textColor="@color/work_w_fg"
+                      android:textSize="12sp"
+                      android:text="عنصر" />
+                  <TextView
+                      android:id="@+id/work_c_add_tw"
+                      android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:layout_marginTop="2dp"
+                      android:maxLines="1"
+                      android:textColor="#FFFFFFFF"
+                      android:textSize="12sp"
+                      android:visibility="gone"
+                      android:text="عنصر" />
+                  <TextView
+                      android:id="@+id/work_c_add_tk"
+                      android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:layout_marginTop="2dp"
+                      android:maxLines="1"
+                      android:textColor="#FF111111"
+                      android:textSize="12sp"
+                      android:visibility="gone"
+                      android:text="عنصر" />
+              </LinearLayout>
+          </LinearLayout>
+          XMLEOF
+          cat > $R/drawable/work_w_add.xml <<'XMLEOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+              <path android:strokeColor="#FFFFFFFF" android:strokeWidth="2.4" android:strokeLineCap="round" android:pathData="M12,5V19M5,12H19" />
+          </vector>
+          XMLEOF
+          cat > $R/drawable/work_c_half_on.xml <<'XMLEOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+              <solid android:color="#F2C2791C" />
+              <corners android:topRightRadius="27dp" android:bottomRightRadius="27dp" android:topLeftRadius="0dp" android:bottomLeftRadius="0dp" />
+          </shape>
+          XMLEOF
+          cat > $R/xml/work_item_info.xml <<'XMLEOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+              android:minWidth="40dp"
+              android:minHeight="40dp"
+              android:targetCellWidth="1"
+              android:targetCellHeight="1"
+              android:updatePeriodMillis="0"
+              android:initialLayout="@layout/work_item_widget"
+              android:resizeMode="horizontal|vertical"
+              android:widgetCategory="home_screen" />
+          XMLEOF
+          cat > $R/xml/work_combo_info.xml <<'XMLEOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+              android:minWidth="110dp"
+              android:minHeight="40dp"
+              android:targetCellWidth="2"
+              android:targetCellHeight="1"
+              android:updatePeriodMillis="0"
+              android:initialLayout="@layout/work_combo_widget"
+              android:resizeMode="horizontal|vertical"
+              android:widgetCategory="home_screen" />
+          XMLEOF
           M=android/app/src/main/AndroidManifest.xml
           sed -i 's#</application>#    <receiver android:name=".WorkWidgetProvider" android:exported="true"><intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter><meta-data android:name="android.appwidget.provider" android:resource="@xml/work_widget_info"/></receiver>\n    </application>#' $M
           sed -i 's#</application>#    <receiver android:name=".TotalWidgetProvider" android:label="المجموع" android:exported="true"><intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter><meta-data android:name="android.appwidget.provider" android:resource="@xml/work_total_info"/></receiver>\n    </application>#' $M
           sed -i 's#</application>#    <service android:name=".WifiWatchService" android:exported="false" android:foregroundServiceType="specialUse"><property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="wifi_presence_tracking"/></service>\n    <receiver android:name=".WifiBootReceiver" android:exported="false"><intent-filter><action android:name="android.intent.action.BOOT_COMPLETED"/><action android:name="android.intent.action.MY_PACKAGE_REPLACED"/><action android:name="com.pd.earnings.WIFI_WAKE"/></intent-filter></receiver>\n    </application>#' $M
+          sed -i 's#</application>#    <receiver android:name=".ItemWidgetProvider" android:label="إضافة عنصر" android:exported="true"><intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter><meta-data android:name="android.appwidget.provider" android:resource="@xml/work_item_info"/></receiver>\n    </application>#' $M
+          sed -i 's#</application>#    <receiver android:name=".ComboWidgetProvider" android:label="دخول وعنصر" android:exported="true"><intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter><meta-data android:name="android.appwidget.provider" android:resource="@xml/work_combo_info"/></receiver>\n    </application>#' $M
           grep -q 'WifiBootReceiver' $M || { echo "wifi receivers were not added to the manifest"; exit 1; }
           grep -q 'WifiWatchService' $M || { echo "wifi service was not added to the manifest"; exit 1; }
           grep -q 'WorkWidgetProvider' $M || { echo "widget receiver was not added to the manifest"; exit 1; }
           grep -q 'TotalWidgetProvider' $M || { echo "total widget receiver was not added to the manifest"; exit 1; }
+          grep -q 'ItemWidgetProvider' $M || { echo "item widget receiver was not added to the manifest"; exit 1; }
+          grep -q 'ComboWidgetProvider' $M || { echo "combo widget receiver was not added to the manifest"; exit 1; }
           sed -i '/^dependencies {/a\    implementation "androidx.biometric:biometric:1.1.0"' android/app/build.gradle
           grep -q 'androidx.biometric' android/app/build.gradle || { echo "biometric dependency was not added"; exit 1; }
 
