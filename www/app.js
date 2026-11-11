@@ -464,6 +464,10 @@ function doShortcut(act) {
   } else if (act === 'out') {
     if (!state.open) return toast('لا توجد وردية جارية');
     clockOutForm();
+  } else if (act === 'item') { // من ودجت «إضافة عنصر»
+    if ($('tabJobs').hidden) return toast('ميزة العناصر متوقفة في الإعدادات');
+    if ($('jobDlg').open) return;
+    setView('jobs'); $('addJob').click();
   }
 }
 async function takeShortcut() {
@@ -687,10 +691,11 @@ function askShare(title, build, pdf) {
   const noJ = !(window.Jobs && Jobs.canShare());
   $('shJobsRow').hidden = noJ;
   if (!noJ) { $('shJobs').checked = state.jobsCfg.sj; $('shJobsPr').checked = state.jobsCfg.sc; }
-  $('shJobsPrRow').hidden = noJ || !$('shJobs').checked;
+  $('shJobsPrRow').hidden = noJ; syncJobsPr();
   $('shDlg').showModal();
 }
-$('shJobs').onchange = () => { $('shJobsPrRow').hidden = !$('shJobs').checked; };
+function syncJobsPr() { const on = $('shJobs').checked; $('shJobsPr').disabled = !on; $('shJobsPrRow').classList.toggle('dis', !on); }
+$('shJobs').onchange = syncJobsPr;
 const jobsShareSync = () => { if (window.Jobs) Jobs.setShare(!$('shJobsRow').hidden && $('shJobs').checked, $('shJobsPr').checked, !$('shJobsRow').hidden); };
 $('shCancel').onclick = () => $('shDlg').close();
 $('shGo').onclick = async () => {
