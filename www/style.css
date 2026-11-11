@@ -392,3 +392,28 @@ details[open] .bub.chv .ic{transform:rotate(90deg)}
 #wfCard span{flex:1}
 #wfCard .ic{width:18px;height:18px}
 #payBtn{height:40px;margin-top:10px;border-color:var(--bd);font-weight:600;font-size:calc(14px*var(--fs,1))}
+
+/* الملخص: بلا إطار داخل إطار، والصافي بارز */
+.card.flat{background:none;border:0;box-shadow:none;padding:0}
+.card.flat .seg{background:var(--card);border:1px solid var(--bd)}
+.card.flat input[type=date]{background:var(--card)}
+.card.flat .stat{background:var(--card);border:1px solid var(--bd);box-shadow:var(--sh)}
+.card.flat .stat.net{background:linear-gradient(135deg,var(--pri),var(--pri2));border:0;color:var(--onpri);box-shadow:var(--prish)}
+.card.flat .stat.net .sl,.card.flat .stat.net .sv small{color:var(--onpri)}
+.card.flat .stat.net .bub{background:rgba(255,255,255,.2);color:var(--onpri)}
+.stat .sv>span{flex-wrap:wrap}
+.stat.f1 .sv{font-size:calc(15.5px*var(--fs,1))}
+.stat.f2 .sv{font-size:calc(13.5px*var(--fs,1))}
+.stat.wide{min-height:48px}
+/* العناصر: إحصاءات */
+.jgrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.jg b{font-size:calc(15px*var(--fs,1))}
+.jg.hero{grid-column:1/-1;background:linear-gradient(135deg,var(--pri),var(--pri2));border:0;color:var(--onpri);box-shadow:var(--prish);padding:12px 14px}
+.jg.hero small{color:var(--onpri);opacity:.9}
+.jg.hero b{font-size:calc(26px*var(--fs,1))}
+.jg.hero .rt{display:block;margin-top:2px;font-size:calc(12px*var(--fs,1));color:var(--onpri);opacity:.9}
+.jdb .p{height:104px;gap:3px}
+.jdb .p .c{width:20px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end}
+.jdb .p .c i{width:100%}
+.jdb .p .v{font-size:calc(10.5px*var(--fs,1));color:var(--mut);line-height:1.2;margin-bottom:2px;white-space:nowrap}
+.jdb .n{font-size:calc(10.5px*var(--fs,1));white-space:nowrap;direction:ltr}

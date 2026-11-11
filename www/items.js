@@ -85,7 +85,7 @@
     const seg = '<div class="seg" id="jPer">' + [['m', 'هذا الشهر'], ['w', '7 أيام'], ['a', 'الكل']].map(p => '<button type="button" data-p="' + p[0] + '"' + (p[0] === per ? ' class="on"' : '') + '>' + p[1] + '</button>').join('') + '</div>';
     if (!J.length) { box.innerHTML = seg + emptyBox('bars', 'لا توجد عناصر في هذه الفترة.'); return; }
     const tot = sum(J), mx = J.reduce((m, j) => Math.max(m, j.amt), 0), g = (k, v) => '<div class="jg"><small>' + k + '</small><b>' + v + '</b></div>';
-    let html = seg + '<div class="jgrid">' + g('العدد', J.length) + g('المجموع', money(tot)) + g('متوسط الثمن', money(round2(tot / J.length))) + g('الأعلى', money(mx)) + '</div>';
+    let html = seg;
     // مقارنة بالأجر (أيام فيها عناصر في المحل)
     const wm = wageMap(), mm = minsMap(), sd = {};
     J.filter(j => !j.remote).forEach(j => { sd[j.date] = round2((sd[j.date] || 0) + j.amt); });
@@ -99,10 +99,13 @@
       if (hrs > 0) cmp += kv('الثمن لكل ساعة عمل', money(round2(shop / hrs)));
       cmp += kv('أفضل يوم', money(sd[best]) + ' • <bdi dir="rtl">' + fmtShort(best) + '</bdi>');
     }
+    html += '<div class="jgrid"><div class="jg hero"><small>المجموع</small><b>' + money(tot) + '</b>' +
+      (wage > 0 && shop > 0 ? '<span class="rt">عناصر المحل ' + num(Math.round(shop / wage * 10) / 10) + '× أجر نفس الأيام</span>' : '') + '</div>' +
+      g('العدد', J.length) + g('متوسط الثمن', money(round2(tot / J.length))) + g('الأعلى', money(mx)) + '</div>';
     if (dk.length) { // أعمدة: الأجر مقابل عناصر المحل لكل يوم (آخر 10 أيام فيها عناصر)
-      const ds = Object.keys(sd).sort().slice(-10), mxv = Math.max(1, ...ds.map(d => Math.max(sd[d] || 0, wm[d] || 0))), ht = v => v > 0 ? Math.max(4, Math.round(v / mxv * 84)) : 2;
+      const ds = Object.keys(sd).sort().slice(-7), mxv = Math.max(1, ...ds.map(d => Math.max(sd[d] || 0, wm[d] || 0))), ht = v => v > 0 ? Math.max(4, Math.round(v / mxv * 78)) : 2;
       html += '<div class="jbox"><div class="mh">الأجر مقابل العناصر لكل يوم</div><div class="jleg"><span><i class="w"></i>الأجر</span><span><i class="it"></i>العناصر</span></div><div class="jdb">' +
-        ds.map(d => '<div class="d"><div class="p"><i class="w" style="height:' + ht(wm[d] || 0) + 'px"></i><i class="it" style="height:' + ht(sd[d] || 0) + 'px"></i></div><span class="n num">' + Number(d.slice(8)) + '</span></div>').join('') + '</div></div>';
+        ds.map(d => '<div class="d"><div class="p"><div class="c"><span class="v num">' + (wm[d] ? kfmt(wm[d]) : '') + '</span><i class="w" style="height:' + ht(wm[d] || 0) + 'px"></i></div><div class="c"><span class="v num">' + (sd[d] ? kfmt(sd[d]) : '') + '</span><i class="it" style="height:' + ht(sd[d] || 0) + 'px"></i></div></div><span class="n num">' + Number(d.slice(8)) + '/' + Number(d.slice(5, 7)) + '</span></div>').join('') + '</div></div>';
     }
     const remJ = J.filter(j => j.remote);
     if (remJ.length) {

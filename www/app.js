@@ -710,8 +710,12 @@ $('shareCur').onclick = () => {
   if (!state.items.length) return toast('لا توجد سجلات في الفترة الحالية');
   askShare('مشاركة الفترة الحالية', d => currentText(d), d => ({ cfg: currentCfg(d), name: 'work-current-' + today() + '.pdf' }));
 };
-const stat = (icon, cls, val, label) => `<div class="stat ${cls}"><span class="bub ${cls === 'cr' ? 'neg' : ''}">${ic(icon)}</span><div class="txt"><div class="sv num">${val}</div><div class="sl">${label}</div></div></div>`;
-const mv = (n, neg) => `<span dir="ltr">${neg ? '−' : ''}${num(n)}<small>${esc(state.currency)}</small></span>`;
+const stat = (icon, cls, val, label) => {
+  const L = val.replace(/<[^>]*>/g, '').length, f = /wide|net/.test(cls) ? '' : L > 12 ? ' f2' : L > 9 ? ' f1' : ''; // الأرقام الطويلة تصغر بدل أن تُقصّ
+  return `<div class="stat ${cls}${f}"><span class="bub ${cls === 'cr' ? 'neg' : ''}">${ic(icon)}</span><div class="txt"><div class="sv num">${val}</div><div class="sl">${label}</div></div></div>`;
+};
+const num2 = n => Number(n).toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const mv = (n, neg) => `<span dir="ltr">${neg ? '−' : ''}${num2(n)}<small>${esc(state.currency)}</small></span>`;
 function renderSummary() {
   if (sumMode === 'cur') curDates();
   const c = calc(inRange());
@@ -721,11 +725,12 @@ function renderSummary() {
     (cur && state.carry ? stat('cash', 'wide', mv(Math.abs(state.carry), state.carry < 0), 'مرحَّل من قبل') : '') +
     stat('calendar', '', `<span>${c.days}</span>`, 'أيام العمل') +
     stat('clock', '', `<span dir="ltr">${fmtHM(c.mins)}<small>س</small></span>`, 'مجموع الساعات') +
-    (cur ? '' : stat('cash', '', mv(c.work), 'الأجور' + (c.ramt ? `<small>منها عن بعد ${money(c.ramt)}</small>` : '')) + stat('mcircle', 'cr', mv(c.adv, c.adv > 0), 'الكريدي')) +
-    stat('cash', '', mv(c.days ? Math.round(c.work / c.days * 10) / 10 : 0), 'متوسط أجر اليوم') +
+    (cur ? '' : stat('cash', '', mv(c.work), 'الأجور') + stat('mcircle', 'cr', mv(c.adv, c.adv > 0), 'الكريدي') + (c.ramt ? stat('home', 'wide', mv(c.ramt), 'منها عن بعد') : '')) +
+    stat('cash', '', mv(c.days ? round2(c.work / c.days) : 0), 'متوسط أجر اليوم') +
     stat('clock', '', `<span dir="ltr">${fmtHM(c.wd ? c.mins / c.wd : 0)}<small>س</small></span>`, 'متوسط ساعات اليوم') +
     (cur && c.ramt ? stat('home', 'wide', mv(c.ramt), 'أجور عن بعد') : '') +
     (cur && !state.carry ? '' : stat('tcircle', 'net', mv(Math.abs(c.work - c.adv), c.work - c.adv < 0), 'الصافي'));
+  $('sDates').style.display = sumMode === 'all' ? 'none' : ''; // «الكل» بلا حقلي من/إلى
   renderChart(); renderWeekday(); renderMonths(); renderBalance();
 }
 function renderChart() {
