@@ -92,12 +92,13 @@
     const dk = Object.keys(sd), shop = round2(dk.reduce((t, d) => t + sd[d], 0)), wage = round2(dk.reduce((t, d) => t + (wm[d] || 0), 0)), hrs = dk.reduce((t, d) => t + (mm[d] || 0), 0) / 60;
     const kv = (k, v) => '<div class="srow"><span>' + k + '</span><b>' + v + '</b></div>';
     let cmp = '';
+    const ratio = wage > 0 && shop > 0 ? Math.round(shop / wage * 10) / 10 : 0;
     if (dk.length) {
-      const best = dk.sort((a, b) => sd[b] - sd[a])[0];
-      cmp += kv('عناصر المحل', money(shop)) + kv('أجر نفس الأيام', money(wage));
-      if (wage > 0 && shop > 0) cmp += kv('النسبة', num(Math.round(shop / wage * 10) / 10) + '×');
-      if (hrs > 0) cmp += kv('الثمن لكل ساعة عمل', money(round2(shop / hrs)));
-      cmp += kv('أفضل يوم', money(sd[best]) + ' • <bdi dir="rtl">' + fmtShort(best) + '</bdi>');
+      const best = dk.sort((a, b) => sd[b] - sd[a])[0], mxc = Math.max(shop, wage, 1), pcw = v => Math.max(3, Math.round(v / mxc * 100));
+      cmp += '<div class="jcmp"><div class="jt a"><small>عناصر المحل</small><div class="n">' + money(shop) + '</div><div class="jtr"><i style="width:' + pcw(shop) + '%"></i></div></div>' +
+        '<div class="jt"><small>أجر نفس الأيام</small><div class="n">' + money(wage) + '</div><div class="jtr"><i style="width:' + pcw(wage) + '%"></i></div></div></div>' +
+        '<div class="jmm"><div><small>الثمن لكل ساعة عمل</small><b>' + (hrs > 0 ? money(round2(shop / hrs)) : '—') + '</b></div>' +
+        '<div><small>أفضل يوم • <bdi dir="rtl">' + fmtNoYear(best) + '</bdi></small><b>' + money(sd[best]) + '</b></div></div>';
     }
     html += '<div class="jgrid"><div class="jg hero"><small>المجموع</small><b>' + money(tot) + '</b>' +
       (wage > 0 && shop > 0 ? '<span class="rt">عناصر المحل ' + num(Math.round(shop / wage * 10) / 10) + '× أجر نفس الأيام</span>' : '') + '</div>' +
@@ -112,13 +113,13 @@
       const rw = round2(allItems().reduce((t, i) => t + (i.type === 'work' && i.remote && rg(i.date) ? i.amount : 0), 0));
       cmp += kv('عناصر عن بعد', money(sum(remJ))) + kv('أجور عن بعد في الفترة', money(rw));
     }
-    if (cmp) html += '<div class="jbox"><div class="mh">مقارنة بالأجر</div>' + cmp + '</div>';
+    if (cmp) html += '<div class="jbox"><div class="mh jh"><span>مقارنة بالأجر</span>' + (ratio ? '<span class="p">' + num(ratio) + '×</span>' : '') + '</div>' + cmp + '</div>';
     // حسب الماركة (أول كلمة من اسم الجهاز) وحسب المشكلة
     const grp = fn => { const m = new Map(); J.forEach(j => fn(j).forEach(p => { const o = m.get(p[0]) || { s: p[1], n: 0, t: 0 }; o.n++; o.t = round2(o.t + j.amt); m.set(p[0], o); })); return [...m.values()]; };
-    const probs = grp(j => splitPr(j.pr).map(p => [k1(p), p])).sort((a, b) => b.n - a.n || b.t - a.t).slice(0, 8);
-    const hrow = (lb, sm, v, pc) => '<div class="hrow"><div class="hl"><span><bdi>' + esc(lb) + '</bdi></span><small>' + sm + '</small><b>' + v + '</b></div><div class="hbar"><i style="width:' + Math.max(3, Math.round(pc)) + '%"></i></div></div>';
-    const mxP = Math.max(1, ...probs.map(o => o.n));
-    if (probs.length) html += '<div class="jbox"><div class="mh">حسب النوع</div>' + probs.map(o => hrow(o.s, 'متوسط ' + num(round2(o.t / o.n)), o.n + ' • ' + num(o.t), o.n / mxP * 100)).join('') + '</div>';
+    const probs = grp(j => splitPr(j.pr).map(p => [k1(p), p])).sort((a, b) => b.t - a.t || b.n - a.n).slice(0, 8);
+    const hrow = (o, pc, top) => '<div class="hrow"><div class="hl"><span class="hn"><bdi>' + esc(o.s) + '</bdi><em>' + o.n + '×</em></span><div class="ht"><b>' + money(o.t) + '</b><small>متوسط ' + num(round2(o.t / o.n)) + '</small></div></div><div class="hbar"><i' + (top ? ' class="gd"' : '') + ' style="width:' + Math.max(3, Math.round(pc)) + '%"></i></div></div>';
+    const mxP = Math.max(1, ...probs.map(o => o.t));
+    if (probs.length) html += '<div class="jbox"><div class="mh">حسب النوع</div>' + probs.map((o, i) => hrow(o, o.t / mxP * 100, i === 0)).join('') + '</div>';
     box.innerHTML = html;
   }
   $('jStats').onclick = e => { const b = e.target.closest('button[data-p]'); if (!b) return; per = b.dataset.p; render(); };
