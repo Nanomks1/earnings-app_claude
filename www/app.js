@@ -511,7 +511,7 @@ function renderArchive() {
     const lines = [...a.items].sort((x, y) => x.date.localeCompare(y.date)).map(i =>
       `${fmtShort(i.date)}: ${i.type === 'work' ? (i.remote ? 'عن بعد = ' : fmtDur(i.mins) + ' = ') + money(i.amount) : 'كريدي ' + signed(-i.amount)}${i.note ? ' • ' + esc(i.note) : ''}`).join('<br>');
     const rem = round2(a.remain || 0), ps = paysSorted(a);
-    const badge = rem === 0 ? `<span class="pill pos">مسدّدة</span>` : !remOpen(a) ? `<span class="pill mut">رصيد قديم ${signed(rem)}</span>` : rem > 0 ? `<span class="pill neg">بقي ${money(rem)}</span>` : `<span class="pill pos">زيادة ${money(-rem)}</span>`;
+    const badge = rem === 0 ? `<span class="pill pos">مسدّدة</span>` : remKind(a) !== 'last' ? `<span class="pill mut">${remKind(a) === 'old' ? 'رصيد قديم' : 'رُحِّل'} ${signed(rem)}</span>` : rem > 0 ? `<span class="pill neg">بقي ${money(rem)}</span>` : `<span class="pill pos">زيادة ${money(-rem)}</span>`;
     const payRows = ps.map(p => `<div class="kv" style="align-items:center;padding:0 0 0 0"><span>${fmtShort(p.d)}${p.n ? ' • ' + esc(p.n) : ''}</span><span style="display:flex;align-items:center;gap:6px"><b>${money(p.a)}</b><button class="pe" type="button" data-id="${a.id}" data-p="${p.id}" aria-label="تعديل الدفعة" style="background:none;border:0;color:var(--mut);width:36px;height:36px;display:grid;place-items:center">${ic('edit')}</button></span></div>`).join('');
     return `<details class="card"><summary><span class="bub chv">${ic('chev')}</span><div><b>${fmtShort(a.paidAt)}</b><small>${range}</small><small>${badge}</small></div><b class="num${Number(a.received) ? '' : ' zero'}" style="direction:ltr">${money(a.received)}</b></summary>
       <div class="lines">
@@ -524,7 +524,7 @@ function renderArchive() {
         <div class="kv"><span>المستلم${ps.length > 1 ? ' (' + ps.length + ' دفعات)' : ''}</span><b>${money(a.received)}</b></div>
         ${payRows}
         ${a.adj ? `<div class="kv"><span>تسوية من دفعة سابقة</span><b>${signed(a.adj)}</b></div>` : ''}
-        ${rem ? `<div class="kv"><span>${!remOpen(a) ? OLD_REM : rem > 0 ? 'بقي لك (رُحِّل)' : 'زيادة (خُصمت لاحقًا)'}</span><b>${signed(rem)}</b></div>` : ''}
+        ${rem ? `<div class="kv"><span>${remKind(a) !== 'last' ? REM_LBL[remKind(a)] : rem > 0 ? 'بقي لك (رُحِّل)' : 'زيادة (خُصمت لاحقًا)'}</span><b>${signed(rem)}</b></div>` : ''}
         ${lines ? '<div style="margin-top:8px">' + lines + '</div>' : ''}
         <div style="display:flex;gap:8px;margin-top:12px"><button class="pay ap1" data-id="${a.id}" style="flex:0 0 auto;width:auto;margin:0;height:42px;padding:0 16px;white-space:nowrap;font-size:calc(14px*var(--fs,1))">${ic('plus')}إضافة دفعة</button><button class="pay sh1" data-id="${a.id}" style="flex:1 1 auto;width:auto;margin:0;height:42px;padding:0 12px;white-space:nowrap;font-size:calc(14px*var(--fs,1))">${ic('share')}مشاركة هذه الدفعة</button></div>
       </div></details>`;
@@ -610,10 +610,10 @@ function weekText(k, d) {
   const list = state.items.filter(i => monday(i.date) === k).sort(byDate);
   return periodText('ملخص أسبوع', ['🗓 ' + weekLabel(k)], list, d, null, netKey(list), true);
 }
-// المتبقي من الدفعة يُرحَّل عادةً للدفعة التالية. في الدفعات القديمة المستوردة لم يُرحَّل (المرحَّل في التالية 0)،
-// فيُعرض «رصيد قديم» بلا لون «زيادة/بقي» حتى لا يوحي بمبلغ معلّق
-const remOpen = a => { const nx = state.archive[state.archive.indexOf(a) + 1]; return !nx || !!nx.carryIn || !!nx.adj; };
-const OLD_REM = 'رصيد قديم (سُوّي خارج التطبيق)';
+// متبقي الدفعة: إن وُجدت دفعة تالية فقد رُحِّل إليها (يظهر هناك «مرحَّل قبلها») وانتهى أمره، فيُعرض محايدًا بالإشارة (− عليك، + لك).
+// أما «زيادة/بقي» الملوّنة فللدفعة الأخيرة فقط لأن متبقيها هو المرحَّل الحالي. 'old' = لم يُرحَّل في التطبيق (دفعات قديمة مستوردة)
+const remKind = a => { const nx = state.archive[state.archive.indexOf(a) + 1]; return !nx ? 'last' : (nx.carryIn || nx.adj) ? 'carried' : 'old'; };
+const REM_LBL = { carried: 'متبقٍّ (رُحِّل إلى الدفعة التالية)', old: 'رصيد قديم (سُوّي خارج التطبيق)' };
 function archiveText(a, d) {
   const list = [...a.items].sort(byDate), rem = round2(a.remain || 0), extra = [];
   if (a.carryIn) extra.push('↩️ مرحَّل قبلها: ' + signed(a.carryIn));
@@ -621,7 +621,7 @@ function archiveText(a, d) {
   const ps = pays(a);
   extra.push(...payLines(a));
   if (a.adj) extra.push('↪️ تسوية من دفعة سابقة: ' + signed(a.adj));
-  if (rem) extra.push(!remOpen(a) ? '📎 ' + OLD_REM + ': ' + signed(rem) : rem > 0 ? '⏳ بقي لك (رُحِّل): ' + money(rem) : '➕ زيادة (خُصمت لاحقًا): ' + money(-rem));
+  if (rem) extra.push(remKind(a) !== 'last' ? '📎 ' + REM_LBL[remKind(a)] + ': ' + signed(rem) : rem > 0 ? '⏳ بقي لك (رُحِّل): ' + money(rem) : '➕ زيادة (خُصمت لاحقًا): ' + money(-rem));
   if (ps.length === 1 && ps[0].n) extra.push('📝 ' + clean(ps[0].n));
   return periodText('كشف دفعة', ['🗓 ' + (ps.length > 1 ? 'أول استلام: ' : 'تاريخ الاستلام: ') + fmtShort(a.paidAt), '🗓 الفترة: ' + rangeOf(list)], list, d, extra, '💵 ' + bold('المستلم: ' + ltr(moneyP(a.received))));
 }
@@ -632,10 +632,10 @@ function archivesText(d) {
   arc.forEach((a, n) => {
     const list = [...a.items].sort(byDate), rem = round2(a.remain || 0);
     total += a.received;
-    out.push('', '📌 ' + bold((n + 1) + ') ' + fmtShort(a.paidAt)), '🗓 ' + rangeOf(list), '🧾 المستحق: ' + signed(a.due), '💵 المستلم: ' + money(a.received));
+    out.push('', '📌 ' + bold((n + 1) + ') ' + fmtShort(a.paidAt)), '🗓 ' + rangeOf(list), ...(a.carryIn ? ['↩️ مرحَّل قبلها: ' + signed(a.carryIn)] : []), '🧾 المستحق: ' + signed(a.due), '💵 المستلم: ' + money(a.received));
     out.push(...payLines(a).map(x => '   ' + x));
     if (a.adj) out.push('↪️ تسوية من دفعة سابقة: ' + signed(a.adj));
-    if (rem) out.push(!remOpen(a) ? '📎 ' + OLD_REM + ': ' + signed(rem) : rem > 0 ? '⏳ بقي لك: ' + money(rem) : '➕ زيادة: ' + money(-rem));
+    if (rem) out.push(remKind(a) !== 'last' ? '📎 ' + REM_LBL[remKind(a)] + ': ' + signed(rem) : rem > 0 ? '⏳ بقي لك: ' + money(rem) : '➕ زيادة: ' + money(-rem));
     if (d && list.length) out.push('', ...dayGroups(list));
   });
   out.push('', BOX, '💵 ' + bold('مجموع المستلم: ' + ltr(moneyP(total))), BOX);
@@ -657,7 +657,7 @@ function archiveCfg(a, d) {
   const ps = paysSorted(a);
   if (ps.length > 1) ps.forEach(p => extra.push(['استلام ' + fmtShort(p.d), money(p.a)]));
   if (a.adj) extra.push(['تسوية من دفعة سابقة', signed(a.adj)]);
-  if (rem) extra.push([!remOpen(a) ? OLD_REM : rem > 0 ? 'بقي لك (رُحِّل)' : 'زيادة (خُصمت لاحقًا)', money(Math.abs(rem))]);
+  if (rem) extra.push([remKind(a) !== 'last' ? REM_LBL[remKind(a)] : rem > 0 ? 'بقي لك (رُحِّل)' : 'زيادة (خُصمت لاحقًا)', money(Math.abs(rem))]);
   return { title: 'كشف دفعة', sub: (ps.length > 1 ? 'أول استلام: ' : 'الاستلام: ') + fmtShort(a.paidAt) + ' • الفترة: ' + rangeOf(list), items: list, detail: d, extra };
 }
 function summaryCfg(d) {
