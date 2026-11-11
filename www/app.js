@@ -467,9 +467,16 @@ function doShortcut(act) {
   } else if (act === 'item') { // من ودجت «إضافة عنصر»
     if ($('tabJobs').hidden) return toast('ميزة العناصر متوقفة في الإعدادات');
     if ($('jobDlg').open) return;
-    setView('jobs'); $('addJob').click();
+    setView('jobs'); itemFromWidget = true; $('addJob').click();
   }
 }
+// فُتحت ورقة العنصر من الودجت: بعد الحفظ أو الإلغاء يرجع الهاتف للشاشة الرئيسية (ما فُتح من داخل التطبيق يبقى كما هو)
+let itemFromWidget = false;
+$('jobDlg').addEventListener('close', () => {
+  if (!itemFromWidget) return;
+  itemFromWidget = false;
+  setTimeout(() => { const A = plugin('App'); if (A && A.minimizeApp) { try { A.minimizeApp(); } catch (e) {} } }, 350);
+});
 async function takeShortcut() {
   const W = nplug('WorkWidget'); if (!W || !W.takeShortcut) return;
   try { const r = await W.takeShortcut(); if (r && r.act) doShortcut(r.act); } catch (e) {}
