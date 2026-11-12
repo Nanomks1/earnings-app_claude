@@ -752,11 +752,11 @@ function renderSummary() {
   // في «الفترة الحالية» يعرض الرأس أصلًا المستحق والأجور والكريدي، فلا نكرّرها هنا
   $('sumOut').innerHTML =
     (cur && state.carry ? stat('cash', 'wide', mv(Math.abs(state.carry), state.carry < 0), 'مرحَّل من قبل') : '') +
-    stat('calendar', '', `<span>${c.days}</span>`, 'أيام العمل') +
-    stat('clock', '', `<span dir="ltr">${fmtHM(c.mins)}<small>س</small></span>`, 'مجموع الساعات') +
+    stat('calendar', 'lt', `<span>${c.days}</span>`, 'أيام العمل') +
+    stat('clock', 'lt', `<span dir="ltr">${fmtHM(c.mins)}<small>س</small></span>`, 'مجموع الساعات') +
+    stat('cash', 'lt', mv(c.days ? round2(c.work / c.days) : 0), 'متوسط الأجر') +
+    stat('clock', 'lt', `<span dir="ltr">${fmtHM(c.wd ? c.mins / c.wd : 0)}<small>س</small></span>`, 'متوسط الساعات') +
     (cur ? '' : statV('cash', '', mv(c.work), 'الأجور') + statV('mcircle', 'cr', mv(c.adv, c.adv > 0), 'الكريدي') + (c.ramt ? stat('home', 'wide', mv(c.ramt), 'منها عن بعد') : '') + jobsCard) +
-    stat('cash', '', mv(c.days ? round2(c.work / c.days) : 0), 'متوسط الأجر') +
-    stat('clock', '', `<span dir="ltr">${fmtHM(c.wd ? c.mins / c.wd : 0)}<small>س</small></span>`, 'متوسط الساعات') +
     (cur ? (c.ramt ? stat('home', 'wide', mv(c.ramt), 'أجور عن بعد') : '') + jobsCard : '') +
     (cur && !state.carry ? '' : stat('tcircle', 'net', mv(Math.abs(c.work - c.adv), c.work - c.adv < 0), 'الصافي'));
   $('sDates').style.display = sumMode === 'all' ? 'none' : ''; // «الكل» بلا حقلي من/إلى

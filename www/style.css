@@ -523,3 +523,6 @@ details[open] .bub.chv .ic{transform:rotate(90deg)}
 /* بطاقة مجموع العناصر */
 .stat.jobs .bub{background:color-mix(in srgb,var(--gd2) 28%,transparent);color:var(--gdt)}
 .stat .sl .cn{color:var(--mut);font-weight:400;margin-inline-start:6px;font-size:.88em}
+/* البطاقات الأربع: العنوان فوق والرقم تحته مباشرة والأيقونة في مكانها */
+.stat.lt .sl{order:-1}
+.stat.v{margin-top:6px}
