@@ -504,12 +504,11 @@ details[open] .bub.chv .ic{transform:rotate(90deg)}
 /* العناصر: بطاقة المجموع (داكنة بحافة ووهج خفيف يتبع لون التطبيق) */
 .jhero{grid-column:1/-1;position:relative;overflow:hidden;padding:15px 18px;border-radius:20px;background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid color-mix(in srgb,var(--pri) 75%,var(--bd));box-shadow:0 0 0 3px color-mix(in srgb,var(--pri) 12%,transparent),0 0 24px color-mix(in srgb,var(--pri) 30%,transparent)}
 .jhero::before{content:"";position:absolute;top:0;left:12%;right:12%;height:2px;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--pri) 70%,#fff),transparent);opacity:.95}
-.jhero::after{content:"";position:absolute;top:6px;right:-30px;width:210px;height:110px;border-radius:50%;background:radial-gradient(ellipse,color-mix(in srgb,var(--pri) 30%,transparent),transparent 70%);pointer-events:none}
 .jhero>*{position:relative;z-index:1}
 .jh1{display:flex;justify-content:space-between;align-items:center;font-size:calc(14px*var(--fs,1));color:var(--mut)}
 .jh1 i{font-style:normal;font-size:calc(12px*var(--fs,1));padding:3px 10px;border-radius:20px;background:var(--tint);color:var(--pritx);font-weight:600}
 .jh2{display:flex;align-items:baseline;justify-content:flex-end;gap:6px;margin-top:6px;direction:ltr}
-.jh2 b{font-size:calc(42px*var(--fs,1));font-weight:700;line-height:1.1;color:var(--pritx);text-shadow:0 0 16px color-mix(in srgb,var(--pri) 42%,transparent)}
+.jh2 b{font-size:calc(42px*var(--fs,1));font-weight:700;line-height:1.1;color:var(--pritx)}
 .jh2 small{font-size:calc(15px*var(--fs,1));color:var(--mut);font-weight:600}
 .jh3{display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--bd);font-size:calc(13px*var(--fs,1));color:var(--mut)}
 .jh3 .p{font-size:calc(15px*var(--fs,1));font-weight:700;padding:4px 12px;border-radius:20px;background:var(--tint);color:var(--pritx);box-shadow:0 0 10px color-mix(in srgb,var(--pri) 32%,transparent);direction:ltr}
