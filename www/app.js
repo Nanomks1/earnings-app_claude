@@ -59,13 +59,14 @@ function normJobs(a) {
   return out;
 }
 function norm(d) {
-  const s = { v: 5, items: [], archive: [], trash: [], carry: 0, open: null, prefs: normPrefs(d && d.prefs), jobs: [], jobsCfg: normJobsCfg() };
+  const s = { v: 5, items: [], archive: [], trash: [], carry: 0, open: null, prefs: normPrefs(d && d.prefs), jobs: [], jobsTrash: [], jobsCfg: normJobsCfg() };
   for (const k in SETTINGS) s[k] = SETTINGS[k].def;
   if (!d || typeof d !== 'object') return s;
   for (const k in SETTINGS) s[k] = SETTINGS[k].fix(d[k]);
   if (d.fsv === undefined && [1, 2].includes(Number(d.fs))) s.fsv = Number(d.fs) === 1 ? 113 : 116; // ترحيل من الخطوات القديمة
   s.carry = Number(d.carry) || 0;
   s.jobs = normJobs(d.jobs); s.jobsCfg = normJobsCfg(d.jobsCfg);
+  { const raw = Array.isArray(d.jobsTrash) ? d.jobsTrash : [], dm = new Map(raw.map(x => [Number(x && x.id), Number(x && x.delAt) || 0])); s.jobsTrash = normJobs(raw).filter(j => !s.jobs.some(x => x.id === j.id)).map(j => ({ ...j, delAt: dm.get(j.id) || 0 })); }
   if (d.open && d.open.date && d.open.start) {
     s.open = { date: d.open.date, start: d.open.start };
     const b = Math.round((Number(d.open.brk) || 0) * 100) / 100, bs = Number(d.open.bs) || 0;
@@ -1170,17 +1171,19 @@ $('fDel').onclick = () => {
   $('form').close(); save();
   undoBar('تم حذف السجل (في سلة المحذوفات)', () => restoreItem(it));
 };
-function updTrashLabel() { const n = (state.trash || []).length; $('trashSt').textContent = n ? unit(n, 'سجل', 'سجلان', 'سجلات') : 'فارغة'; }
+function updTrashLabel() { const n = (state.trash || []).length + (state.jobsTrash || []).length; $('trashSt').textContent = n ? unit(n, 'سجل', 'سجلان', 'سجلات') : 'فارغة'; }
 function renderTrash() {
   const t = (state.trash || []).slice().sort((a, b) => (b.delAt || 0) - (a.delAt || 0));
-  $('trashBody').innerHTML = t.length ? t.map(itemRow).join('') : emptyBox('archive', 'السلة فارغة.');
-  $('trashEmpty').hidden = !t.length;
+  const jt = (state.jobsTrash || []).length;
+  $('trashBody').innerHTML = t.length ? t.map(itemRow).join('') : (jt ? '' : emptyBox('archive', 'السلة فارغة.'));
+  if (window.Jobs) Jobs.renderTrash();
+  $('trashEmpty').hidden = !t.length && !jt;
 }
 function purgeTrash() { // حذف نهائي لما مرّ عليه 30 يومًا في السلة
-  if (state.trashAuto === false || !(state.trash || []).length) return;
+  if (state.trashAuto === false || (!(state.trash || []).length && !(state.jobsTrash || []).length)) return;
   const cut = Date.now() - 30 * 864e5;
-  const keep = state.trash.filter(t => !t.delAt || t.delAt > cut);
-  if (keep.length !== state.trash.length) { state.trash = keep; save(); }
+  const keep = (state.trash || []).filter(t => !t.delAt || t.delAt > cut), keepJ = (state.jobsTrash || []).filter(t => !t.delAt || t.delAt > cut);
+  if (keep.length !== (state.trash || []).length || keepJ.length !== (state.jobsTrash || []).length) { state.trash = keep; state.jobsTrash = keepJ; save(); }
 }
 setTimeout(purgeTrash, 0);
 $('trashAuto').onchange = () => { state.trashAuto = $('trashAuto').checked; savePrefs(); };
@@ -1192,8 +1195,8 @@ $('trashBody').onclick = async e => {
   if (t && await ask('استعادة السجل؟', 'سيعود إلى الفترة الحالية.', { ok: 'استعادة' })) { restoreItem(t); renderTrash(); updTrashLabel(); }
 };
 $('trashEmpty').onclick = async () => {
-  if (!(state.trash || []).length || !(await ask('إفراغ السلة؟', 'لا يمكن استرجاع السجلات بعدها.', { ok: 'إفراغ', danger: true }))) return;
-  state.trash = []; save(); renderTrash(); updTrashLabel(); toast('تم إفراغ السلة');
+  if ((!(state.trash || []).length && !(state.jobsTrash || []).length) || !(await ask('إفراغ السلة؟', 'لا يمكن استرجاع السجلات بعدها.', { ok: 'إفراغ', danger: true }))) return;
+  state.trash = []; state.jobsTrash = []; save(); renderTrash(); updTrashLabel(); toast('تم إفراغ السلة');
 };
 
 // ---------- استلام الدفعة والأرشيف ----------

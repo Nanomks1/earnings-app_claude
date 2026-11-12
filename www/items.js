@@ -143,8 +143,9 @@
         '<div class="stmm"><div><small>الثمن لكل ساعة عمل</small><b>' + (hrs > 0 ? money(round2(shop / hrs)) : '—') + '</b></div>' +
         '<div><small>أفضل يوم • <bdi dir="rtl">' + fmtNoYear(best) + '</bdi></small><b>' + money(sd[best]) + '</b></div></div>';
     }
-    html += '<div class="jgrid"><div class="jg hero"><div class="hr"><small>المجموع :</small><b>' + money(tot) + '</b></div>' +
-      (wage > 0 && shop > 0 ? '<span class="rt">عناصر المحل ' + num(Math.round(shop / wage * 10) / 10) + '× أجر نفس الأيام</span>' : '') + '</div>' +
+    const plab = per === 'm' ? 'هذا الشهر' : per === 'w' ? '7 أيام' : (B0.last ? { cur: 'الدفعة الحالية', prev: 'دفعات سابقة', all: 'الكل' }[scope] : 'الكل');
+    html += '<div class="jgrid"><div class="jhero"><div class="jh1"><span>مجموع العناصر</span><i>' + plab + '</i></div><div class="jh2"><b>' + num(tot) + '</b><small>' + esc((state.currency || '').trim()) + '</small></div>' +
+      (wage > 0 && shop > 0 ? '<div class="jh3"><span class="p">' + num(Math.round(shop / wage * 10) / 10) + '×</span><span>عناصر المحل مقارنة بأجر نفس الأيام</span></div>' : '') + '</div>' +
       g('العدد', J.length) + g('متوسط الثمن', money(round2(tot / J.length))) + g('الأعلى', money(mx)) + '</div>';
     if (dk.length) { // أعمدة: الأجر مقابل عناصر المحل لكل يوم (آخر 10 أيام فيها عناصر)
       const ds = Object.keys(sd).sort().slice(-7), mxv = Math.max(1, ...ds.map(d => Math.max(sd[d] || 0, wm[d] || 0))), ht = v => v > 0 ? Math.max(4, Math.round(v / mxv * 78)) : 2;
@@ -248,8 +249,9 @@
   $('jDel').onclick = () => {
     const i = state.jobs.findIndex(x => x.id === editId); if (i < 0) return;
     const j = state.jobs.splice(i, 1)[0];
-    $('jobDlg').close(); save();
-    undoBar('حُذف العنصر', () => { if (!state.jobs.some(x => x.id === j.id)) { state.jobs.push(j); save(); } });
+    state.jobsTrash = [{ ...j, delAt: Date.now() }, ...(state.jobsTrash || [])];
+    $('jobDlg').close(); save(); updTrashLabel();
+    undoBar('حُذف العنصر (في سلة المحذوفات)', () => { state.jobsTrash = (state.jobsTrash || []).filter(x => x.id !== j.id); if (!state.jobs.some(x => x.id === j.id)) state.jobs.push(j); save(); updTrashLabel(); });
   };
 
   // ---------- تحويل عناصر «عن بعد» إلى أجرة ----------
@@ -369,7 +371,20 @@
     $('jRenDlg').close(); save(); manage();
   };
 
-  window.Jobs = { apply, render, cfgShow, canShare, shareOn, setShare, lines, datesIn, attachPdf };
+  function renderTrash() {
+    const el = $('trashJobs'), t = (state.jobsTrash || []).slice().sort((a, b) => (b.delAt || 0) - (a.delAt || 0));
+    el.innerHTML = t.length ? '<div class="jbh">العناصر المحذوفة</div>' + t.map(j => '<button class="jrow" type="button" data-tj="' + j.id + '"><span class="jt"><b><bdi>' + esc(j.dev) + '</bdi></b>' + (j.pr ? '<span class="jm">' + esc(j.pr) + '</span>' : '') + '<span class="jx"> · ' + fmtNoYear(j.date) + '</span></span><span class="jp num">' + money(j.amt) + '</span></button>').join('') : '';
+  }
+  $('trashJobs').onclick = async e => {
+    const b = e.target.closest('[data-tj]'); if (!b) return;
+    const t = (state.jobsTrash || []).find(x => x.id == b.dataset.tj); if (!t) return;
+    if (!(await ask('استعادة العنصر؟', 'سيعود إلى قائمة العناصر.', { ok: 'استعادة' }))) return;
+    const { delAt, ...j } = t;
+    state.jobsTrash = state.jobsTrash.filter(x => x.id !== j.id);
+    if (!state.jobs.some(x => x.id === j.id)) state.jobs.push(j);
+    save(); renderTrash(); updTrashLabel(); render(); toast('تمت استعادة العنصر');
+  };
+  window.Jobs = { apply, render, renderTrash, cfgShow, canShare, shareOn, setShare, lines, datesIn, attachPdf };
   apply();
   if (view === 'jobs') render();
 })();
