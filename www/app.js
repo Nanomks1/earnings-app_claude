@@ -25,7 +25,7 @@ const SETTINGS = {
   secure: { def: false, fix: v => v === true }
 };
 // تفضيلات الجهاز التي تدخل النسخة الاحتياطية (مظهر الودجت، شكل الأيقونة، خيار التفصيل في المشاركة)
-const PREFS_DEF = () => ({ wg: { bg: 0, fg: 0, ic: 0, label: true, on: true, total: true }, ic: { style: 'a', follow: true }, sd: true, mo: 2, hp: true });
+const PREFS_DEF = () => ({ wg: { bg: 0, fg: 0, ic: 0, label: true, on: true, total: true }, ic: { style: 'a', follow: true }, sd: true, mo: 2, hp: true, sh: {} });
 const inSet = (v, a) => a.includes(Number(v)) ? Number(v) : 0;
 function normPrefs(p) {
   const o = PREFS_DEF(); if (!p || typeof p !== 'object') return o;
@@ -35,6 +35,7 @@ function normPrefs(p) {
   o.sd = p.sd !== false;
   o.mo = [0, 1, 2].includes(Number(p.mo)) ? Number(p.mo) : 2;
   o.hp = p.hp !== false;
+  o.sh = {}; if (p.sh && typeof p.sh === 'object') Object.keys(p.sh).slice(0, 12).forEach(k => { if (p.sh[k] === true) o.sh[k.slice(0, 40)] = true; });
   return o;
 }
 // عناصر العمل المنفَّذة (جهاز + مشكلة + ثمن): بيانات مستقلة عن السجل المالي ولا تدخل في حساب الأجر
@@ -559,11 +560,12 @@ const clean = s => String(s || '').replace(/[*_~`]/g, c => ({ '*': '×', '_': '�
 const moneyP = n => num(n) + cur();
 const signedP = n => (n < 0 ? '−' : '') + num(Math.abs(n)) + cur();
 const durS = m => { m = Math.round(m); const h = Math.floor(m / 60), r = m % 60; return h ? ltr(h + ':' + pad2(r)) + ' ساعة' : ltr(r) + ' دقيقة'; };
+let shHide = false; // نسخة «لصاحب العمل»: بلا كريدي ولا صافي (تُضبط أثناء بناء المشاركة فقط)
 function totalsBlock(c, hideNet) {
   const o = ['📆 أيام العمل: ' + ltr(c.days), '⌛ مجموع الساعات: ' + fmtDur(c.mins), '💰 الأجور: ' + money(c.work)];
   if (c.ramt) o.push('🏠 منها عن بعد: ' + money(c.ramt));
-  o.push('🔻 الكريدي: ' + signed(-c.adv));
-  if (!hideNet) o.push('✅ الصافي: ' + signed(c.work - c.adv));
+  if (!shHide) o.push('🔻 الكريدي: ' + signed(-c.adv));
+  if (!hideNet && !shHide) o.push('✅ الصافي: ' + signed(c.work - c.adv));
   return o;
 }
 // بند واحد = سطر واحد: أيقونة، المبلغ بخط عريض، ثم التفاصيل
@@ -574,6 +576,7 @@ function itemLine(i) {
   return '💰 ' + bold(ltr(moneyP(i.amount))) + ' • ' + (i.start && i.end ? ltr(i.start + ' – ' + i.end) + ' • ' : '') + durS(i.mins) + n;
 }
 function dayGroups(list) {
+  if (shHide) list = list.filter(i => i.type === 'work');
   const out = []; let last = null;
   const days = [];
   list.forEach(i => { if (i.date !== last) { days.push([]); last = i.date; } days[days.length - 1].push(i); });
@@ -602,8 +605,8 @@ const rangeOf = list => {
 };
 const rtl = lines => lines.join('\n').split('\n').map(l => l ? RLM + l : l).join('\n');
 function periodText(title, head, list, withDetail, extra, key, hideNet) {
-  const out = ['📋 ' + bold(title), ...head, SEP, ...totalsBlock(calc(list), hideNet), ...(extra || [])];
-  if (key) out.push('', BOX, key, BOX);
+  const out = ['📋 ' + bold(title), ...head, SEP, ...totalsBlock(calc(list), hideNet), ...(shHide ? [] : extra || [])];
+  if (key && !shHide) out.push('', BOX, key, BOX);
   if (withDetail && list.length) out.push('', '📑 ' + bold('التفاصيل'), ...dayGroups(list));
   return rtl(out);
 }
@@ -689,13 +692,16 @@ async function doShare(text) {
     else { await navigator.clipboard.writeText(text); toast('تم نسخ النص'); }
   } catch (e) {}
 }
-let pendingShare = null, pendingPdf = null;
+let pendingShare = null, pendingPdf = null, shKey = '';
 const setSd = d => { if (state.prefs.sd !== d) { state.prefs.sd = d; savePrefs(); } };
 function askShare(title, build, pdf) {
-  pendingShare = build; pendingPdf = pdf || null;
+  pendingShare = build; pendingPdf = pdf || null; shKey = title;
   $('shPdf').style.display = pdf ? '' : 'none';
   $('shTitle').textContent = title;
   $('shDetail').checked = state.prefs.sd !== false;
+  $('shHideRow').hidden = title === 'مشاركة كل الدفعات';
+  $('shHide').checked = !!(state.prefs.sh && state.prefs.sh[title]);
+  $('shText').hidden = true; $('shTextNote').hidden = true; $('shPrev').textContent = 'معاينة وتعديل النص';
   const noJ = !(window.Jobs && Jobs.canShare());
   $('shJobsRow').hidden = noJ;
   if (!noJ) { $('shJobs').checked = state.jobsCfg.sj; $('shJobsPr').checked = state.jobsCfg.sc; }
@@ -705,18 +711,37 @@ function askShare(title, build, pdf) {
 function syncJobsPr() { const on = $('shJobs').checked; $('shJobsPr').disabled = !on; $('shJobsPrRow').classList.toggle('dis', !on); }
 $('shJobs').onchange = syncJobsPr;
 const jobsShareSync = () => { if (window.Jobs) Jobs.setShare(!$('shJobsRow').hidden && $('shJobs').checked, $('shJobsPr').checked, !$('shJobsRow').hidden); };
-$('shCancel').onclick = () => $('shDlg').close();
-$('shGo').onclick = async () => {
-  const d = $('shDetail').checked; setSd(d); jobsShareSync();
-  const text = pendingShare(d); $('shDlg').close(); await doShare(text);
+// «إخفاء الكريدي والصافي»: يُحفظ اختياره لكل نوع مشاركة
+const readHide = () => {
+  const row = !$('shHideRow').hidden, v = row && $('shHide').checked;
+  if (row && !!(state.prefs.sh && state.prefs.sh[shKey]) !== v) { if (!state.prefs.sh) state.prefs.sh = {}; if (v) state.prefs.sh[shKey] = true; else delete state.prefs.sh[shKey]; savePrefs(); }
+  return v;
 };
+function buildText() {
+  const d = $('shDetail').checked; jobsShareSync(); shHide = readHide();
+  try { return pendingShare(d); } finally { shHide = false; }
+}
+const fillPrev = () => { $('shText').value = buildText(); };
+function shareTextNow() {
+  const d = $('shDetail').checked; setSd(d); jobsShareSync(); readHide();
+  return !$('shText').hidden ? $('shText').value : buildText();
+}
+['shDetail', 'shJobs', 'shJobsPr', 'shHide'].forEach(id => $(id).addEventListener('change', () => { if (!$('shText').hidden) fillPrev(); }));
+$('shPrev').onclick = () => {
+  const on = $('shText').hidden;
+  $('shText').hidden = !on; $('shTextNote').hidden = !on; $('shPrev').textContent = on ? 'إخفاء المعاينة' : 'معاينة وتعديل النص';
+  if (on) fillPrev();
+};
+$('shCancel').onclick = () => $('shDlg').close();
+$('shGo').onclick = async () => { const text = shareTextNow(); $('shDlg').close(); await doShare(text); };
 $('shPdf').onclick = async () => {
-  const d = $('shDetail').checked; setSd(d); jobsShareSync();
-  const p = pendingPdf(d); if (window.Jobs) Jobs.attachPdf(p.cfg); $('shDlg').close(); await sharePdf(p.cfg, p.name);
+  const d = $('shDetail').checked; setSd(d); jobsShareSync(); const hid = readHide();
+  const p = pendingPdf(d);
+  if (hid) { p.cfg.items = p.cfg.items.filter(i => i.type === 'work'); p.cfg.extra = []; p.cfg.hideNet = true; }
+  if (window.Jobs) Jobs.attachPdf(p.cfg); $('shDlg').close(); await sharePdf(p.cfg, p.name);
 };
 $('shCopy').onclick = async () => {
-  const d = $('shDetail').checked; setSd(d); jobsShareSync();
-  const text = pendingShare(d); $('shDlg').close();
+  const text = shareTextNow(); $('shDlg').close();
   try { await navigator.clipboard.writeText(text); toast('تم نسخ النص'); } catch (e) { toast('تعذر النسخ'); }
 };
 $('shareCur').onclick = () => {
@@ -957,10 +982,11 @@ function reportPages(cfg) {
   T(cfg.title, 72, '700', 'rtl', 'right', R, y, P.INK); y += 60;
   if (cfg.sub) { T(cfg.sub, 36, '400', 'rtl', 'right', R, y, P.GR); y += 40; }
   y += 24;
-  const net = c.work - c.adv, cards = [['عدد الأيام', String(c.days), P.INK, 'rtl'], ['ساعات العمل', hmAr(c.mins), P.GO, 'rtl'], ['أجر العمل بالساعات', money(c.work - c.ramt), P.GN, 'ltr']];
+  const net = c.work - c.adv, tv = cfg.hideNet ? c.work : net, cards = [['عدد الأيام', String(c.days), P.INK, 'rtl'], ['ساعات العمل', hmAr(c.mins), P.GO, 'rtl'], ['أجر العمل بالساعات', money(c.work - c.ramt), P.GN, 'ltr']];
   if (c.ramt) cards.push(['أجر العمل عن بعد', money(c.ramt), P.BL, 'ltr']);
   if (c.adv) cards.push(['الكريدي', '−' + money(c.adv), P.RD, 'ltr']);
-  cards.push(['الصافي', money(net), net < 0 ? P.RD : P.GN, 'ltr', net < 0 ? P.RD : P.GN]);
+  if (!cfg.hideNet) cards.push(['الصافي', money(net), net < 0 ? P.RD : P.GN, 'ltr', net < 0 ? P.RD : P.GN]);
+  else if (c.ramt) cards.push(['إجمالي الأجور', money(c.work), P.GN, 'ltr', P.GN]);
   const strong = [];
   (cfg.extra || []).forEach(r => r[2] ? strong.push(r) : cards.push([r[0], r[1], P.INK, 'ltr', null]));
   const CWD = (W - 2 * M - 24) / 2, CH = 124;
@@ -1002,7 +1028,7 @@ function reportPages(cfg) {
     x.fillStyle = P.HB; x.fillRect(M, y, W - 2 * M, RH);
     T('المجموع', 30, '700', 'rtl', 'right', cols[0].r - 16, y + 44, P.INK);
     T(hmAr(c.mins), 28, '700', 'rtl', 'center', cols[5].c, y + 44, P.GO);
-    T((net < 0 ? '−' : '') + num(Math.abs(net)), 28, '700', 'ltr', 'center', cols[6].c, y + 44, net < 0 ? P.RD : P.GN);
+    T((tv < 0 ? '−' : '') + num(Math.abs(tv)), 28, '700', 'ltr', 'center', cols[6].c, y + 44, tv < 0 ? P.RD : P.GN);
     x.fillStyle = P.GD; x.fillRect(M, y + RH - 2, W - 2 * M, 2); vlines(y, RH); y += RH;
   }
   if (cfg.jobs && cfg.jobs.length) { // قسم «ما تم تنفيذه»: التاريخ، الجهاز، المشكلة، (الثمن)

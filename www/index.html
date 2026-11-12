@@ -393,8 +393,12 @@
 <dialog id="shDlg">
   <h2 id="shTitle">مشاركة</h2>
   <div class="tg"><span>تضمين تفاصيل الأيام</span><input type="checkbox" id="shDetail" checked></div>
+  <div class="tg" id="shHideRow"><span>إخفاء الكريدي والصافي</span><input type="checkbox" id="shHide"></div>
   <div class="tg" id="shJobsRow" hidden><span>أرفق ما تم تنفيذه</span><input type="checkbox" id="shJobs" checked></div>
   <div class="tg" id="shJobsPrRow" hidden><span>مع الأثمنة</span><input type="checkbox" id="shJobsPr" checked></div>
+  <div class="acts" style="margin-top:12px"><button id="shPrev" type="button">معاينة وتعديل النص</button></div>
+  <textarea id="shText" hidden rows="9" style="width:100%;margin-top:10px;box-sizing:border-box;direction:rtl;font:inherit;font-size:calc(14px*var(--fs,1));background:var(--card2);color:var(--text);border:1px solid var(--bd);border-radius:12px;padding:10px;resize:vertical"></textarea>
+  <div id="shTextNote" hidden style="margin-top:6px;font-size:calc(12px*var(--fs,1));color:var(--mut)">التعديل يخص النص فقط (لا يدخل في PDF)، ويُعاد بناء النص عند تغيير المفاتيح.</div>
   <div class="acts">
     <button class="ok" id="shGo" type="button"><svg class="ic"><use href="#i-share"/></svg>مشاركة نص</button>
     <button id="shPdf" type="button"><svg class="ic"><use href="#i-file"/></svg>مشاركة PDF</button>
