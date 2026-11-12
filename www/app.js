@@ -727,21 +727,37 @@ const stat = (icon, cls, val, label) => {
   const L = val.replace(/<[^>]*>/g, '').length, f = /wide|net/.test(cls) ? '' : L > 10 ? ' f2' : L > 8 ? ' f1' : ''; // الأرقام الطويلة تصغر بدل أن تُقصّ
   return `<div class="stat ${cls}${f}"><span class="bub ${cls === 'cr' ? 'neg' : ''}">${ic(icon)}</span><div class="txt"><div class="sv num">${val}</div><div class="sl">${label}</div></div></div>`;
 };
+// بطاقة بأيقونة وعنوان في الأعلى والرقم تحتهما؛ DH يقع تحت مركز الأيقونة تمامًا (للأجور والكريدي)
+const statV = (icon, cls, val, label) => {
+  const N = val.replace(/<small>[\s\S]*?<\/small>/g, '').replace(/<[^>]*>/g, '').length, f = N > 11 ? ' f2' : N > 9 ? ' f1' : '';
+  return `<div class="stat v ${cls}${f}"><div class="vh"><span class="bub ${cls === 'cr' ? 'neg' : ''}">${ic(icon)}</span><div class="sl">${label}</div></div><div class="sv num">${val}</div></div>`;
+};
+// عناصر الفترة المعروضة في الملخص: «الحالية» = ما بعد آخر دفعة مؤرشفة، وغيرها حسب حقلي من/إلى
+function jobsRange() {
+  const jobs = state.jobs || [];
+  if (sumMode === 'cur') {
+    let last = ''; (state.archive || []).forEach(a => (a.items || []).forEach(i => { if (i.date && i.date > last) last = i.date; }));
+    return jobs.filter(j => !last || j.date > last);
+  }
+  const from = $('sFrom').value, to = $('sTo').value;
+  return jobs.filter(j => (!from || j.date >= from) && (!to || j.date <= to));
+}
 const num2 = n => Number(n).toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const mv = (n, neg) => `<span dir="ltr">${neg ? '−' : ''}${num2(n)}<small>${esc(state.currency)}</small></span>`;
 function renderSummary() {
   if (sumMode === 'cur') curDates();
   const c = calc(inRange());
   const cur = sumMode === 'cur';
+  const jb = jobsRange(), jobsCard = jb.length ? stat('list', 'wide jobs', mv(round2(jb.reduce((t, j) => t + (Number(j.amt) || 0), 0))), `مجموع العناصر<span class="cn">· ${jb.length} عنصر</span>`) : '';
   // في «الفترة الحالية» يعرض الرأس أصلًا المستحق والأجور والكريدي، فلا نكرّرها هنا
   $('sumOut').innerHTML =
     (cur && state.carry ? stat('cash', 'wide', mv(Math.abs(state.carry), state.carry < 0), 'مرحَّل من قبل') : '') +
     stat('calendar', '', `<span>${c.days}</span>`, 'أيام العمل') +
     stat('clock', '', `<span dir="ltr">${fmtHM(c.mins)}<small>س</small></span>`, 'مجموع الساعات') +
-    (cur ? '' : stat('cash', '', mv(c.work), 'الأجور') + stat('mcircle', 'cr', mv(c.adv, c.adv > 0), 'الكريدي') + (c.ramt ? stat('home', 'wide', mv(c.ramt), 'منها عن بعد') : '')) +
+    (cur ? '' : statV('cash', '', mv(c.work), 'الأجور') + statV('mcircle', 'cr', mv(c.adv, c.adv > 0), 'الكريدي') + (c.ramt ? stat('home', 'wide', mv(c.ramt), 'منها عن بعد') : '') + jobsCard) +
     stat('cash', '', mv(c.days ? round2(c.work / c.days) : 0), 'متوسط الأجر') +
     stat('clock', '', `<span dir="ltr">${fmtHM(c.wd ? c.mins / c.wd : 0)}<small>س</small></span>`, 'متوسط الساعات') +
-    (cur && c.ramt ? stat('home', 'wide', mv(c.ramt), 'أجور عن بعد') : '') +
+    (cur ? (c.ramt ? stat('home', 'wide', mv(c.ramt), 'أجور عن بعد') : '') + jobsCard : '') +
     (cur && !state.carry ? '' : stat('tcircle', 'net', mv(Math.abs(c.work - c.adv), c.work - c.adv < 0), 'الصافي'));
   $('sDates').style.display = sumMode === 'all' ? 'none' : ''; // «الكل» بلا حقلي من/إلى
   renderChart(); renderWeekday(); renderMonths(); renderBalance();

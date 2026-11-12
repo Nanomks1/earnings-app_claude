@@ -513,3 +513,13 @@ details[open] .bub.chv .ic{transform:rotate(90deg)}
 .jh2 small{font-size:calc(15px*var(--fs,1));color:var(--mut);font-weight:600}
 .jh3{display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--bd);font-size:calc(13px*var(--fs,1));color:var(--mut)}
 .jh3 .p{font-size:calc(15px*var(--fs,1));font-weight:700;padding:4px 12px;border-radius:20px;background:var(--tint);color:var(--pritx);box-shadow:0 0 10px color-mix(in srgb,var(--pri) 32%,transparent);direction:ltr}
+/* بطاقتا الأجور والكريدي: الأيقونة والعنوان فوق، والرقم تحتهما وDH تحت مركز الأيقونة */
+.stat.v{flex-direction:column;align-items:stretch;justify-content:center;gap:8px}
+.stat.v .vh{display:flex;align-items:center;gap:10px;min-width:0}
+.stat.v .sl{flex:1;min-width:0}
+.stat.v .sv{width:100%}
+.stat.v .sv>span{display:flex;justify-content:flex-end;align-items:baseline;gap:0;direction:ltr;flex-wrap:nowrap;white-space:nowrap}
+.stat.v .sv small{display:inline-flex;justify-content:center;flex:none;width:34px}
+/* بطاقة مجموع العناصر */
+.stat.jobs .bub{background:color-mix(in srgb,var(--gd2) 28%,transparent);color:var(--gdt)}
+.stat .sl .cn{color:var(--mut);font-weight:400;margin-inline-start:6px;font-size:.88em}
