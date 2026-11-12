@@ -464,3 +464,28 @@ details[open] .bub.chv .ic{transform:rotate(90deg)}
 .cs div{padding:9px 6px}
 .cs b{font-size:calc(15px*var(--fs,1))}
 .cd b .ic{width:16px;height:16px;vertical-align:middle}
+
+/* العناصر: تصميم جديد للإحصاءات والقائمة */
+.jsum{padding:8px 0;font-size:calc(12px*var(--fs,1))}
+.jsum>div{flex:1;text-align:center}
+.jsum>div+div{border-inline-start:1px solid var(--bd)}
+.jsum small{display:block;color:var(--mut)}
+.jsum b{display:block;margin:0;font-size:calc(17px*var(--fs,1));color:var(--text);direction:ltr}
+.jg.hero .hr{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.jg.hero .hr small{display:inline;font-size:calc(19px*var(--fs,1));opacity:1}
+.jg.hero .hr b{display:inline;font-size:calc(30px*var(--fs,1))}
+.jg.hero .rt{margin-top:8px;font-size:calc(15px*var(--fs,1));text-align:start}
+.jgrid .jg:not(.hero){text-align:center;padding:10px 4px}
+.jgrid .jg:not(.hero) b{text-align:center}
+.jh{padding:10px 20px 8px}
+.jk3{display:grid;grid-template-columns:minmax(0,1fr) 90px 48px;column-gap:6px;padding:0 12px 12px}
+.jk3>div{display:grid;grid-template-rows:16px 22px;row-gap:2px;padding:7px 8px}
+.jk3 small{line-height:16px;white-space:nowrap}
+.jk3 b{line-height:22px}
+.jk3 .jw,.jk3 .jw b{text-align:right}
+.jk3 .jr{padding:7px 2px}
+.jrow.j3{display:grid;grid-template-columns:minmax(0,1fr) 90px 48px;column-gap:6px;padding:6px 12px}
+.jrow.j3>*{padding:0 8px}
+.jrow.j3 .jn{text-align:start;font-size:calc(14px*var(--fs,1));overflow-wrap:anywhere}
+.jrow.j3 .jch{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;padding:0}
+.jrow.j3 .jp{text-align:center;padding:0;font-size:calc(14px*var(--fs,1))}

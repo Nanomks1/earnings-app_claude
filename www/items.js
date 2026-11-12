@@ -45,7 +45,7 @@
       box.innerHTML = q ? emptyBox('search', 'لا توجد نتائج مطابقة.') : emptyBox('list', 'لا توجد عناصر بعد.<br>اضغط «عنصر» لتسجيل أول عنصر.');
       return;
     }
-    $('jSum').innerHTML = 'العدد: ' + all.length + ' • المجموع: ' + money(sum(all));
+    $('jSum').innerHTML = '<div><small>العدد</small><b>' + all.length + '</b></div><div><small>المجموع</small><b>' + money(sum(all)) + '</b></div>';
     const wm = wageMap(), days = {};
     all.forEach(j => (days[j.date] = days[j.date] || []).push(j));
     const keys = Object.keys(days).sort().reverse(), shown = keys.slice(0, showDays);
@@ -59,8 +59,11 @@
       if (shopL.length) cells.push(cell('العناصر', money(shop), true));
       if (wage > 0 && shop > 0) cells.push(cell('النسبة', num(Math.round(shop / wage * 10) / 10) + '×'));
       if (rem > 0) cells.push(cell('عن بعد', money(rem)));
-      return '<div class="jcard"><div class="jh"><b>' + fmtDay(d) + '</b></div><div class="jk">' + cells.join('') + '</div>' +
-        g.map(j => '<button class="jrow" type="button" data-id="' + j.id + '"><span class="jt"><b><bdi>' + esc(j.dev) + '</bdi></b>' + (j.pr ? '<span class="jm">' + esc(j.pr) + '</span>' : '') + (j.remote ? '<span class="jx"> · عن بعد' + (settled(j, have) ? ' · محسوبة' : '') + '</span>' : '') +
+      const m3 = wage > 0 && shop > 0 && !g.some(j => j.remote);
+      const tiles3 = '<div class="jw"><small>الأجر</small><b>' + money(wage) + '</b></div><div class="jhl"><small>العناصر</small><b>' + money(shop) + '</b></div><div class="jr"><small>النسبة</small><b>' + num(Math.round(shop / wage * 10) / 10) + '×</b></div>';
+      const row3 = j => '<button class="jrow j3" type="button" data-id="' + j.id + '"><span class="jn"><b><bdi>' + esc(j.dev) + '</bdi></b></span><span class="jch">' + splitPr(j.pr).map(x => '<span class="jm">' + esc(x) + '</span>').join('') + '</span><span class="jp num">' + money(j.amt) + '</span></button>';
+      return '<div class="jcard"><div class="jh"><b>' + fmtDay(d) + '</b></div><div class="jk' + (m3 ? ' jk3' : '') + '">' + (m3 ? tiles3 : cells.join('')) + '</div>' +
+        g.map(j => m3 ? row3(j) : '<button class="jrow" type="button" data-id="' + j.id + '"><span class="jt"><b><bdi>' + esc(j.dev) + '</bdi></b>' + (j.pr ? '<span class="jm">' + esc(j.pr) + '</span>' : '') + (j.remote ? '<span class="jx"> · عن بعد' + (settled(j, have) ? ' · محسوبة' : '') + '</span>' : '') +
           '</span><span class="jp num">' + money(j.amt) + '</span></button>').join('') + '</div>';
     }).join('') + (keys.length > shown.length ? '<button class="jmore" id="jMore" type="button">عرض أيام أقدم</button>' : '');
   }
@@ -99,7 +102,7 @@
         '<div class="stmm"><div><small>الثمن لكل ساعة عمل</small><b>' + (hrs > 0 ? money(round2(shop / hrs)) : '—') + '</b></div>' +
         '<div><small>أفضل يوم • <bdi dir="rtl">' + fmtNoYear(best) + '</bdi></small><b>' + money(sd[best]) + '</b></div></div>';
     }
-    html += '<div class="jgrid"><div class="jg hero"><small>المجموع</small><b>' + money(tot) + '</b>' +
+    html += '<div class="jgrid"><div class="jg hero"><div class="hr"><small>المجموع :</small><b>' + money(tot) + '</b></div>' +
       (wage > 0 && shop > 0 ? '<span class="rt">عناصر المحل ' + num(Math.round(shop / wage * 10) / 10) + '× أجر نفس الأيام</span>' : '') + '</div>' +
       g('العدد', J.length) + g('متوسط الثمن', money(round2(tot / J.length))) + g('الأعلى', money(mx)) + '</div>';
     if (dk.length) { // أعمدة: الأجر مقابل عناصر المحل لكل يوم (آخر 10 أيام فيها عناصر)
