@@ -439,6 +439,8 @@ function toggleBreak() {
   else { o.bs = Date.now(); toast('بدأت الاستراحة'); }
   save();
 }
+// بطاقة الدخول: خارج «السجلات» تختفي إلا إذا كانت وردية جارية
+function shiftVis() { $('shift').hidden = view !== 'list' && !state.open; }
 function renderShift() {
   const o = state.open;
   $('shift').innerHTML = !o
@@ -446,6 +448,7 @@ function renderShift() {
     : `<div class="open"><div class="top"><span class="pulse"></span><div style="flex:1"><b>أنت الآن في العمل</b><br><small>دخلت <button type="button" class="edst" id="editIn" aria-label="تعديل وقت الدخول"><span dir="ltr">${o.start}</span>${ic('edit')}</button></small>${o.bs || o.brk > 0 ? '<br><small id="brkInfo">' + brkInfoText() + '</small>' : ''}</div><div class="el num" id="elapsed">${fmtHM(netMins())}</div></div>
        ${elapsedMins() > OPEN_WARN ? '<div class="note warn" id="openWarn">مضى وقت طويل على الدخول. تأكد من وقت الخروج.</div>' : ''}
        <div class="btns"><button id="clockOut">${ic('stop')}تسجيل الخروج</button><button id="brkBtn"${o.bs ? ' class="on"' : ''}>${o.bs ? 'إنهاء الاستراحة' : 'استراحة'}</button><button id="clockCancel" aria-label="إلغاء">${ic('x')}</button></div></div>`;
+  shiftVis();
 }
 setInterval(() => {
   const e = $('elapsed'); if (!e || !state.open) return;
@@ -886,6 +889,7 @@ function setView(v) {
   view = v;
   $('list').hidden = v !== 'list'; $('arch').hidden = v !== 'arc'; $('cal').hidden = v !== 'cal'; $('summary').hidden = v !== 'sum'; $('jobs').hidden = v !== 'jobs'; $('flt').hidden = v === 'sum' || v === 'cal' || v === 'jobs'; renderFltRes();
   $('mainBar').hidden = v === 'jobs'; $('jobBar').hidden = v !== 'jobs';
+  shiftVis();
   $('tabJobs').classList.toggle('on', v === 'jobs');
   if (v === 'jobs' && window.Jobs) Jobs.render();
   $('tabList').classList.toggle('on', v === 'list');
