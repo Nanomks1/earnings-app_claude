@@ -1545,6 +1545,30 @@ function fdb() { return new Promise((res, rej) => { const r = indexedDB.open('wo
 async function fdbGet() { const db = await fdb(); return new Promise((res, rej) => { const q = db.transaction('f').objectStore('f').get('custom'); q.onsuccess = () => res(q.result || null); q.onerror = () => rej(q.error); }); }
 async function fdbSet(v) { const db = await fdb(); return new Promise((res, rej) => { const t = db.transaction('f', 'readwrite'); t.objectStore('f').put(v, 'custom'); t.oncomplete = () => res(); t.onerror = t.onabort = () => rej(t.error); }); }
 async function fdbDel() { const db = await fdb(); return new Promise((res, rej) => { const t = db.transaction('f', 'readwrite'); t.objectStore('f').delete('custom'); t.oncomplete = () => res(); t.onerror = t.onabort = () => rej(t.error); }); }
+function varWeightRange(buf) { // يقرأ مدى وزن الخط المتغيّر (جدول fvar) من داخل ملف ttf/otf؛ null إن لم يكن متغيّرًا
+  try {
+    const v = new DataView(buf);
+    if (buf.byteLength < 12) return null;
+    const sig = v.getUint32(0);
+    if (sig !== 0x00010000 && sig !== 0x4F54544F && sig !== 0x74727565) return null; // ttf / otf / true فقط
+    const n = v.getUint16(4);
+    for (let i = 0; i < n; i++) {
+      const r = 12 + i * 16;
+      if (r + 16 > buf.byteLength) return null;
+      if (v.getUint32(r) !== 0x66766172) continue; // 'fvar'
+      const t = v.getUint32(r + 8), ao = v.getUint16(t + 4), ac = v.getUint16(t + 8), as = v.getUint16(t + 10);
+      for (let k = 0; k < ac; k++) {
+        const a = t + ao + k * as;
+        if (v.getUint32(a) === 0x77676874) { // 'wght'
+          const lo = Math.round(v.getInt32(a + 4) / 65536), hi = Math.round(v.getInt32(a + 12) / 65536);
+          if (lo >= 1 && hi > lo && hi <= 1000) return lo + ' ' + hi;
+        }
+      }
+      return null;
+    }
+  } catch (e) {}
+  return null;
+}
 function fontWeightOf(n) { // يستنتج الوزن من اسم الملف
   if (/variable|\[wght|-vf\b/.test(n)) return '100 900';
   const m = [[/thin|hairline/, 100], [/extra-?light|ultra-?light/, 200], [/light/, 300], [/semi-?bold|demi-?bold/, 600], [/extra-?bold|ultra-?bold/, 800], [/black|heavy/, 900], [/bold/, 700], [/medium/, 500]];
@@ -1587,7 +1611,7 @@ $('ffFile').onchange = async () => {
     for (const f of fl) {
       const n = f.name.toLowerCase();
       if (!/\.(ttf|otf|woff2?)$/.test(n) || /italic|oblique/.test(n) || f.size > 8 * 1024 * 1024) continue;
-      files.push({ name: f.name, weight: fontWeightOf(n), data: await f.arrayBuffer() });
+      const data = await f.arrayBuffer(); files.push({ name: f.name, weight: varWeightRange(data) || fontWeightOf(n), data });
     }
   } catch (e) { toast('تعذّرت قراءة الملفات'); return; }
   if (!files.length) { toast('لم أجد ملف خط صالحًا (ttf أو otf)'); return; }
