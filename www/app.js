@@ -506,6 +506,7 @@ $('iOk').onclick = async () => {
     }
   }
   state.open = { ...(state.open || {}), date, start: time };
+  if (state.open.bs && state.open.bs < new Date(date + 'T' + time).getTime()) state.open.bs = new Date(date + 'T' + time).getTime(); // الاستراحة الجارية لا تسبق وقت الدخول الجديد
   wfAskedMark('in', k0); wfAskedMark('in', date + ' ' + time);
   $('inDlg').close(); buzz(15); save(); toast('تم حفظ وقت الدخول');
 };
@@ -1736,7 +1737,7 @@ async function rotateSnap() {
 }
 // نسخ أمان (5): تدور فقط عندما يُنقِص التغيير بيانات (حذف سجل، ضياع دخول جارٍ، نقص أرشيف)، فتُحفظ النسخة السابقة قبل الكتابة فوقها
 const SAFES = ['earnings-safe-1.json', 'earnings-safe-2.json', 'earnings-safe-3.json', 'earnings-safe-4.json', 'earnings-safe-5.json'];
-const bkSum = s => ({ n: s.items.length, a: s.archive.length, o: s.open ? 1 : 0 });
+const bkSum = s => ({ n: s.items.length + s.archive.reduce((t, a) => t + ((a.items || []).length), 0), a: s.archive.length, o: s.open ? 1 : 0 }); // n = كل السجلات (الحالية + المؤرشفة): استلام دفعة ينقلها للأرشيف فلا يُعدّ نقصًا
 const bkLoss = (p, c) => !!p && (c.n < p.n || c.a < p.a || (p.o && !c.o && c.n <= p.n));
 async function rotateSafe() {
   const cur = await readBack(AUTO_NAME);
