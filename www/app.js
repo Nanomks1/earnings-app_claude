@@ -4,6 +4,8 @@ const AUTO_NAME = 'earnings-backup.json';
 const DEF_RATE = 10;
 const DEF_COLOR = '#2c6e69';
 const PALETTE = ['#2c6e69', '#3d6a8f', '#4a7c59', '#6b5b95', '#a0623a', '#a14d63', '#4b5563', '#7a6a3a', '#ff5a5f', '#29a9e8', '#8bc34a', '#5c6bc0'];
+// ألوان الأيقونات الفعلية (نفس ترتيب PALETTE، ومطابقة لـ android-src/gen_icons.py) — تُستخدم لاختيار أقرب أيقونة للون مخصص
+const ICON_PAL = ['#26a69a', '#4a90d9', '#4caf50', '#7e57c2', '#ff7043', '#ec407a', '#607d8b', '#ffb300', '#ff5a5f', '#29a9e8', '#8bc34a', '#5c6bc0'];
 let sysCol = ''; try { sysCol = localStorage.getItem('earnings_syscol') || ''; } catch (e) {}
 const WD = ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
 
@@ -575,16 +577,17 @@ function itemLine(i) {
   if (i.remote) return '🏠 ' + bold(ltr(moneyP(i.amount))) + ' • عن بعد' + n;
   return '💰 ' + bold(ltr(moneyP(i.amount))) + ' • ' + (i.start && i.end ? ltr(i.start + ' – ' + i.end) + ' • ' : '') + durS(i.mins) + n;
 }
-function dayGroups(list) {
+const weekEnd = k => { const d = dt(k); d.setDate(d.getDate() + 6); return iso(d); };
+function dayGroups(list, rng) { // rng: مدى تواريخ التقرير ('cur' أو {lo,hi}) ليشمل أيام العناصر الخالية من ورديات العمل
   if (shHide) list = list.filter(i => i.type === 'work');
   const out = []; let last = null;
   const days = [];
   list.forEach(i => { if (i.date !== last) { days.push([]); last = i.date; } days[days.length - 1].push(i); });
   const J = window.Jobs && Jobs.shareOn() ? Jobs : null; // «ما تم تنفيذه» تحت كل يوم عند تفعيله في نافذة المشاركة
   const blocks = days.map(g => ({ d: g[0].date, g }));
-  if (J && blocks.length) {
+  if (J && (blocks.length || rng)) {
     const have = new Set(blocks.map(b => b.d));
-    J.datesIn(blocks[0].d, blocks[blocks.length - 1].d).forEach(d => { if (!have.has(d)) blocks.push({ d, g: [] }); });
+    J.rangeDates(rng, blocks.length ? blocks[0].d : '', blocks.length ? blocks[blocks.length - 1].d : '').forEach(d => { if (!have.has(d)) blocks.push({ d, g: [] }); });
     blocks.sort((a, b) => a.d.localeCompare(b.d));
   }
   blocks.forEach((b, k) => {
@@ -604,26 +607,26 @@ const rangeOf = list => {
   return d.length ? (d[0] === d[d.length - 1] ? fmtShort(d[0]) : fmtShort(d[0]) + ' ← ' + fmtShort(d[d.length - 1])) : '—';
 };
 const rtl = lines => lines.join('\n').split('\n').map(l => l ? RLM + l : l).join('\n');
-function periodText(title, head, list, withDetail, extra, key, hideNet) {
+function periodText(title, head, list, withDetail, extra, key, hideNet, rng) {
   const out = ['📋 ' + bold(title), ...head, SEP, ...totalsBlock(calc(list), hideNet), ...(shHide ? [] : extra || [])];
   if (key && !shHide) out.push('', BOX, key, BOX);
-  if (withDetail && list.length) out.push('', '📑 ' + bold('التفاصيل'), ...dayGroups(list));
+  if (withDetail && list.length) out.push('', '📑 ' + bold('التفاصيل'), ...dayGroups(list, rng));
   return rtl(out);
 }
 const netKey = list => { const c = calc(list); return '✅ ' + bold('الصافي: ' + ltr(signedP(c.work - c.adv))); };
 function summaryText(withDetail) {
   const list = inRange().sort(byDate), from = $('sFrom').value, to = $('sTo').value;
   const head = from && to ? `من ${fmtShort(from)}\nإلى ${fmtShort(to)}` : from ? `من ${fmtShort(from)}` : to ? `حتى ${fmtShort(to)}` : 'كل الفترات';
-  return periodText('ملخص العمل', ['🗓 ' + head], list, withDetail === undefined ? true : withDetail, null, netKey(list), true);
+  return periodText('ملخص العمل', ['🗓 ' + head], list, withDetail === undefined ? true : withDetail, null, netKey(list), true, { lo: from, hi: to });
 }
 function currentText(d) {
   const list = [...state.items].sort(byDate), extra = [];
   if (state.carry) extra.push('↩️ مرحَّل من الدفعة السابقة: ' + signed(state.carry));
-  return periodText('الفترة الحالية (غير مدفوعة)', ['🗓 ' + rangeOf(list)], list, d, extra, '🧾 ' + bold('المستحق الآن: ' + ltr(signedP(due()))));
+  return periodText('الفترة الحالية (غير مدفوعة)', ['🗓 ' + rangeOf(list)], list, d, extra, '🧾 ' + bold('المستحق الآن: ' + ltr(signedP(due()))), false, 'cur');
 }
 function weekText(k, d) {
   const list = state.items.filter(i => monday(i.date) === k).sort(byDate);
-  return periodText('ملخص أسبوع', ['🗓 ' + weekLabel(k)], list, d, null, netKey(list), true);
+  return periodText('ملخص أسبوع', ['🗓 ' + weekLabel(k)], list, d, null, netKey(list), true, { lo: k, hi: weekEnd(k) });
 }
 // متبقي الدفعة: إن وُجدت دفعة تالية فقد رُحِّل إليها (يظهر هناك «مرحَّل قبلها») وانتهى أمره، فيُعرض محايدًا بالإشارة (− عليك، + لك).
 // أما «زيادة/بقي» الملوّنة فللدفعة الأخيرة فقط لأن متبقيها هو المرحَّل الحالي. 'old' = لم يُرحَّل في التطبيق (دفعات قديمة مستوردة)
@@ -660,10 +663,10 @@ function currentCfg(d) {
   const list = [...state.items].sort(byDate), extra = [];
   if (state.carry) extra.push(['مرحَّل من الدفعة السابقة', signed(state.carry)]);
   extra.push(['المستحق الآن', signed(due()), true]);
-  return { title: 'الفترة الحالية (غير مدفوعة)', sub: 'الفترة: ' + rangeOf(list), items: list, detail: d, extra };
+  return { title: 'الفترة الحالية (غير مدفوعة)', sub: 'الفترة: ' + rangeOf(list), items: list, detail: d, extra, rng: 'cur' };
 }
 function weekCfg(k, d) {
-  return { title: 'ملخص أسبوع', sub: weekLabel(k), items: state.items.filter(i => monday(i.date) === k).sort(byDate), detail: d };
+  return { title: 'ملخص أسبوع', sub: weekLabel(k), items: state.items.filter(i => monday(i.date) === k).sort(byDate), detail: d, rng: { lo: k, hi: weekEnd(k) } };
 }
 function archiveCfg(a, d) {
   const list = [...a.items].sort(byDate), rem = round2(a.remain || 0), extra = [];
@@ -678,7 +681,7 @@ function archiveCfg(a, d) {
 function summaryCfg(d) {
   const list = [...inRange()].sort(byDate), from = $('sFrom').value, to = $('sTo').value;
   const sub = from && to ? 'من ' + fmtShort(from) + ' إلى ' + fmtShort(to) : from ? 'من ' + fmtShort(from) : to ? 'حتى ' + fmtShort(to) : 'كل الفترات';
-  return { title: 'ملخص العمل', sub, items: list, detail: d };
+  return { title: 'ملخص العمل', sub, items: list, detail: d, rng: { lo: from, hi: to } };
 }
 function archivesCfg(d) {
   const arc = [...state.archive], items = arc.flatMap(a => a.items).sort(byDate), rec = arc.reduce((t, a) => t + a.received, 0);
@@ -863,7 +866,7 @@ function dateView(id) {
   Object.defineProperty(el, 'value', { get() { return d.get.call(this); }, set(x) { d.set.call(this, x); upd(); }, configurable: true });
   el.addEventListener('input', upd); el.addEventListener('change', upd); upd();
 }
-dateView('sFrom'); dateView('sTo');
+['sFrom', 'sTo', 'fDate', 'iDate', 'pDate', 'aDate', 'jDate', 'jRemDate'].forEach(dateView);
 function setMode(m) {
   sumMode = m;
   const d = new Date();
@@ -1009,9 +1012,10 @@ function reportPages(cfg) {
   if (cfg.detail) {
     if (y + HH + RH * 2 > H - 100) newPage(false); else head();
     items.forEach((i, k) => {
-      if (y + RH > H - 100) newPage(false);
+      const nt = i.note ? clean(i.note) : '', rh = nt ? RH + 34 : RH; // الملاحظة سطر صغير تحت الصف
+      if (y + rh > H - 100) newPage(false);
       const wk = i.type === 'work' && !i.remote, d = dt(i.date).toLocaleDateString('ar-u-nu-latn', { weekday: 'long', day: 'numeric', month: 'long' });
-      if (k % 2) { x.fillStyle = P.ZB; x.fillRect(M, y, W - 2 * M, RH); }
+      if (k % 2) { x.fillStyle = P.ZB; x.fillRect(M, y, W - 2 * M, rh); }
       const by = y + 44, kind = i.type === 'adv' ? 'adv' : i.remote ? 'rem' : 'wrk';
       const col = kind === 'adv' ? P.RD : kind === 'rem' ? P.BL : P.GN, chipBg = kind === 'adv' ? P.CR : kind === 'rem' ? P.CB : P.CG;
       T(d, 28, '400', 'rtl', 'right', cols[0].r - 16, by, P.INK);
@@ -1022,7 +1026,12 @@ function reportPages(cfg) {
       T(wk && i.brk ? i.brk + ' د' : '—', 28, '400', 'rtl', 'center', cols[4].c, by, wk && i.brk ? P.INK : P.GR);
       T(wk ? hmAr(i.mins) : '—', 28, '400', 'rtl', 'center', cols[5].c, by, wk ? P.INK : P.GR);
       T((i.type === 'adv' ? '−' : '') + num(i.amount), 28, '700', 'ltr', 'center', cols[6].c, by, col);
-      x.fillStyle = P.GD; x.fillRect(M, y + RH - 2, W - 2 * M, 2); vlines(y, RH); y += RH;
+      if (nt) {
+        x.font = '400 24px sans-serif'; let nn = nt; const mw = W - 2 * M - 40;
+        while (nn.length > 1 && x.measureText(nn).width > mw) nn = nn.slice(0, -2) + '…';
+        T(nn, 24, '400', 'rtl', 'right', cols[0].r - 16, y + RH + 10, P.GR);
+      }
+      x.fillStyle = P.GD; x.fillRect(M, y + rh - 2, W - 2 * M, 2); vlines(y, rh); y += rh;
     });
     if (y + RH > H - 100) newPage(false);
     x.fillStyle = P.HB; x.fillRect(M, y, W - 2 * M, RH);
@@ -1395,7 +1404,7 @@ function drawDots() {
   if (box.children.length !== n) box.innerHTML = '<span></span>'.repeat(n);
   [...box.children].forEach((s, i) => s.classList.toggle('on', i < entered.length));
 }
-function showLock() { if (!state.pin) return; entered = ''; drawDots(); bioKeyShow(); $('lock').hidden = false; tryBio(); }
+function showLock() { if (!state.pin) return; document.querySelectorAll('dialog[open]').forEach(d => { try { d.close(); } catch (e) {} }); entered = ''; drawDots(); bioKeyShow(); $('lock').hidden = false; tryBio(); }
 let pinBusy = false;
 $('pad').onclick = async e => {
   const b = e.target.closest('button'); if (!b || pinBusy) return;
@@ -1622,8 +1631,10 @@ const icSave = () => { // idx/applied خاصان بهذا الجهاز؛ الن�
   if (p.style !== icPref.style || p.follow !== icPref.follow) { state.prefs.ic = { style: icPref.style, follow: icPref.follow }; savePrefs(); }
 };
 function nearestColor(hex) {
-  const t = hex2rgb(hex); let bi = 0, bd = 1e9;
-  PALETTE.forEach((p, i) => { const r = hex2rgb(p), d = (r[0] - t[0]) ** 2 + (r[1] - t[1]) ** 2 + (r[2] - t[2]) ** 2; if (d < bd) { bd = d; bi = i; } });
+  const h = String(hex || '').toLowerCase(), ex = PALETTE.findIndex(p => p.toLowerCase() === h);
+  if (ex >= 0) return ex; // أحد ألوان التطبيق الـ12: أيقونته المقابلة مباشرة
+  const t = hex2rgb(hex); let bi = 0, bd = 1e9; // لون مخصص/ألوان النظام: الأقرب بين ألوان الأيقونات الفعلية
+  ICON_PAL.forEach((p, i) => { const r = hex2rgb(p), d = (r[0] - t[0]) ** 2 + (r[1] - t[1]) ** 2 + (r[2] - t[2]) ** 2; if (d < bd) { bd = d; bi = i; } });
   return bi;
 }
 let icTimer;

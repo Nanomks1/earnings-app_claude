@@ -295,6 +295,12 @@
     return out;
   }
   const datesIn = (a, z) => [...new Set(state.jobs.filter(j => j.date >= a && j.date <= z).map(j => j.date))];
+  // أيام العناصر ضمن مدى التقرير: 'cur' = الدفعة الحالية، {lo,hi} = مدى محدد، وإلا من a إلى z (أول وآخر يوم عمل)
+  const rangeDates = (r, a, z) => {
+    if (r === 'cur') { const B = bounds(); return [...new Set(state.jobs.filter(j => !B.list.length || j.date > B.last).map(j => j.date))]; }
+    if (r && typeof r === 'object') return datesIn(r.lo || '0000-00-00', r.hi || '9999-12-31');
+    return datesIn(a, z);
+  };
   const canShare = () => on() && state.jobs.length > 0;
   const shareOn = () => shareFlag && on();
   function setShare(inc, pr, persist) {
@@ -304,7 +310,8 @@
   function attachPdf(c) { // قسم «ما تم تنفيذه» في تقرير الـ PDF ضمن مدى تواريخ التقرير
     if (!c || !shareOn() || !c.items || !c.items.length) return;
     const ds = c.items.map(i => i.date).sort(), a = ds[0], z = ds[ds.length - 1];
-    const rows = state.jobs.filter(j => j.date >= a && j.date <= z).sort((x, y) => x.date.localeCompare(y.date) || x.t - y.t || x.id - y.id);
+    const okD = new Set(rangeDates(c.rng, a, z));
+    const rows = state.jobs.filter(j => okD.has(j.date)).sort((x, y) => x.date.localeCompare(y.date) || x.t - y.t || x.id - y.id);
     if (rows.length) { c.jobs = rows.map(j => ({ date: j.date, dev: j.dev, pr: j.pr, amt: j.amt, remote: j.remote })); c.jobsPr = sharePr; }
   }
 
@@ -384,7 +391,7 @@
     if (!state.jobs.some(x => x.id === j.id)) state.jobs.push(j);
     save(); renderTrash(); updTrashLabel(); render(); toast('تمت استعادة العنصر');
   };
-  window.Jobs = { apply, render, renderTrash, cfgShow, canShare, shareOn, setShare, lines, datesIn, attachPdf };
+  window.Jobs = { apply, render, renderTrash, cfgShow, canShare, shareOn, setShare, lines, datesIn, rangeDates, attachPdf };
   apply();
   if (view === 'jobs') render();
 })();

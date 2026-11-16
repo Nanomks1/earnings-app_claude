@@ -81,7 +81,7 @@
 <dialog id="form">
   <h2 id="formTitle"></h2>
   <label for="fDate" style="margin-top:4px">التاريخ</label>
-  <input type="date" id="fDate">
+  <div class="dfld"><input type="date" id="fDate"><span class="dv" id="fDateV"></span></div>
   <div id="workFields">
     <div class="row">
       <div><label for="fStart">البداية</label><input type="time" id="fStart"></div>
@@ -107,7 +107,7 @@
 <dialog id="inDlg">
   <h2>تسجيل دخول العمل</h2>
   <div class="row">
-    <div><label for="iDate" style="margin-top:4px">التاريخ</label><input type="date" id="iDate"></div>
+    <div><label for="iDate" style="margin-top:4px">التاريخ</label><div class="dfld"><input type="date" id="iDate"><span class="dv" id="iDateV"></span></div></div>
     <div><label for="iTime" style="margin-top:4px">وقت الدخول</label><input type="time" id="iTime"></div>
   </div>
   <div class="note">عند الخروج اضغط «خروج» وسيحسب التطبيق المدة والأجرة.</div>
@@ -121,7 +121,7 @@
   <h2>استلام دفعة</h2>
   <div class="info big2" id="pInfo"></div>
   <label for="pDate">تاريخ الاستلام</label>
-  <input type="date" id="pDate">
+  <div class="dfld"><input type="date" id="pDate"><span class="dv" id="pDateV"></span></div>
   <label for="pRecv">المبلغ الذي استلمته</label>
   <input type="number" id="pRecv" inputmode="decimal" min="0" step="any">
   <div class="info" id="pRem"></div>
@@ -138,7 +138,7 @@
   <h2>تعديل الدفعة</h2>
   <div class="info big2" id="aInfo"></div>
   <label for="aDate">تاريخ الاستلام</label>
-  <input type="date" id="aDate">
+  <div class="dfld"><input type="date" id="aDate"><span class="dv" id="aDateV"></span></div>
   <label for="aRecv">المبلغ المستلم</label>
   <input type="number" id="aRecv" inputmode="decimal" min="0" step="any">
   <div class="info" id="aRem"></div>
@@ -455,7 +455,7 @@
   <div class="sug" id="jPrSug"></div>
   <div class="row">
     <div><label for="jAmt">الثمن</label><input type="number" id="jAmt" inputmode="decimal" min="0" step="any" placeholder="0"><button type="button" class="jlast" id="jLast" hidden></button></div>
-    <div><label for="jDate">التاريخ</label><input type="date" id="jDate"></div>
+    <div><label for="jDate">التاريخ</label><div class="dfld"><input type="date" id="jDate"><span class="dv" id="jDateV"></span></div></div>
   </div>
   <div class="tg"><span>عن بعد</span><input type="checkbox" id="jRemote"></div>
   <div class="acts">
@@ -471,7 +471,7 @@
   <div id="jRemList" style="max-height:34vh;overflow-y:auto"></div>
   <div class="row">
     <div><label for="jRemAmt">أجرتي</label><input type="number" id="jRemAmt" inputmode="decimal" min="0" step="any" placeholder="0"></div>
-    <div><label for="jRemDate">التاريخ</label><input type="date" id="jRemDate"></div>
+    <div><label for="jRemDate">التاريخ</label><div class="dfld"><input type="date" id="jRemDate"><span class="dv" id="jRemDateV"></span></div></div>
   </div>
   <div class="acts">
     <button id="jRemCancel" type="button">إلغاء</button>
