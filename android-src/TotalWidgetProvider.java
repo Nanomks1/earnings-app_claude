@@ -25,10 +25,9 @@ public class TotalWidgetProvider extends AppWidgetProvider {
         v.setTextViewText(R.id.work_t_value, !show ? "\u2022\u2022\u2022\u2022" : (txt.isEmpty() ? "\u2014" : txt));
         v.setTextColor(R.id.work_t_value, col);
         v.setTextColor(R.id.work_t_label, (col & 0x00FFFFFF) | 0xB3000000);
-        Intent li = c.getPackageManager().getLaunchIntentForPackage(c.getPackageName());
-        if (li != null) {
-            v.setOnClickPendingIntent(R.id.work_t_root, PendingIntent.getActivity(c, 2, li, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
-        }
+        Intent li = new Intent(c, MainActivity.class); // مباشرةً (لا عبر مكوّن الأيقونة البديل الذي قد يُعطَّل عند تغيير الأيقونة)
+        li.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+        v.setOnClickPendingIntent(R.id.work_t_root, PendingIntent.getActivity(c, 2, li, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
         m.updateAppWidget(id, v);
     }
 

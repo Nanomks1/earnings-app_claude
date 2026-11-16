@@ -113,10 +113,9 @@ public class WifiWatchService extends Service {
         if (Build.VERSION.SDK_INT >= 26) b = new Notification.Builder(this, CH);
         else b = new Notification.Builder(this);
         b.setContentTitle("تتبع الواي فاي").setContentText(noteText).setSmallIcon(appIcon()).setOngoing(true).setOnlyAlertOnce(true);
-        Intent li = getPackageManager().getLaunchIntentForPackage(getPackageName());
-        if (li != null) {
-            b.setContentIntent(PendingIntent.getActivity(this, 0, li, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT));
-        }
+        Intent li = new Intent(this, MainActivity.class); // مباشرةً (لا عبر مكوّن الأيقونة البديل الذي قد يُعطَّل عند تغيير الأيقونة)
+        li.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+        b.setContentIntent(PendingIntent.getActivity(this, 0, li, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT));
         return b.build();
     }
 
