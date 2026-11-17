@@ -834,17 +834,22 @@ function renderMonths() {
 }
 function balSeries() { // رصيدك (المستحق) تراكميًا: الأجور − الكريدي − كل ما استُلم، بتاريخ كل يوم وكل دفعة
   const days = {}, add = (d, v) => { if (d) days[d] = (days[d] || 0) + v; };
-  [...state.archive.flatMap(a => a.items), ...state.items].forEach(i => add(i.date, i.type === 'work' ? i.amount : -i.amount));
+  const advd = {};
+  [...state.archive.flatMap(a => a.items), ...state.items].forEach(i => { add(i.date, i.type === 'work' ? i.amount : -i.amount); if (i.type !== 'work' && i.date) advd[i.date] = (advd[i.date] || 0) + i.amount; });
   state.archive.forEach(a => paysSorted(a).forEach(p => add(p.d, -p.a)));
   let bal = state.archive.length ? (state.archive[0].carryIn || 0) : (state.carry || 0);
-  const pts = Object.keys(days).sort().map(d => { bal += days[d]; return { d, v: round2(bal) }; });
+  const pts = Object.keys(days).sort().map(d => { bal += days[d]; return { d, v: round2(bal), c: advd[d] || 0 }; });
   const gap = pts.length ? round2(due() - pts[pts.length - 1].v) : 0; // لو كانت أرقام قديمة غير متسقة: يطابق آخر الرسم "المستحق الآن" دائمًا
-  return gap ? pts.map(p => ({ d: p.d, v: round2(p.v + gap) })) : pts;
+  return gap ? pts.map(p => ({ d: p.d, v: round2(p.v + gap), c: p.c })) : pts;
 }
+let balRange = 'cur'; // الفترة الخاصة برسم الرصيد: الدفعة الحالية / 30 يومًا / الكل
 function renderBalance() {
-  const from = $('sFrom').value, to = $('sTo').value;
+  let from = '', to = '';
+  if (balRange === 'cur') { from = state.items.map(i => i.date).filter(Boolean).sort()[0] || ''; }
+  else if (balRange === 'm30') { const d = new Date(); d.setDate(d.getDate() - 29); from = iso(d); }
   const pts = balSeries().filter(p => (!from || p.d >= from) && (!to || p.d <= to));
-  const head = '<div class="ch"><b>تطور الرصيد</b>' + (pts.length ? `<span class="num">${signed(pts[pts.length - 1].v)}</span>` : '') + '</div>';
+  const head = '<div class="ch"><b>تطور الرصيد</b>' + (pts.length ? `<span class="num">${signed(pts[pts.length - 1].v)}</span>` : '') + '</div>' +
+    '<div class="seg bseg" id="balSeg">' + [['cur', 'الدفعة الحالية'], ['m30', '30 يومًا'], ['all', 'الكل']].map(r => `<button type="button" data-r="${r[0]}"${r[0] === balRange ? ' class="on"' : ''}>${r[1]}</button>`).join('') + '</div>';
   if (pts.length < 2) { $('chartBal').innerHTML = head + '<div class="nodata">لا توجد بيانات كافية في هذه الفترة</div>'; return; }
   const t = p => dt(p.d).getTime(), t0 = t(pts[0]), t1 = t(pts[pts.length - 1]);
   const vs = pts.map(p => p.v), mx = Math.max(...vs, 0), mn = Math.min(...vs, 0), span = mx - mn || 1;
@@ -853,13 +858,39 @@ function renderBalance() {
   const line = pts.map(p => X(p).toFixed(1) + ',' + Y(p.v).toFixed(1)).join(' ');
   const area = '300,' + Y(0).toFixed(1) + ' ' + line + ' 0,' + Y(0).toFixed(1);
   const sd = p => dt(p.d).toLocaleDateString('ar-u-nu-latn', { day: 'numeric', month: 'short' });
-  const lastP = pts[pts.length - 1];
+  const lastP = pts[pts.length - 1], L = p => (X(p) / 3).toFixed(1) + '%';
+  const vmax = Math.max(...vs), vmin = Math.min(...vs), iMax = vs.lastIndexOf(vmax), iMin = vs.lastIndexOf(vmin), last = pts.length - 1;
+  const dot = (p, cls) => `<i class="bdot ${cls}" style="left:${L(p)};top:${Y(p.v).toFixed(1)}px"></i>`;
+  const lab = (p, cls, above) => { const l = X(p) / 3, tx = l < 12 ? '0' : l > 88 ? '-100%' : '-50%'; return `<b class="blab ${cls} num" style="left:${l.toFixed(1)}%;top:${Y(p.v).toFixed(1)}px;--tx:${tx};--ty:${above ? 'calc(-100% - 7px)' : '7px'}">${signed(p.v)}</b>`; };
+  const ov = pts.filter(p => p.c > 0).map(p => dot(p, 'adv')).join('') +
+    (vmax !== vmin ? dot(pts[iMax], 'mx') + dot(pts[iMin], 'mn') : '') +
+    (vmax !== vmin && iMax !== last ? lab(pts[iMax], 'mx', Y(vmax) >= 18) : '') +
+    (vmax !== vmin && iMin !== last ? lab(pts[iMin], 'mn', Y(vmin) > 100) : '') +
+    dot(lastP, 'cur');
   $('chartBal').innerHTML = head +
-    `<svg viewBox="0 0 300 120" preserveAspectRatio="none"><defs><linearGradient id="balG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--pritx)" stop-opacity=".35"/><stop offset="100%" stop-color="var(--pritx)" stop-opacity="0"/></linearGradient></defs><line x1="0" x2="300" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}" stroke="var(--bd)" stroke-width="1" stroke-dasharray="4 4" vector-effect="non-scaling-stroke"/>` +
-    `<polygon points="${area}" fill="url(#balG)"/><polyline points="${line}" fill="none" stroke="var(--pritx)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/><ellipse cx="${X(lastP).toFixed(1)}" cy="${Y(lastP.v).toFixed(1)}" rx="4" ry="4.5" fill="var(--pritx)" stroke="var(--card)" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>` +
-    `<div class="ax"><span>${esc(sd(pts[0]))}</span><span>${esc(sd(lastP))}</span></div>` +
-    `<div class="mm"><div><span>أدنى</span><b class="num">${signed(Math.min(...vs))}</b></div><div><span>أعلى</span><b class="num">${signed(Math.max(...vs))}</b></div></div>`;
+    `<div class="bw" id="balW"><svg viewBox="0 0 300 120" preserveAspectRatio="none"><defs><linearGradient id="balG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--pritx)" stop-opacity=".35"/><stop offset="100%" stop-color="var(--pritx)" stop-opacity="0"/></linearGradient></defs><line x1="0" x2="300" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}" stroke="var(--bd)" stroke-width="1" stroke-dasharray="4 4" vector-effect="non-scaling-stroke"/>` +
+    `<polygon points="${area}" fill="url(#balG)"/><polyline points="${line}" fill="none" stroke="var(--pritx)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>` +
+    ov + '<i class="bvl" hidden></i><i class="bdot sel" hidden></i><div class="btip" hidden></div></div>' +
+    `<div class="ax"><span>${esc(sd(pts[0]))}</span><span>${esc(sd(lastP))}</span></div>`;
+  // لمس أو سحب على المنحنى: تاريخ اليوم ورصيده
+  const w = $('balW'), tip = w.querySelector('.btip'), vl = w.querySelector('.bvl'), sel = w.querySelector('.sel');
+  let down = false, tm = 0;
+  const hide = () => { tip.hidden = vl.hidden = sel.hidden = true; };
+  const show = ev => {
+    const r = w.getBoundingClientRect(), fx = Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width)) * 300;
+    let bi = 0, bd = 1e9; pts.forEach((p, i) => { const d = Math.abs(X(p) - fx); if (d < bd) { bd = d; bi = i; } });
+    const p = pts[bi], l = X(p) / 3;
+    vl.style.left = sel.style.left = tip.style.left = l.toFixed(1) + '%'; sel.style.top = Y(p.v).toFixed(1) + 'px';
+    tip.style.setProperty('--tx', l < 22 ? '0' : l > 78 ? '-100%' : '-50%');
+    tip.innerHTML = `<small>${esc(dt(p.d).toLocaleDateString('ar-u-nu-latn', { day: 'numeric', month: 'long' }))}</small><b class="num">${signed(p.v)}</b>` + (p.c > 0 ? `<em class="num">كريدي ${signed(-p.c)}</em>` : '');
+    tip.hidden = vl.hidden = sel.hidden = false; clearTimeout(tm);
+  };
+  w.addEventListener('pointerdown', e => { down = true; show(e); });
+  w.addEventListener('pointermove', e => { if (down) show(e); });
+  const up = () => { down = false; clearTimeout(tm); tm = setTimeout(hide, 2000); };
+  w.addEventListener('pointerup', up); w.addEventListener('pointercancel', up); w.addEventListener('pointerleave', () => { if (down) up(); });
 }
+$('chartBal').addEventListener('click', e => { const b = e.target.closest('#balSeg button'); if (b) { balRange = b.dataset.r; renderBalance(); } });
 function curDates() { // من بداية الفترة الحالية إلى اليوم
   const ds = state.items.map(i => i.date).filter(Boolean).sort();
   $('sFrom').value = ds.length ? ds[0] : today(); $('sTo').value = today();

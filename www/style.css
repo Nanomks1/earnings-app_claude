@@ -539,3 +539,26 @@ details[open] .bub.chv .ic{transform:rotate(90deg)}
 /* منع تحديد النص وقائمة النسخ عند الضغط المزدوج، مع إبقاء حقول الكتابة قابلة للتحديد */
 html,body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 input,textarea{-webkit-user-select:text;user-select:text}
+
+/* رسم الرصيد: علامات ولمس للمعاينة */
+.bal .bseg{margin-bottom:10px}
+.bal .bseg button{height:30px;font-size:calc(12px*var(--fs,1))}
+.bal .bw{position:relative;direction:ltr;touch-action:pan-y;margin-top:4px}
+.bal .bw svg{height:120px}
+.bal .bdot{position:absolute;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:var(--pritx);border:1.5px solid var(--card);box-sizing:content-box;pointer-events:none}
+.bal .bdot.adv{width:6px;height:6px;margin:-3px 0 0 -3px;background:var(--neg)}
+.bal .bdot.mx{background:var(--pos)}
+.bal .bdot.mn{background:var(--neg)}
+.bal .bdot.cur{width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-width:2px}
+.bal .bdot.sel{width:10px;height:10px;margin:-5px 0 0 -5px;border-width:2px}
+.bal .blab{position:absolute;transform:translate(var(--tx),var(--ty));font-size:calc(11px*var(--fs,1));white-space:nowrap;pointer-events:none}
+.bal .blab.mx{color:var(--pos)}
+.bal .blab.mn{color:var(--neg)}
+.bal .bvl{position:absolute;top:0;bottom:0;width:0;border-left:1px dashed var(--bd);pointer-events:none}
+.bal .btip{position:absolute;top:-2px;transform:translateX(var(--tx,-50%));background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:4px 10px;box-shadow:var(--sh);pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:1px;white-space:nowrap;z-index:2}
+.bal .btip[hidden],.bal .bvl[hidden],.bal .bdot[hidden]{display:none}
+.bal .btip small{font-size:calc(11px*var(--fs,1));color:var(--mut)}
+.bal .btip b{font-size:calc(13px*var(--fs,1))}
+.bal .btip em{font-style:normal;font-size:calc(11px*var(--fs,1));color:var(--neg)}
+.bal .btip{direction:rtl}
+.bal .blab{text-shadow:0 0 3px var(--card),0 0 3px var(--card),0 0 3px var(--card)}
