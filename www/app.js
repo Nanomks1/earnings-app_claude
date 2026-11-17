@@ -874,14 +874,9 @@ function dateView(id) {
 // «من/إلى» داخل بطاقة التاريخ: بجانب التاريخ إن اتسع، وإلا فوقه (البطاقتان معًا)
 function fitDates() {
   const w = $('sDates'); if (!w || !w.offsetWidth) return;
-  const wd = n => { const r = document.createRange(); r.selectNodeContents(n); return r.getBoundingClientRect().width; };
-  let fit = true;
-  w.querySelectorAll('.dv').forEach(v => {
-    const dl = v.querySelector('.dl'), dt = v.querySelector('.dt'); if (!dl || !dt) return;
-    const cs = getComputedStyle(v), pad = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight), gap = parseFloat(cs.columnGap) || 6;
-    if (wd(dl) + wd(dt) + 16 + gap * 2 + pad + 2 > v.parentNode.clientWidth) fit = false;
-  });
-  w.classList.toggle('stk', !fit);
+  w.classList.remove('stk'); // جرّب السطر الواحد فعليًا: إن قُصّ أي تاريخ صعد «من/إلى» فوقه
+  const fit = [...w.querySelectorAll('.dt')].every(t => t.scrollWidth <= t.clientWidth + 1);
+  if (!fit) w.classList.add('stk');
 }
 ['sFrom', 'sTo', 'fDate', 'iDate', 'pDate', 'aDate', 'jDate', 'jRemDate'].forEach(dateView);
 if (window.ResizeObserver && $('sDates')) new ResizeObserver(fitDates).observe($('sDates'));
