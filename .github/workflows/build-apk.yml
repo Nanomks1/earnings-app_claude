@@ -1,12 +1,28 @@
 name: Build APK
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'www/**'
+      - 'android-src/**'
+      - 'package.json'
+      - 'capacitor.config.json'
   workflow_dispatch:
+
+# عند رفع عدة ملفات متتالية: يُلغى أي بناء سابق ويبقى الأخير فقط
+concurrency:
+  group: build-apk
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-24.04
     steps:
+      - name: Wait for more uploads
+        if: github.event_name == 'push'
+        run: sleep 60
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
