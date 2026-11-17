@@ -525,3 +525,13 @@ details[open] .bub.chv .ic{transform:rotate(90deg)}
 /* البطاقات الأربع: العنوان فوق والرقم تحته مباشرة والأيقونة في مكانها */
 .stat.lt .sl{order:-1}
 .stat.v{margin-top:6px}
+
+/* قوائم العناصر: مؤطرة مثل شريط الملخص */
+#jobs .seg{background:var(--card);border:1px solid var(--bd)}
+/* «من/إلى» داخل بطاقة التاريخ */
+.dates .dv{padding:0 8px;gap:6px}
+.dates .dv .dl{flex:none;font-weight:500;font-size:calc(12.5px*var(--fs,1));color:var(--mut)}
+.dates .dv .dt{flex:1;min-width:0;white-space:nowrap}
+.dates.stk .dfld input{height:calc(64px*var(--fs,1))}
+.dates.stk .dv{flex-wrap:wrap;align-content:center;row-gap:1px}
+.dates.stk .dv .dl{flex:0 0 100%}

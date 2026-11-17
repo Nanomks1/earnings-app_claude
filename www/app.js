@@ -218,6 +218,7 @@ function applyTheme() {
   const root = document.documentElement.style, set = (k, v) => root.setProperty(k, v);
   set('--pri', pri);
   set('--fs', (state.fsv || 100) / 100);
+  if (typeof fitDates === 'function') requestAnimationFrame(fitDates);
   document.documentElement.dataset.mo = state.prefs ? state.prefs.mo : 2;
   set('--ff', state.font === 1 && customOk ? '"' + CUSTOM_FAMILY + '",system-ui,"Noto Sans Arabic","Segoe UI",Tahoma,sans-serif' : '');
   try { applySecure(); } catch (e) {}
@@ -866,11 +867,26 @@ function curDates() { // من بداية الفترة الحالية إلى ال
 // عرض التاريخ بصيغة «30 أكتوبر 2026» فوق حقل التاريخ الأصلي (الأصلي يعرض 10/30/2026 فيلتبس اليوم بالشهر)
 function dateView(id) {
   const el = $(id), v = $(id + 'V'), d = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
-  const upd = () => { v.textContent = el.value ? fmtShort(el.value) : '—'; };
+  const upd = () => { (v.querySelector('.dt') || v).textContent = el.value ? fmtShort(el.value) : '—'; if (id === 'sFrom' || id === 'sTo') fitDates(); };
   Object.defineProperty(el, 'value', { get() { return d.get.call(this); }, set(x) { d.set.call(this, x); upd(); }, configurable: true });
   el.addEventListener('input', upd); el.addEventListener('change', upd); upd();
 }
+// «من/إلى» داخل بطاقة التاريخ: بجانب التاريخ إن اتسع، وإلا فوقه (البطاقتان معًا)
+function fitDates() {
+  const w = $('sDates'); if (!w || !w.offsetWidth) return;
+  const wd = n => { const r = document.createRange(); r.selectNodeContents(n); return r.getBoundingClientRect().width; };
+  let fit = true;
+  w.querySelectorAll('.dv').forEach(v => {
+    const dl = v.querySelector('.dl'), dt = v.querySelector('.dt'); if (!dl || !dt) return;
+    const cs = getComputedStyle(v), pad = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight), gap = parseFloat(cs.columnGap) || 6;
+    if (wd(dl) + wd(dt) + 16 + gap * 2 + pad + 2 > v.parentNode.clientWidth) fit = false;
+  });
+  w.classList.toggle('stk', !fit);
+}
 ['sFrom', 'sTo', 'fDate', 'iDate', 'pDate', 'aDate', 'jDate', 'jRemDate'].forEach(dateView);
+if (window.ResizeObserver && $('sDates')) new ResizeObserver(fitDates).observe($('sDates'));
+window.addEventListener('resize', fitDates);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitDates);
 function setMode(m) {
   sumMode = m;
   const d = new Date();
@@ -1642,6 +1658,7 @@ $('fsRange').oninput = () => {
   state.fsv = +$('fsRange').value;
   document.documentElement.style.setProperty('--fs', state.fsv / 100);
   $('fsVal').textContent = ltr(state.fsv + '%');
+  requestAnimationFrame(fitDates);
 };
 $('fsRange').onchange = () => savePrefs();
 const updMo = () => [...$('moSeg').children].forEach(b => b.classList.toggle('on', +b.dataset.v === state.prefs.mo));
