@@ -535,3 +535,7 @@ details[open] .bub.chv .ic{transform:rotate(90deg)}
 .dates.stk .dfld input{height:calc(64px*var(--fs,1))}
 .dates.stk .dv{flex-wrap:wrap;align-content:center;row-gap:1px}
 .dates.stk .dv .dl{flex:0 0 100%}
+
+/* منع تحديد النص وقائمة النسخ عند الضغط المزدوج، مع إبقاء حقول الكتابة قابلة للتحديد */
+html,body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+input,textarea{-webkit-user-select:text;user-select:text}
