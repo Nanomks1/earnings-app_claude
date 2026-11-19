@@ -862,7 +862,7 @@ function renderBalance() {
   const vmax = Math.max(...vs), vmin = Math.min(...vs), iMax = vs.lastIndexOf(vmax), iMin = vs.lastIndexOf(vmin), last = pts.length - 1;
   const dot = (p, cls) => `<i class="bdot ${cls}" style="left:${L(p)};top:${Y(p.v).toFixed(1)}px"></i>`;
   const lab = (p, cls, above) => { const l = X(p) / 3, tx = l < 12 ? '0' : l > 88 ? '-100%' : '-50%'; return `<b class="blab ${cls} num" style="left:${l.toFixed(1)}%;top:${Y(p.v).toFixed(1)}px;--tx:${tx};--ty:${above ? 'calc(-100% - 7px)' : '7px'}">${signed(p.v)}</b>`; };
-  const ov = pts.filter(p => p.c > 0).map(p => dot(p, 'adv')).join('') +
+  const ov = (pts.length <= 40 ? pts.filter(p => p.c > 0).map(p => dot(p, 'adv')).join('') : '') +
     (vmax !== vmin ? dot(pts[iMax], 'mx') + dot(pts[iMin], 'mn') : '') +
     (vmax !== vmin && iMax !== last ? lab(pts[iMax], 'mx', Y(vmax) >= 18) : '') +
     (vmax !== vmin && iMin !== last ? lab(pts[iMin], 'mn', Y(vmin) > 100) : '') +
